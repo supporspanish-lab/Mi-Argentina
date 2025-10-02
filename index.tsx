@@ -154,8 +154,7 @@ const NotificationIcon = () => (
 
 
 // --- Profile Dropdown Component ---
-// Fix: Add types to `forwardRef` to correctly type the forwarded ref.
-const ProfileDropdown = forwardRef<HTMLDivElement, {}>((props, ref) => (
+const ProfileDropdown = forwardRef<HTMLDivElement>((props, ref) => (
   <div className="profile-dropdown" ref={ref}>
     <div className="dropdown-user-info">
       <h4>León Iván Gastón IRUSTA</h4>
