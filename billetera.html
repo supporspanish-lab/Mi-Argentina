@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- PWA Enhancements -->
     <meta name="theme-color" content="#ffffff"/>
@@ -2534,6 +2535,82 @@
             background-color: var(--notification-red);
             color: white;
         }
+
+        /* --- Receipt Image Generation Styles --- */
+        #receipt-capture-wrapper {
+            position: fixed;
+            top: 0;
+            left: -9999px; /* Render off-screen */
+            width: 414px; /* Match mobile screen width */
+            background-color: #f0f2f5;
+            padding: 20px 16px 40px 16px;
+            font-family: 'Roboto', sans-serif;
+            color: #212529;
+        }
+        .receipt-image-logo-full {
+            width: 125px;
+            height: auto;
+            display: block;
+            margin-bottom: 24px;
+        }
+        .receipt-image-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .receipt-image-card.amount-card {
+            text-align: center;
+        }
+        .receipt-image-card .label {
+            font-size: 15px;
+            color: #6c757d;
+        }
+        .receipt-image-card .amount {
+            font-size: 48px;
+            font-weight: 700;
+            color: #212529;
+            margin: 8px 0;
+        }
+        .receipt-image-card .date-time {
+            font-size: 15px;
+            color: #6c757d;
+        }
+        .receipt-image-card .section-label {
+            font-size: 15px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+        .receipt-image-card .data-value {
+            font-size: 16px;
+            color: #212529;
+            line-height: 1.5;
+        }
+        .receipt-image-card .data-value.bold {
+            font-weight: 700;
+        }
+        .receipt-image-card .data-block {
+            margin-bottom: 20px;
+        }
+        .receipt-image-card .data-block:last-child {
+            margin-bottom: 0;
+        }
+        .receipt-image-card hr {
+            border: none;
+            border-top: 1px solid #e9ecef;
+            margin: 20px 0;
+        }
+        .receipt-image-card .details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        .receipt-image-card .inline-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
     </style>
 </head>
 <body>
@@ -2629,7 +2706,7 @@
                     alias: 'ROMERO.DIETA.DELTA',
                     cbu: '00700979-30004015282128',
                     cuil: '20-11387130-0',
-                    titular: 'ANDRES FERNANDO TELLERIA ',
+                    titular: 'PERSONA XXXXX XXXXX ',
                     actions: [
                         { label: 'Transferir dinero', icon: 'transfer' },
                         { label: 'Ingresar dinero', icon: 'deposit' },
@@ -2666,7 +2743,7 @@
                         { label: 'Copiar CBU', icon: 'copy' },
                     ],
                     movements: [
-                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de terceiros', amount: 195.00, originalDate: '07/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'SMITH JOHN', recipientCuit: '50-11223344-9', recipientCbu: '9990040110000000123456', concept: 'PAYMENT', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de terceiros', amount: 195.00, originalDate: '07/10/25', details: { movementType: 'TRANSF. CTAS PROPIAS', recipientName: 'SMITH JOHN', recipientCuit: '50-11223344-9', recipientCbu: '9990040110000000123456', concept: 'PAYMENT', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
                         { id: generateUniqueId(), description: 'Pago tarjeta visa', amount: -2125.60, originalDate: '29/09/25' },
                         { id: generateUniqueId(), description: 'Rescate fima', amount: 0.01, originalDate: '29/09/25' },
                         { id: generateUniqueId(), description: 'Interes capitalizado', amount: 0.01, originalDate: '22/09/25' },
@@ -3126,16 +3203,13 @@
                 const accountCurrency = selectedAccount?.currency || '$';
 
                 const formatCurrency = (value, currency) => {
-                    // This function now correctly uses comma for decimals as per the image
                     const options = {
                         style: 'currency',
-                        currency: 'ARS', // Using ARS for formatting, but showing the account's symbol
+                        currency: 'ARS',
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                     };
-                    // A trick to format with ',' for decimals and '.' for thousands
                     let formatted = new Intl.NumberFormat('es-AR', options).format(Math.abs(value));
-                    // Replace the standard currency symbol with the account's currency
                     formatted = formatted.replace('$', currency).trim();
 
                     if (value < 0) {
@@ -3159,14 +3233,15 @@
                       ].filter(Boolean).join('')
                     : [
                         details.movementType && `<p>${details.movementType}</p>`,
-                        details.recipientName && `<p>${details.recipientName}</p>`,
                         details.recipientCuit && `<p>CUIT ${details.recipientCuit}</p>`,
                         details.recipientCbu && `<p>${details.recipientCbu}</p>`,
-                        details.cardUsed && `<p>${details.cardUsed}</p>`, // Ensure card is shown for other transfers too
+                        details.cardUsed && `<p>${details.cardUsed}</p>`,
                         details.concept && `<p>${details.concept}</p>`,
-                        details.longId1 && `<p>${details.longId1}</p>`,
-                        details.longId2 && `<p>${details.longId2}</p>`
                       ].filter(Boolean).join('');
+
+                const randomHour = Math.floor(Math.random() * 24).toString().padStart(2, '0');
+                const randomMinute = Math.floor(Math.random() * 60).toString().padStart(2, '0');
+                const randomTime = `${randomHour}:${randomMinute} h`;
 
                 return `
                     <div class="movement-detail-section">
@@ -3178,7 +3253,7 @@
                     <div class="movement-detail-section">
                         <p class="movement-detail-label">Fecha</p>
                         <div class="movement-detail-data">
-                            <p>${originalDate}</p>
+                            <p>${originalDate} - ${randomTime}</p>
                         </div>
                     </div>
                     <div class="movement-detail-section">
@@ -3816,74 +3891,111 @@
                 },
                 dismissAd: () => { const banner = document.getElementById('fima-banner'); if (banner) banner.style.display = 'none'; },
                 shareReceipt: async () => {
-                    const details = state.currentTransfer;
-                    if (typeof window.jspdf === 'undefined') {
-                        alert('No se pudo cargar la librería para generar PDF. Por favor, intente de nuevo más tarde.');
+                    if (typeof window.html2canvas === 'undefined') {
+                        alert('No se pudo cargar la librería para generar la imagen. Por favor, intente de nuevo más tarde.');
+                        console.error('html2canvas library not found on window object.');
                         return;
                     }
 
+                    const details = state.currentTransfer;
+                    const senderData = state.userData;
+                    const sourceAccountData = state.accounts.find(acc => acc.number === details.sourceAccountNumber);
+
+                    if (!details || !senderData || !sourceAccountData) {
+                        alert('Faltan datos para generar el comprobante.');
+                        return;
+                    }
+                    
+                    const now = new Date();
+                    const formattedDate = now.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const formattedTime = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+                    const receiptNode = document.createElement('div');
+                    receiptNode.id = 'receipt-capture-wrapper';
+
+                    receiptNode.innerHTML = `
+                        <img src="https://iili.io/KkC0qBV.png" alt="Banco Galicia Logo" class="receipt-image-logo-full" />
+                        <div class="receipt-image-card amount-card">
+                            <p class="label">Transferencia enviada</p>
+                            <p class="amount">$${details.amount.replace(/\./g, '')}</p>
+                            <p class="date-time">${formattedDate.replace(/\//g, '/')} \u00B7 ${formattedTime} h</p>
+                        </div>
+                        <div class="receipt-image-card details-card">
+                            <div class="data-block">
+                                <p class="section-label">De:</p>
+                                <p class="data-value bold">${senderData.name.toUpperCase()}</p>
+                                <p class="data-value">CUIT ${senderData.cuil}</p>
+                                <p class="data-value">CA $ ${sourceAccountData.number.replace('Nº ', '')}</p>
+                                <p class="data-value">Cuenta en Banco De Galicia S.A.U</p>
+                            </div>
+                            <div class="data-block">
+                                <p class="section-label">Para:</p>
+                                <p class="data-value bold">${details.recipientName.replace(',', ', ')}</p>
+                                <p class="data-value">CUIT ${details.cuit}</p>
+                                <p class="data-value">CBU ${details.cbu}</p>
+                                <p class="data-value">Cuenta en ${details.destinationBank.toUpperCase()}</p>
+                            </div>
+                            <hr />
+                            <div class="details-grid">
+                                <div class="inline-detail">
+                                    <p class="section-label">Concepto</p>
+                                    <p class="data-value">${details.concept}</p>
+                                </div>
+                                <div class="inline-detail">
+                                    <p class="section-label">N\u00B0 de operaci\u00F3n</p>
+                                    <p class="data-value">${generateUniqueId().toUpperCase()}${generateRandomNumberString(5)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.appendChild(receiptNode);
+
                     try {
-                        const { jsPDF } = window.jspdf;
-                        const doc = new jsPDF();
+                        const canvas = await window.html2canvas(receiptNode, {
+                            useCORS: true,
+                            backgroundColor: '#f0f2f5',
+                            scale: 2 // Increase resolution
+                        });
 
-                        doc.setFont('helvetica', 'bold');
-                        doc.setFontSize(20);
-                        doc.text("Comprobante de Transferencia", 105, 25, { align: "center" });
+                        canvas.toBlob(async (blob) => {
+                            if (!blob) {
+                                alert('No se pudo generar la imagen del comprobante.');
+                                return;
+                            }
+                            const fileName = `comprobante-galicia-${Date.now()}.png`;
+                            const imageFile = new File([blob], fileName, { type: 'image/png' });
 
-                        doc.setFont('helvetica', 'normal');
-                        doc.setFontSize(10);
-                        doc.setTextColor(100);
-                        doc.text(`Fecha de Emisión: ${new Date().toLocaleString('es-AR')}`, 105, 35, { align: "center" });
+                            if (navigator.share && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+                                try {
+                                    await navigator.share({
+                                        title: 'Comprobante de Transferencia',
+                                        text: `Te comparto el comprobante de la transferencia a ${details.recipientName}.`,
+                                        files: [imageFile],
+                                    });
+                                } catch (error) {
+                                    if (error.name !== 'AbortError') {
+                                        console.error('Error al compartir la imagen:', error);
+                                        alert('Ocurrió un error al intentar compartir el comprobante.');
+                                    }
+                                }
+                            } else {
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = fileName;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(link.href);
+                                alert('Tu navegador no soporta compartir archivos. El comprobante se ha descargado.');
+                            }
+                        }, 'image/png');
 
-                        doc.setLineWidth(0.5);
-                        doc.line(20, 45, 190, 45);
-
-                        let yPosition = 60;
-                        const addDetail = (label, value) => {
-                            if (!value) return;
-                            if (yPosition > 270) { doc.addPage(); yPosition = 20; }
-                            doc.setFont('helvetica', 'bold');
-                            doc.setFontSize(12);
-                            doc.text(label, 20, yPosition);
-                            doc.setFont('helvetica', 'normal');
-                            const splitValue = doc.splitTextToSize(String(value), 100);
-                            doc.text(splitValue, 80, yPosition);
-                            yPosition += (splitValue.length * 5) + 5;
-                        };
-
-                        addDetail('Importe:', `$ ${details.amount}`);
-                        addDetail('Destinatario:', (details.recipientName || '').toUpperCase());
-                        addDetail('CUIT/CUIL Destino:', details.cuit);
-                        addDetail('Banco Destino:', details.destinationBank);
-                        addDetail('CBU Destino:', details.cbu);
-                        addDetail('Cuenta Origen:', details.sourceAccount);
-                        addDetail('Concepto:', (details.concept || '').toUpperCase());
-                        addDetail('ID de Transacción:', generateUniqueId());
-                        
-                        doc.line(20, yPosition, 190, yPosition);
-                        doc.setFontSize(10);
-                        doc.setTextColor(150);
-                        doc.text("Gracias por utilizar Banco Galicia.", 105, yPosition + 10, { align: "center" });
-
-                        const pdfBlob = doc.output('blob');
-                        const fileName = `comprobante-galica-${Date.now()}.pdf`;
-                        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-                        
-                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-                            await navigator.share({
-                                title: 'Comprobante de Transferencia',
-                                text: `Te comparto el comprobante de la transferencia a ${details.recipientName}.`,
-                                files: [pdfFile],
-                            });
-                        } else {
-                            alert('Tu navegador no soporta compartir archivos. El comprobante se descargará.');
-                            doc.save(fileName);
-                        }
                     } catch (error) {
-                         if (error.name !== 'AbortError') {
-                             console.error('Error al generar o compartir el PDF:', error);
-                             alert('Ocurrió un error al intentar compartir el comprobante.');
-                         }
+                        console.error('Error al generar la imagen del comprobante:', error);
+                        alert('Ocurrió un error al generar la imagen del comprobante.');
+                    } finally {
+                        document.body.removeChild(receiptNode);
                     }
                 },
                 // Profile Page Handlers
@@ -3907,7 +4019,7 @@
                     }
                 },
                 addRecipient: () => {
-                    state.profilePage.recipientsFormData.push({ id: Date.now(), userId: generateUniqueId(), recipientName: '', alias: '', cuit: '', cbu: '', destinationBank: '' });
+                    state.profilePage.recipientsFormData.push({ id: Date.now(), userId: generateUniqueId(), recipientName: '', alias: '', cu: '', cbu: '', destinationBank: '' });
                     render();
                 },
                 removeRecipient: (index) => {
@@ -4053,7 +4165,7 @@
                 if (tarjetasCarousel) tarjetasCarousel.addEventListener('scroll', (e) => handlers.handleCarouselScroll(e, 'tarjetas'));
             }
 
-            // --- INITIALIZATION ---
+            // --- INITIALIZATION --- 
             setInterval(() => {
                 state.isQrMode = !state.isQrMode;
                 if(state.isLoggedIn && ['home', 'accountDetail', 'tarjetas', 'transferencias', 'more'].includes(state.currentPage)) {
