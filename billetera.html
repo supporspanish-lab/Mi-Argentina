@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Home</title>
+    <title>Banco Galicia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- PWA Enhancements -->
-    <meta name="theme-color" content="#003366"/>
+    <meta name="theme-color" content="#ffffff"/>
+    <link rel="icon" href="https://iili.io/KGaTONe.jpg">
     <link rel="manifest" href='data:application/manifest+json,{"short_name":"Galicia","name":"Banco Galicia","icons":[{"src":"/icon-192x192.png","type":"image/png","sizes":"192x192","purpose":"any maskable"},{"src":"/icon-512x512.png","type":"image/png","sizes":"512x512","purpose":"any maskable"},{"src":"https://iili.io/KGaTONe.jpg","type":"image/jpeg","sizes":"512x512","purpose":"any maskable"}],"start_url":".","display":"standalone","theme_color":"%23003366","background_color":"%23f8f9fa","description":"Aplicación de Home Banking de Banco Galicia."}' />
     <link rel="apple-touch-icon" href="/icon-192x192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     <style>
         :root {
@@ -23,7 +24,7 @@
           --text-dark: #212529;
           --text-gray: #6c757d;
           --text-light: #f8f9fa;
-          --background-gray: #f8f9fa;
+          --background-gray: #ffffff;
           --card-bg: #ffffff;
           --border-color: #dee2e6;
           --pink-bg: #fdeeee;
@@ -483,7 +484,7 @@
         }
         
         .app-main.tarjetas-page, .app-main.account-detail-page, .app-main.more-page, .app-main.transferencias-page, .app-main.profile-page, .app-main.movement-detail-page {
-            background-color: #f0f2f5;
+            background-color: #ffffff;
         }
 
 
@@ -577,6 +578,7 @@
           color: var(--active-blue);
           font-weight: 500;
           width: 75px; /* ensure items have enough space */
+          cursor: pointer;
         }
 
         .action-button {
@@ -589,6 +591,7 @@
           justify-content: center;
           align-items: center;
           cursor: pointer;
+          pointer-events: none; /* Let parent div handle click */
         }
 
         .usd-icon {
@@ -1481,6 +1484,13 @@
 
         .session-button:first-child {
             border-bottom: 1px solid #f0f2f5;
+        }
+        .session-control-card .session-button:nth-child(2) {
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        .session-button.danger {
+            color: var(--notification-red);
         }
 
         .version-info {
@@ -2388,21 +2398,26 @@
         }
         .movement-detail-section {
             background-color: white;
-            border-radius: 12px;
-            padding: 16px;
+            padding: 0 16px;
             margin-bottom: 16px;
         }
         .movement-detail-label {
             font-size: 14px;
             color: var(--text-gray);
             margin-bottom: 8px;
+            padding-top: 16px;
         }
         .movement-detail-data p {
             font-size: 16px;
             color: var(--text-dark);
             line-height: 1.5;
             word-break: break-all;
+            margin-bottom: 16px;
         }
+         .movement-detail-data p:last-child {
+            margin-bottom: 0;
+            padding-bottom: 16px;
+         }
         .movement-detail-amount {
             font-weight: 700;
             font-size: 18px !important;
@@ -2457,6 +2472,68 @@
             background-color: var(--orange-accent);
             color: white;
         }
+         /* --- Clear Data Modal --- */
+        .clear-data-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10002;
+        }
+        .clear-data-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 340px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .clear-data-modal-content h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 8px;
+            margin-bottom: 0;
+        }
+        .clear-data-modal-content p {
+            font-size: 15px;
+            color: var(--text-gray);
+            line-height: 1.5;
+            margin: 0;
+        }
+        .clear-data-modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            width: 100%;
+        }
+        .clear-data-modal-actions .modal-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .clear-data-modal-actions .modal-button.cancel {
+            background-color: #e9ecef;
+            color: var(--text-dark);
+        }
+        .clear-data-modal-actions .modal-button.confirm {
+            background-color: var(--notification-red);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -2475,7 +2552,7 @@
                 UsdIcon: `<span class="usd-icon">U$D</span>`,
                 StarIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#868e96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
                 ChevronRightIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#868e96" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
-                ChevronLeftIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
+                ChevronLeftIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
                 MoreHorizontalIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>`,
                 PencilIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
                 CopyIconSmall: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
@@ -2531,7 +2608,7 @@
             };
 
             // --- LOCAL STORAGE & DATA MANAGEMENT ---
-            const LOCAL_STORAGE_KEY = 'GaliciaBilleteraState';
+            const LOCAL_STORAGE_KEY = 'galicaBilleteraState';
             
             const generateUniqueId = () => Math.random().toString(36).substring(2, 10).toUpperCase();
             const generateRandomNumberString = (length) => {
@@ -2545,8 +2622,8 @@
             const initialAccountsData = [
                 {
                     type: 'Caja de ahorro en pesos',
-                    balance: '2.567.106',
-                    cents: '48',
+                    balance: '0',
+                    cents: '0',
                     currency: '$',
                     number: 'Nº 4015282-1 097-2',
                     alias: 'ROMERO.DIETA.DELTA',
@@ -2559,6 +2636,7 @@
                         { label: 'Copiar CBU', icon: 'copy' },
                     ],
                     movements: [
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'TRANSF. CTAS PROPIAS', amount: -100.00, originalDate: '13/10/25', details: { movementType: 'TRANSF. CTAS PROPIAS', recipientCuit: '20400108340', recipientCbu: '4530000800014238109707', shortRef: 'NRJX', cardUsed: '4517 XXXX XXXX XX00', concept: 'VARIOS' } },
                         { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia a terceros', amount: -113500.00, originalDate: '08/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'EMPRESA DE SERVICIOS S.A.', recipientCuit: '30-12345678-9', recipientCbu: '0170456740000001234567', concept: 'VARIOS', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
                         { id: generateUniqueId(), description: 'Pago de servicios', amount: -702767.62, originalDate: '07/10/25' },
                         { id: generateUniqueId(), description: 'Ing. brutos s/ cred', amount: -1.20, originalDate: '06/10/25' },
@@ -2574,8 +2652,8 @@
                 },
                 {
                     type: 'Caja de ahorro en dólares',
-                    balance: '79.981',
-                    cents: '60',
+                    balance: '0',
+                    cents: '0',
                     currency: 'U$D',
                     number: 'Nº 4004892-5 097-3',
                     alias: 'VERDE.VUELTA.DELTA',
@@ -2687,6 +2765,7 @@
                 isProcessingTransfer: false,
                 isQrMode: false,
                 showInsufficientFundsModal: false,
+                showClearDataModal: false,
                 tarjetas: {
                     loadingState: 'idle', // 'idle' | 'wait' | 'load'
                     visibleCardIndex: null,
@@ -2772,6 +2851,7 @@
                     ${state.transferFlow.isAliasLoading ? WaitModal('Espera un instante...') : ''}
                     ${state.transferFlow.isProcessingAmount ? WaitModal('Espere...') : ''}
                     ${state.showInsufficientFundsModal ? InsufficientFundsModal() : ''}
+                    ${state.showClearDataModal ? ClearDataConfirmationModal() : ''}
                 `;
 
                 return pageHtml + overlays;
@@ -2811,7 +2891,7 @@
                 } else if (page === 'more') {
                      return ''; // This page has its own title
                 } else if (page === 'home') {
-                    content = `<img src="https://iili.io/KGzjc92.png" alt="Galicia Logo" class="header-logo" /><div class="header-actions"><button class="icon-button">${icons.EyeIcon}</button><button class="icon-button">${icons.QuestionIcon}</button><button class="icon-button">${icons.BellIcon}</button></div>`;
+                    content = `<img src="https://iili.io/KGzjc92.png" alt="Galica Logo" class="header-logo" /><div class="header-actions"><button class="icon-button">${icons.EyeIcon}</button><button class="icon-button">${icons.QuestionIcon}</button><button class="icon-button">${icons.BellIcon}</button></div>`;
                 } else {
                     return ''; // No header for some pages
                 }
@@ -2860,15 +2940,14 @@
                     <main class="login-main">
                         <h1 class="login-greeting">¡Hola, ${firstName}! <span role="img" aria-label="smiling face">😄</span></h1>
                         <form id="login-form">
-                            <input id="login-password" type="password" placeholder="Clave Galicia" class="login-input" maxlength="4" pattern="\\d*" inputmode="numeric" autofocus />
+                            <input id="login-password" type="password" placeholder="Clave Galica" class="login-input" maxlength="4" pattern="\\d*" inputmode="numeric" autofocus />
                             <p class="login-error" id="login-error-msg"></p>
                         </form>
-                        <button class="login-link-button recover-password">Recuperar Clave Galicia</button>
+                        <button class="login-link-button recover-password">Recuperar Clave Galica</button>
                         <div class="login-actions-group"><button class="face-id-button">${icons.FaceIdIcon}<span>Ingresar con Face ID</span></button></div>
                     </main>
                     <footer class="login-footer">
-                        <button class="generate-token-button" data-action="forceUpdate">${icons.GenerateTokenIcon}<span>Generar Token Galicia</span></button>
-                        <p class="login-help-text">¿Necesitás ayuda para ingresar? <a href="#" class="login-help-link">Ir a Ayuda</a></p>
+                        <button class="generate-token-button" data-action="forceUpdate">${icons.GenerateTokenIcon}<span>Generar Token Galica</span></button>
                     </footer>
                     <div id="login-loading-overlay" class="loading-overlay" style="display: none;"><div class="loader"></div></div>
                 </div>`;
@@ -2889,7 +2968,7 @@
                                 </div>
                                 <div class="account-actions">
                                     ${account.actions.map(action => `
-                                        <div class="action-item">
+                                        <div class="action-item" ${action.icon === 'transfer' ? `data-action="navigate" data-page="transferencias"` : ''}>
                                             <button class="action-button" aria-label="${action.label}">${iconMap[action.icon]}</button>
                                             <span>${action.label}</span>
                                         </div>
@@ -2907,7 +2986,7 @@
                         <div class="shortcuts-grid">
                             <div class="shortcut-item"><button class="shortcut-button"><span class="fima-label">FIMA</span>${icons.FimaIcon}</button><span>Agregar / Retirar</span></div>
                             <div class="shortcut-item"><button class="shortcut-button"><span class="usd-shortcut">U$D</span></button><span>Comprar / Vender</span></div>
-                            <div class="shortcut-item" data-action="navigate" data-page="token"><button class="shortcut-button" aria-label="Ver Token Galicia">${icons.TokenIcon}</button><span>Ver Token Galicia</span></div>
+                            <div class="shortcut-item" data-action="navigate" data-page="token"><button class="shortcut-button" aria-label="Ver Token Galica">${icons.TokenIcon}</button><span>Ver Token Galica</span></div>
                             <div class="shortcut-item"><button class="shortcut-button">${icons.PlusIcon}</button><span>Más accesos</span></div>
                         </div>
                     </div>`;
@@ -3018,7 +3097,7 @@
                         <div class="movements-header"><span>ÚLTIMOS MOVIMIENTOS</span><button class="filter-button">FILTRAR</button></div>
                         <div class="movement-list">
                             ${account.movements.map(mov => `
-                                <div class="movement-item ${mov.type === 'Transferencia' ? 'clickable' : ''}" data-action="selectMovement" data-id="${mov.id}">
+                                <div class="movement-item ${mov.details ? 'clickable' : ''}" data-action="selectMovement" data-id="${mov.id}">
                                     <div class="movement-details"><span class="movement-description">${mov.description}</span><span class="movement-date">${mov.originalDate}</span></div>
                                     <span class="movement-amount">${formatCurrency(mov.amount, account.currency)}</span>
                                 </div>
@@ -3036,31 +3115,80 @@
 
             function MovementDetailPage() {
                 const { selectedMovement: movement, selectedAccount } = state;
-                if (!movement || !movement.details) return `<p>Error: No movement details found.</p>`;
-                
+                if (!movement) {
+                    return `<div class="app-main movement-detail-page"><p>Error: No se ha seleccionado ningún movimiento.</p></div>`;
+                }
                 const { details, amount, originalDate } = movement;
+                if (!details) {
+                     return `<div class="app-main movement-detail-page"><p>No hay detalles disponibles para este movimiento.</p></div>`;
+                }
+                
                 const accountCurrency = selectedAccount?.currency || '$';
 
                 const formatCurrency = (value, currency) => {
-                    const formattedAmount = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(value));
-                    return `${currency}${formattedAmount}`;
+                    // This function now correctly uses comma for decimals as per the image
+                    const options = {
+                        style: 'currency',
+                        currency: 'ARS', // Using ARS for formatting, but showing the account's symbol
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    };
+                    // A trick to format with ',' for decimals and '.' for thousands
+                    let formatted = new Intl.NumberFormat('es-AR', options).format(Math.abs(value));
+                    // Replace the standard currency symbol with the account's currency
+                    formatted = formatted.replace('$', currency).trim();
+
+                    if (value < 0) {
+                        return `-${formatted}`;
+                    }
+                    return formatted;
                 };
+
                 const isCredit = amount > 0;
+                
+                const isPhotoStyleTransaction = details.movementType === 'TRANSF. CTAS PROPIAS';
+
+                const movementDataHtml = isPhotoStyleTransaction 
+                    ? [
+                        details.movementType && `<p>${details.movementType}</p>`,
+                        details.recipientCuit && `<p>CU ${details.recipientCuit}</p>`,
+                        details.recipientCbu && `<p>${details.recipientCbu}</p>`,
+                        details.shortRef && `<p>${details.shortRef}</p>`,
+                        details.cardUsed && `<p>${details.cardUsed}</p>`,
+                        details.concept && `<p>${details.concept}</p>`,
+                      ].filter(Boolean).join('')
+                    : [
+                        details.movementType && `<p>${details.movementType}</p>`,
+                        details.recipientName && `<p>${details.recipientName}</p>`,
+                        details.recipientCuit && `<p>CUIT ${details.recipientCuit}</p>`,
+                        details.recipientCbu && `<p>${details.recipientCbu}</p>`,
+                        details.cardUsed && `<p>${details.cardUsed}</p>`, // Ensure card is shown for other transfers too
+                        details.concept && `<p>${details.concept}</p>`,
+                        details.longId1 && `<p>${details.longId1}</p>`,
+                        details.longId2 && `<p>${details.longId2}</p>`
+                      ].filter(Boolean).join('');
 
                 return `
                     <div class="movement-detail-section">
                         <p class="movement-detail-label">Movimiento</p>
                         <div class="movement-detail-data">
-                            <p>${details.movementType}</p><p>${details.recipientName}</p><p>${details.recipientCuit}</p>
-                            <p>${details.recipientCbu}</p><p>${details.concept}</p><p>${details.longId1}</p><p>${details.longId2}</p>
+                            ${movementDataHtml}
                         </div>
                     </div>
-                    <div class="movement-detail-section"><p class="movement-detail-label">Fecha</p><div class="movement-detail-data"><p>${originalDate}</p></div></div>
+                    <div class="movement-detail-section">
+                        <p class="movement-detail-label">Fecha</p>
+                        <div class="movement-detail-data">
+                            <p>${originalDate}</p>
+                        </div>
+                    </div>
                     <div class="movement-detail-section">
                         <p class="movement-detail-label">${isCredit ? 'Crédito' : 'Débito'}</p>
-                        <div class="movement-detail-data"><p class="movement-detail-amount">${formatCurrency(amount, accountCurrency)}</p></div>
+                        <div class="movement-detail-data">
+                           <p class="movement-detail-amount">${formatCurrency(amount, accountCurrency)}</p>
+                        </div>
                     </div>`;
             }
+
 
             function MorePage() {
                  const financialMenuItems = ['Inversiones', 'Compra/Venta de Dólares', 'Préstamos', 'Pago de servicios', 'MODO', 'Seguros', 'NFT Galicia', 'Transferencias internacionales'];
@@ -3091,7 +3219,11 @@
                     <div class="menu-section"><div class="menu-section-header"><h2>Seguridad</h2>${icons.SecurityIcon}</div><div class="card menu-list">${createMenu(securityMenuItems)}</div></div>
                     <div class="menu-section"><div class="menu-section-header"><h2>Beneficios</h2>${icons.BenefitsIcon}</div><div class="card menu-list">${createMenu(benefitsMenuItems)}</div></div>
                     <div class="menu-section"><div class="menu-section-header"><h2>Atención al cliente</h2>${icons.CustomerSupportIcon}</div><div class="card menu-list">${createMenu(supportMenuItems)}</div></div>
-                    <div class="card session-control-card"><button class="session-button">Cambiar de sesión</button><button class="session-button">Cerrar sesión</button></div>
+                    <div class="card session-control-card">
+                        <button class="session-button">Cambiar de sesión</button>
+                        <button class="session-button">Cerrar sesión</button>
+                        <button class="session-button danger" data-action="showClearDataModal">Borrar datos de la app</button>
+                    </div>
                     <div class="version-info"><p>Versión 9.21.4</p><p>Último ingreso: 06/10/2025 21:55:58</p></div>
                  `;
             }
@@ -3216,7 +3348,7 @@
                 <div class="token-page-container">
                     <header class="token-header">
                         <button class="icon-button" data-action="back" aria-label="Cerrar">${icons.CloseIcon}</button>
-                        <h1 class="token-title">Token Galicia</h1>
+                        <h1 class="token-title">Token Galica</h1>
                         <button class="icon-button" aria-label="Información">${icons.InfoIcon}</button>
                     </header>
                     <main class="token-main">
@@ -3412,6 +3544,21 @@
                     </div>
                 `;
             }
+            function ClearDataConfirmationModal() {
+                return `
+                    <div class="clear-data-modal-overlay">
+                        <div class="clear-data-modal-content">
+                            ${icons.WarningIcon}
+                            <h2>Confirmar Acción</h2>
+                            <p>Esta acción borrará todos los datos de la aplicación, incluyendo cuentas, movimientos y configuraciones guardadas. Esta acción no se puede deshacer.</p>
+                            <div class="clear-data-modal-actions">
+                                <button class="modal-button cancel" data-action="closeClearDataModal">Cancelar</button>
+                                <button class="modal-button confirm" data-action="clearAppData">Confirmar y Borrar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
 
 
             // --- ALL EVENT HANDLERS ---
@@ -3478,7 +3625,11 @@
                 switchAccountTab: (tab) => { state.initialTab = tab; render(); },
                 selectMovement: (id) => {
                     const movement = state.selectedAccount?.movements.find(m => m.id === id);
-                    if (movement?.type === 'Transferencia') { state.selectedMovement = movement; state.currentPage = 'movementDetail'; render(); }
+                    if (movement) { 
+                        state.selectedMovement = movement; 
+                        state.currentPage = 'movementDetail'; 
+                        render(); 
+                    }
                 },
                 backToAccountDetail: () => { state.currentPage = 'accountDetail'; state.initialTab = 'Movimientos'; state.selectedMovement = null; render(); },
                 exitTransfer: () => { state.currentTransfer = null; state.currentPage = 'transferencias'; render(); },
@@ -3585,24 +3736,21 @@
                     }, 1500);
                 },
                 finalConfirmTransfer: () => {
-                    const { currentTransfer, accounts } = state;
+                    const { currentTransfer, accounts, cards } = state;
                     const sourceAccountNumber = currentTransfer.sourceAccountNumber;
                     const transferAmount = parseFloat(currentTransfer.amount.replace(/\./g, '').replace(',', '.'));
                     let hasSufficientFunds = false;
 
-                    if (sourceAccountNumber === 'FIMA') {
-                        const fimaBalance = 718.70; // Hardcoded value from AmountTransferPage
-                        if (transferAmount <= fimaBalance) {
+                    const sourceAccount = accounts.find(acc => acc.number === sourceAccountNumber);
+
+                    if (sourceAccount) {
+                        const currentBalance = parseFloat(`${sourceAccount.balance.replace(/\./g, '')}.${sourceAccount.cents}`);
+                        if (transferAmount <= currentBalance) {
                             hasSufficientFunds = true;
                         }
-                    } else {
-                        const sourceAccount = accounts.find(acc => acc.number === sourceAccountNumber);
-                        if (sourceAccount) {
-                            const currentBalance = parseFloat(`${sourceAccount.balance.replace(/\./g, '')}.${sourceAccount.cents}`);
-                            if (transferAmount <= currentBalance) {
-                                hasSufficientFunds = true;
-                            }
-                        }
+                    } else if (sourceAccountNumber === 'FIMA') {
+                        // Handle FIMA account logic if necessary, assuming it has funds for this simulation.
+                        hasSufficientFunds = true; 
                     }
 
                     if (!hasSufficientFunds) {
@@ -3611,28 +3759,37 @@
                         return; // Stop the transfer
                     }
 
-                    // If funds are sufficient, proceed:
                     state.isProcessingTransfer = true; 
                     render();
 
                     setTimeout(() => {
+                        let cardUsedForTransfer = null;
+                        if (sourceAccount) {
+                            // Simple logic: find the first debit card and associate it.
+                            const debitCard = cards.find(card => card.type === 'Débito');
+                            if (debitCard) {
+                                cardUsedForTransfer = debitCard.number; // The masked '**** **** **** 2469'
+                            }
+                        }
+
                         const newAccounts = state.accounts.map(acc => {
-                            if (acc.number === state.currentTransfer.sourceAccountNumber) {
+                            if (acc.number === sourceAccountNumber) {
                                 const currentBalanceNum = parseFloat(`${acc.balance.replace(/\./g, '')}.${acc.cents}`);
                                 const newBalance = currentBalanceNum - transferAmount;
                                 const [newBalanceInt, newCents] = newBalance.toFixed(2).split('.');
                                 const newMovement = { 
                                     id: generateUniqueId(), 
                                     type: 'Transferencia', 
-                                    description: `Transferencia a ${state.currentTransfer.recipientName}`, 
+                                    description: `Transferencia a ${currentTransfer.recipientName}`, 
                                     amount: -transferAmount, 
                                     originalDate: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit'}), 
                                     details: { 
-                                        movementType: 'TRANSF. CTAS PROPIAS', 
-                                        recipientName: (state.currentTransfer.recipientName || '').toUpperCase(), 
-                                        recipientCuit: state.currentTransfer.cuit, 
-                                        recipientCbu: state.currentTransfer.cbu, 
-                                        concept: (state.currentTransfer.concept || '').toUpperCase(), 
+                                        movementType: 'TRANSFERENCIA DE TERCEROS', 
+                                        recipientName: (currentTransfer.recipientName || '').toUpperCase(), 
+                                        recipientCuit: currentTransfer.cuit, 
+                                        recipientCbu: currentTransfer.cbu, 
+                                        concept: (currentTransfer.concept || '').toUpperCase(), 
+                                        cardUsed: cardUsedForTransfer, // Add the card number here
                                         longId1: generateRandomNumberString(18), 
                                         longId2: generateRandomNumberString(9) 
                                     } 
@@ -3709,7 +3866,7 @@
                         doc.text("Gracias por utilizar Banco Galicia.", 105, yPosition + 10, { align: "center" });
 
                         const pdfBlob = doc.output('blob');
-                        const fileName = `comprobante-Galicia-${Date.now()}.pdf`;
+                        const fileName = `comprobante-galica-${Date.now()}.pdf`;
                         const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
                         
                         if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
@@ -3798,7 +3955,44 @@
                         state.profilePage.passwordError = 'Contraseña incorrecta.';
                     }
                     render();
-                }
+                },
+                showClearDataModal: () => { state.showClearDataModal = true; render(); },
+                closeClearDataModal: () => { state.showClearDataModal = false; render(); },
+                clearAppData: async () => {
+                    state.showClearDataModal = false;
+                    const waitModal = document.createElement('div');
+                    waitModal.innerHTML = WaitModal('Borrando datos...');
+                    root.appendChild(waitModal);
+
+                    try {
+                        localStorage.removeItem(LOCAL_STORAGE_KEY);
+
+                        // Service Worker and Cache APIs are not supported on `file://` protocol.
+                        // We check if the app is served over http/https to avoid errors.
+                        if (window.location.protocol.startsWith('http')) {
+                            if ('serviceWorker' in navigator) {
+                                const registrations = await navigator.serviceWorker.getRegistrations();
+                                for (const registration of registrations) { await registration.unregister(); }
+                            }
+                            if ('caches' in window) {
+                                const keys = await caches.keys();
+                                await Promise.all(keys.map(key => caches.delete(key)));
+                            }
+                        }
+                        
+                        // Use a short delay so the user sees the "Borrando..." message
+                        setTimeout(() => {
+                            alert('Todos los datos de la aplicación han sido borrados. La aplicación se reiniciará ahora.');
+                            window.location.reload();
+                        }, 500);
+
+                    } catch (error) {
+                        console.error('Error al borrar los datos de la aplicación:', error);
+                        // If something goes wrong, it's safer to reload the page to a fresh state.
+                        alert('Ocurrió un error durante la limpieza, pero los datos principales fueron borrados. La aplicación se reiniciará.');
+                        window.location.reload();
+                    }
+                },
             };
 
             // --- EVENT LISTENERS ---
@@ -3863,7 +4057,8 @@
             setInterval(() => {
                 state.isQrMode = !state.isQrMode;
                 if(state.isLoggedIn && ['home', 'accountDetail', 'tarjetas', 'transferencias', 'more'].includes(state.currentPage)) {
-                    const centralButton = document.querySelector('.central-button');
+                    const 
+                    centralButton = document.querySelector('.central-button');
                     if (centralButton) centralButton.classList.toggle('is-flipped', state.isQrMode);
                 }
             }, 8000);
@@ -3871,17 +4066,6 @@
             setupDelegatedListeners();
             render();
         });
-    </script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js').then(registration => {
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          }, err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-        });
-      }
     </script>
 </body>
 </html>
