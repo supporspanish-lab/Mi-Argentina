@@ -1,0 +1,3887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- PWA Enhancements -->
+    <meta name="theme-color" content="#003366"/>
+    <link rel="manifest" href='data:application/manifest+json,{"short_name":"Galicia","name":"Banco Galicia","icons":[{"src":"/icon-192x192.png","type":"image/png","sizes":"192x192","purpose":"any maskable"},{"src":"/icon-512x512.png","type":"image/png","sizes":"512x512","purpose":"any maskable"},{"src":"https://iili.io/KGaTONe.jpg","type":"image/jpeg","sizes":"512x512","purpose":"any maskable"}],"start_url":".","display":"standalone","theme_color":"%23003366","background_color":"%23f8f9fa","description":"Aplicación de Home Banking de Banco Galicia."}' />
+    <link rel="apple-touch-icon" href="/icon-192x192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <style>
+        :root {
+          --primary-blue: #003366;
+          --light-blue-bg: #e6f3ff;
+          --text-dark: #212529;
+          --text-gray: #6c757d;
+          --text-light: #f8f9fa;
+          --background-gray: #f8f9fa;
+          --card-bg: #ffffff;
+          --border-color: #dee2e6;
+          --pink-bg: #fdeeee;
+          --notification-red: #dc3545;
+          --active-blue: #0057b8;
+          --orange-accent: #f39c12;
+          --brand-orange: #f77f00;
+          --success-green: #28a745;
+        }
+
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+
+        html, body, #root {
+          height: 100%;
+          width: 100%;
+        }
+
+        body {
+          font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          background-color: #343a40; /* Darker background to highlight the app */
+          color: var(--text-dark);
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        #root {
+          width: 100%;
+          height: 100%;
+          max-width: 414px; /* Common mobile width */
+          max-height: 896px; /* Common mobile height */
+          overflow: hidden;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          position: relative;
+        }
+
+        .mobile-screen {
+          width: 100%;
+          height: 100%;
+          background-color: var(--background-gray);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        /* --- Login Page Styles --- */
+        .login-container {
+            width: 100%;
+            height: 100%;
+            background-color: var(--background-gray);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            padding-top: 50px; /* Safe area */
+            text-align: center;
+        }
+
+        .login-top-nav {
+            width: 100%;
+            text-align: left;
+        }
+
+        .login-link-button {
+            background: none;
+            border: none;
+            color: var(--active-blue);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .login-main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding-bottom: 60px; /* Pushes content up a bit */
+        }
+
+        .login-greeting {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 48px;
+        }
+
+        .login-form {
+            width: 100%;
+            max-width: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 12px 0;
+            border-radius: 0;
+            border: none;
+            border-bottom: 1px solid #adb5bd;
+            background-color: transparent;
+            font-size: 18px;
+            color: var(--text-dark);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .login-input::placeholder {
+            color: #adb5bd;
+            font-weight: 400;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-bottom-color: var(--active-blue);
+            box-shadow: none;
+        }
+
+        .recover-password {
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .login-actions-group {
+            margin-top: 64px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .face-id-button {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-dark);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .login-footer {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 24px;
+        }
+
+        .generate-token-button, .download-billetera-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 18px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-dark);
+            width: 100%;
+            max-width: 300px;
+        }
+        .download-billetera-button svg {
+            stroke: var(--active-blue);
+            width: 20px;
+            height: 20px;
+        }
+
+
+        .login-help-text {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .login-help-link {
+            color: var(--active-blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .login-error {
+            color: var(--notification-red);
+            margin-top: -8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            min-height: 21px;
+        }
+
+        /* --- Loading Styles --- */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--orange-accent);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+        }
+
+        /* --- Wait Modal Styles --- */
+        .wait-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .wait-modal-content {
+            background-color: white;
+            padding: 24px 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+            color: var(--text-dark);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* --- Loading Sequence Styles --- */
+        .loading-sequence-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e0e0e0; /* Solid gray as requested */
+            z-index: 10001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: slide-up 0.3s ease-out forwards;
+        }
+
+        @keyframes slide-up {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .loading-sequence-content {
+            background-color: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            animation: fade-in 0.3s ease-in 2.2s forwards;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 80%;
+            max-width: 280px;
+        }
+
+        .loading-sequence-content p {
+            font-weight: 500;
+            color: var(--text-dark);
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .validation-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .validation-container .validating-icon {
+            position: absolute;
+        }
+
+        .validation-container .loader {
+            width: 80px;
+            height: 80px;
+            border: 6px solid transparent;
+            border-top-color: var(--orange-accent);
+            position: absolute;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .skeleton {
+            background-color: #e0e0e0;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skeleton::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        .skeleton-account-card { height: 188px; }
+        .skeleton-upcoming-payments { height: 55px; }
+        .skeleton-insurance { height: 90px; }
+        .skeleton-shortcuts { height: 125px; }
+        .skeleton-cards { height: 130px; }
+
+
+        /* --- Main App Styles --- */
+
+        .app-header {
+          background-color: #003478;
+          color: var(--text-light);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          padding-top: 40px; /* Safe area for status bar */
+          z-index: 100;
+        }
+
+        .header-logo {
+          height: 28px;
+          width: auto;
+        }
+
+        .app-header-page {
+            background-color: var(--background-gray);
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border-color);
+            justify-content: center;
+            position: relative;
+        }
+        .app-header-page .header-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .app-header-page .header-actions {
+            position: absolute;
+            right: 16px;
+        }
+        .app-header-page .icon-button {
+          color: var(--text-dark);
+        }
+
+        /* Account Detail Header */
+        .app-header-detail {
+            background-color: var(--background-gray);
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding: 12px 16px;
+            padding-top: 40px;
+        }
+        .app-header-detail .icon-button {
+            color: var(--text-dark);
+        }
+        .header-detail-title {
+            text-align: center;
+            flex-grow: 1;
+            padding: 0 40px; /* Space for buttons */
+        }
+        .header-detail-title p:first-child {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .header-detail-title p:last-child {
+            font-size: 13px;
+            color: var(--text-gray);
+        }
+        .back-button {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .more-button, .close-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .app-header-detail.profile-header {
+             padding-top: 40px;
+        }
+
+
+        .icon-button {
+          background: none;
+          border: none;
+          color: var(--text-light);
+          cursor: pointer;
+          padding: 4px;
+        }
+
+        .header-actions {
+          display: flex;
+          gap: 16px;
+        }
+
+        .app-main {
+          flex-grow: 1;
+          overflow-y: auto;
+          padding: 16px;
+        }
+       
+        .app-main.no-padding {
+            padding: 0;
+        }
+
+        .app-main > *:not(:first-child) {
+          margin-top: 16px;
+        }
+        
+        .app-main.tarjetas-page, .app-main.account-detail-page, .app-main.more-page, .app-main.transferencias-page, .app-main.profile-page, .app-main.movement-detail-page {
+            background-color: #f0f2f5;
+        }
+
+
+        .card {
+          background-color: var(--card-bg);
+          border-radius: 12px;
+          padding: 16px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .accounts-section {
+            margin-bottom: 16px;
+        }
+
+        .account-carousel-wrapper {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            margin: 0 -16px; 
+            padding: 4px 16px; /* Add padding for shadow visibility and spacing */
+        }
+
+        .account-carousel-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        .account-slide {
+            flex: 0 0 90%; 
+            scroll-snap-align: start;
+            cursor: pointer;
+        }
+        .account-slide:not(:last-child) {
+            margin-right: 16px;
+        }
+
+        .account-slide-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .account-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .account-type {
+          font-size: 14px;
+          color: var(--text-gray);
+          margin-bottom: 4px;
+        }
+
+        .account-balance {
+          font-size: 32px;
+          font-weight: 700;
+          color: var(--text-dark);
+        }
+
+        .account-balance sup {
+          font-size: 18px;
+          font-weight: 500;
+          top: -0.6em;
+        }
+
+        .account-number {
+          font-size: 14px;
+          color: var(--text-gray);
+        }
+
+        .account-actions {
+          display: flex;
+          justify-content: space-around;
+          text-align: center;
+          margin-top: 24px;
+        }
+
+        .action-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          color: var(--active-blue);
+          font-weight: 500;
+          width: 75px; /* ensure items have enough space */
+        }
+
+        .action-button {
+          width: 56px;
+          height: 56px;
+          border-radius: 12px;
+          background-color: #edf6ff;
+          border: none;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          cursor: pointer;
+        }
+
+        .usd-icon {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0057b8;
+        }
+
+        .upcoming-payments {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-weight: 500;
+          color: var(--text-gray);
+          font-size: 13px;
+          letter-spacing: 0.5px;
+        }
+
+        .payment-details {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .notification-badge {
+          background-color: var(--notification-red);
+          color: white;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .insurance-ad {
+          background-color: var(--pink-bg);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .insurance-text h3 {
+          font-size: 16px;
+          font-weight: 500;
+          margin-bottom: 4px;
+          max-width: 200px;
+        }
+
+        .insurance-text p {
+          font-size: 14px;
+          font-weight: 700;
+          color: var(--text-dark);
+        }
+
+        .insurance-image {
+          width: 60px;
+          height: auto;
+        }
+
+        .shortcuts-section h2, .cards-section h2 {
+          font-size: 16px;
+          font-weight: 500;
+          margin-bottom: 16px;
+          color: var(--text-dark);
+        }
+
+        .shortcuts-grid {
+          display: flex;
+          justify-content: space-around;
+          text-align: center;
+        }
+
+        .shortcut-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          color: var(--text-gray);
+          width: 75px;
+          cursor: pointer;
+        }
+
+        .shortcut-button {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background-color: var(--card-bg);
+          border: 1px solid var(--border-color);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          cursor: pointer;
+          position: relative;
+        }
+
+        .fima-label {
+            position: absolute;
+            top: 6px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #0057b8;
+        }
+
+        .usd-shortcut {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0057b8;
+        }
+        
+        .cards-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+        }
+
+        .visa-card {
+            background-color: #111;
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .visa-card h4 {
+            font-weight: bold;
+            font-family: 'Arial', sans-serif;
+            font-style: italic;
+            font-size: 20px;
+        }
+        .visa-card .card-type {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 16px;
+        }
+        .visa-card .card-info {
+            font-size: 14px;
+            color: #fff;
+            line-height: 1.4;
+        }
+        .visa-card .card-last-four {
+            margin-top: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            font-family: monospace;
+        }
+
+        .go-to-cards-card {
+            background-color: #e9ecef;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-dark);
+            cursor: pointer;
+        }
+
+        .go-to-cards-card .icon-button {
+            color: #0057b8;
+        }
+
+
+        .bottom-nav {
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          background-color: var(--card-bg);
+          box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+          padding: 8px 0;
+          position: relative;
+          z-index: 1000;
+          flex-shrink: 0;
+        }
+
+        .nav-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          font-size: 10px;
+          color: var(--text-gray);
+          flex: 1;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px 0;
+        }
+
+        .nav-item.active {
+          color: var(--active-blue);
+        }
+
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .central-button {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-color: var(--orange-accent);
+            border: 3px solid #ffeed9;
+            cursor: pointer;
+            margin-top: -32px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+            padding: 0;
+            perspective: 1000px;
+        }
+
+        .central-button .flipper {
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .central-button.is-flipped .flipper {
+            transform: rotateY(180deg);
+        }
+
+        .central-button .front,
+        .central-button .back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+        }
+
+        .central-button .front {
+            z-index: 2;
+        }
+
+        .central-button .back {
+            background-color: var(--active-blue);
+            transform: rotateY(180deg);
+        }
+
+
+        /* --- Tarjetas Page Styles --- */
+        .tarjetas-carousel-wrapper {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            margin: 0 -16px;
+            padding: 4px 16px 16px 16px;
+        }
+
+        .tarjetas-carousel-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tarjeta-slide {
+            flex: 0 0 100%;
+            scroll-snap-align: start;
+        }
+
+        .tarjeta-slide:not(:last-child) {
+            padding-right: 12px;
+        }
+
+        .tarjeta-card {
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 200px;
+            height: 100%;
+        }
+        .visa-debit-card {
+            background: linear-gradient(105deg, #23395B 0%, #D35400 100%);
+        }
+        .visa-credit-card-black {
+            background: #111;
+            color: #fff;
+        }
+        .tarjeta-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .tarjeta-brand .visa-logo-text {
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            font-style: italic;
+            font-size: 28px;
+            letter-spacing: -1px;
+        }
+        .tarjeta-brand .tarjeta-debit-text {
+            font-size: 14px;
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .mostrar-datos-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 0;
+        }
+        .mostrar-datos-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        .tarjeta-number {
+            font-family: 'monospace';
+            font-size: 22px;
+            letter-spacing: 2px;
+            margin-top: auto;
+            padding: 16px 0;
+        }
+        .tarjeta-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            align-items: flex-end;
+        }
+        .tarjeta-details > div {
+            display: flex;
+            flex-direction: column;
+        }
+        .tarjeta-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .tarjeta-value {
+            font-family: 'monospace';
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .tarjeta-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 20px 12px;
+        }
+        .tarjeta-action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-dark);
+            text-align: center;
+            font-weight: 500;
+        }
+        .tarjeta-action-item .action-button {
+            width: 100%;
+            max-width: 60px;
+            height: 60px;
+        }
+
+        .resumen-card {
+            padding: 16px;
+        }
+        .resumen-info {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+        .resumen-total {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 4px 0 12px 0;
+        }
+        .resumen-action {
+            background: none;
+            border: none;
+            padding: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            cursor: pointer;
+        }
+        .resumen-action span {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--active-blue);
+        }
+        .resumen-action svg {
+            stroke: var(--active-blue);
+        }
+
+        .movimientos-card {
+             padding: 16px;
+        }
+
+        .actividad-card {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-gray);
+        }
+        .actividad-card h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            color: var(--text-dark);
+            text-align: left;
+        }
+        .actividad-card svg {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 12px;
+            stroke: var(--text-gray);
+        }
+        .actividad-card p {
+            font-size: 14px;
+            max-width: 250px;
+            margin: 0 auto;
+        }
+
+        .no-usage-info-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .no-usage-info-card p {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+        .no-usage-info-card svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .card-info-table h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .debit-card-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            font-size: 16px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .debit-card-info-row:last-child {
+            padding-bottom: 0;
+        }
+
+        .debit-card-info-row span:last-child {
+            font-weight: 500;
+        }
+
+        /* --- Account Detail Page Styles --- */
+        .segmented-control {
+            display: flex;
+            background-color: #e0e0e0;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
+        .segmented-control button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background-color: transparent;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .segmented-control button.active {
+            background-color: white;
+            color: var(--text-dark);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .info-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .info-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 0 16px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .detail-row.no-border {
+            border-bottom: none;
+        }
+        .detail-row > div:first-child {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-bottom: 2px;
+        }
+        .detail-value {
+            font-size: 16px;
+            color: var(--text-dark);
+        }
+        .detail-value.bold {
+            font-weight: 500;
+        }
+        .detail-value.gray {
+            color: var(--text-gray);
+        }
+        .detail-actions {
+            display: flex;
+            gap: 16px;
+        }
+        .icon-action-button {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+        }
+        .share-data-button {
+            background: none;
+            border: none;
+            color: var(--active-blue);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 12px 0;
+            text-align: left;
+        }
+        .info-section-header {
+            font-size: 13px;
+            color: var(--text-gray);
+            font-weight: 500;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .no-movements {
+            text-align: center;
+            color: var(--text-gray);
+            padding: 32px;
+        }
+
+        /* --- Movements List Styles --- */
+        .movements-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-gray);
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .filter-button {
+            background: none;
+            border: none;
+            color: var(--active-blue);
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .movement-list {
+            background-color: white;
+            border-radius: 12px;
+            padding: 0 16px;
+        }
+
+        .movement-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .movement-item.clickable {
+            cursor: pointer;
+        }
+
+        .movement-item:last-child {
+            border-bottom: none;
+        }
+
+        .movement-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .movement-description {
+            font-size: 15px;
+            color: var(--text-dark);
+            max-width: 200px;
+        }
+
+        .movement-date {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-top: 2px;
+        }
+
+        .movement-amount {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
+        /* --- Token Page Styles --- */
+        .token-page-container {
+            width: 100%;
+            height: 100%;
+            background-color: var(--background-gray);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            padding-top: 40px; /* Safe area */
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .token-header .icon-button {
+            color: var(--text-dark);
+        }
+
+        .token-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .token-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .token-warning {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #fef5e7;
+            border: 1px solid #fdebd0;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            color: #856404;
+            margin-bottom: 48px;
+        }
+
+        .token-warning p {
+            text-align: left;
+        }
+
+        .token-display {
+            margin-bottom: 32px;
+        }
+
+        .token-label {
+            font-size: 16px;
+            color: var(--text-gray);
+        }
+
+        .token-code {
+            font-size: 52px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: var(--text-dark);
+            margin-top: 8px;
+        }
+
+        .token-timer {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 48px;
+        }
+
+        .token-timer p {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 12px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 4px;
+            background-color: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--active-blue);
+            border-radius: 2px;
+            transition: width 1s linear;
+        }
+
+        .token-unlock {
+            margin-top: auto;
+            padding-bottom: 32px;
+        }
+
+        .token-unlock p {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+
+        .unlock-button {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* --- More Page Styles --- */
+        .more-page-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .profile-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+        }
+
+        .profile-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #e0e7ff;
+            color: #4338ca;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 500;
+            font-size: 18px;
+        }
+
+        .profile-info {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .profile-subtext {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .menu-section {
+            margin-top: 24px;
+        }
+
+        .menu-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 0 4px;
+        }
+
+        .menu-section-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .menu-list {
+            padding: 0 16px;
+        }
+
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 16px 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .menu-item span {
+            font-size: 16px;
+            color: var(--text-dark);
+        }
+
+        .menu-item-right-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .new-badge {
+            background-color: #e6f7ff;
+            color: #0069d9;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+
+        .session-control-card {
+            margin-top: 24px;
+            padding: 0;
+        }
+
+        .session-button {
+            width: 100%;
+            text-align: left;
+            padding: 16px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: var(--active-blue);
+            cursor: pointer;
+            font-weight: 400;
+        }
+
+        .session-button:first-child {
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        .version-info {
+            text-align: center;
+            margin-top: 24px;
+            padding-bottom: 8px;
+            color: var(--text-gray);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        /* --- Profile Page Styles --- */
+        .profile-page-container {
+            width: 100%;
+            height: 100%;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .profile-form-card {
+            padding: 0 16px;
+            margin-bottom: 16px;
+        }
+
+        .profile-section-header {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f2f5;
+            margin: 0 -16px 8px -16px;
+            padding-left: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        .form-group.no-border {
+            border-bottom: none;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            border: none;
+            background-color: transparent;
+            font-size: 16px;
+            color: var(--text-dark);
+            padding: 0;
+        }
+        .form-group input:focus {
+            outline: none;
+        }
+        .form-group input:disabled,
+        .form-group input[readonly] {
+            color: var(--text-gray);
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+            font-family: monospace;
+            font-size: 15px;
+        }
+
+        .save-profile-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px;
+            background-color: var(--active-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .save-profile-button:hover {
+            background-color: #00418a;
+        }
+        .save-profile-button:disabled {
+            background-color: #a0b1c2;
+            cursor: not-allowed;
+        }
+        .save-profile-button svg {
+            stroke: white;
+            width: 20px;
+            height: 20px;
+        }
+
+        .balance-input-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .balance-input-group span {
+            font-size: 16px;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+        .balance-input-group input {
+            flex-grow: 1;
+        }
+        .balance-input-group .cents-input {
+            flex-grow: 0;
+            width: 30px;
+            text-align: center;
+        }
+        .balance-input-group input:disabled {
+            background-color: #f1f3f5;
+            color: var(--text-gray);
+        }
+
+
+        .profile-section-header-with-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f2f5;
+            margin: 0 -16px 0 -16px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .profile-section-header.no-padding {
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+        .add-recipient-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+        .add-recipient-button svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--active-blue);
+        }
+        .add-recipient-button:disabled svg {
+            stroke: #adb5bd;
+        }
+
+        .recipient-form-container {
+            padding-top: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .recipient-form-container:last-child {
+            border-bottom: none;
+        }
+        .recipient-form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .recipient-form-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-gray);
+        }
+        .remove-recipient-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+        .remove-recipient-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .account-form-container {
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .account-form-container:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+        .account-form-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-gray);
+            margin-bottom: 16px;
+            padding-top: 16px;
+        }
+        .account-form-container:first-child .account-form-title {
+            padding-top: 0;
+        }
+
+        .balance-label-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .balance-label-container label {
+            margin-bottom: 0;
+        }
+        .unlock-balance-button {
+            background-color: #e9ecef;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background-color 0.2s;
+        }
+        .unlock-balance-button:hover {
+            background-color: #dee2e6;
+        }
+        .unlock-balance-button svg {
+            stroke: var(--text-dark);
+            width: 14px;
+            height: 14px;
+        }
+
+
+        /* --- Admin Password Modal --- */
+        .admin-password-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10002;
+        }
+        .admin-password-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 320px;
+            text-align: center;
+        }
+        .admin-modal-header {
+            margin-bottom: 24px;
+        }
+        .admin-modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .admin-modal-header p {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+        .admin-password-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .admin-password-input:focus {
+            outline: none;
+            border-color: var(--active-blue);
+            box-shadow: 0 0 0 2px rgba(0, 87, 184, 0.2);
+        }
+        .admin-password-error {
+            color: var(--notification-red);
+            font-size: 14px;
+            margin-bottom: 16px;
+            min-height: 20px;
+        }
+        .admin-modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .admin-modal-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .admin-modal-button.cancel {
+            background-color: #e9ecef;
+            color: var(--text-dark);
+        }
+        .admin-modal-button.unlock {
+            background-color: var(--active-blue);
+            color: white;
+        }
+
+
+        /* --- Transferencias Page Styles --- */
+        .transfer-options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .transfer-option-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 110px;
+            cursor: pointer;
+        }
+
+        .transfer-option-card .icon-container {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background-color: #fff2e6; /* Light orange */
+            color: #d97706; /* Darker orange */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .transfer-option-card .icon-container svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .transfer-option-card span {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-dark);
+            line-height: 1.3;
+        }
+
+        .favorite-contacts-card {
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            min-height: 250px;
+        }
+
+        .favorite-contacts-card h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 16px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .no-recipients-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            flex-grow: 1;
+            gap: 12px;
+        }
+        .fav-contacts-main-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-dark);
+            max-width: 300px;
+            line-height: 1.4;
+        }
+        .fav-contacts-sub-text {
+            font-size: 14px;
+            color: var(--text-gray);
+            max-width: 280px;
+        }
+        .go-to-contacts-link {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-decoration: none;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+        .go-to-contacts-link span {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--active-blue);
+        }
+        .go-to-contacts-link svg {
+            stroke: var(--active-blue);
+        }
+        
+        /* --- Alias Transfer Page --- */
+        .alias-transfer-page-container,
+        .confirm-transfer-page-container,
+        .amount-transfer-page-container,
+        .final-confirmation-page-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: white;
+        }
+
+        .alias-transfer-main {
+            flex-grow: 1;
+            padding: 24px 16px;
+        }
+        .alias-transfer-main h2 {
+            font-size: 22px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        .alias-input {
+            width: 100%;
+            border: none;
+            border-bottom: 2px solid #ced4da;
+            background-color: transparent;
+            padding: 8px 0;
+            font-size: 18px;
+            color: var(--text-dark);
+        }
+        .alias-input:focus {
+            outline: none;
+            border-bottom-color: var(--orange-accent);
+        }
+        .alias-error {
+            color: var(--notification-red);
+            font-size: 14px;
+            margin-top: 8px;
+            min-height: 21px; /* Prevents layout shift */
+            text-align: left;
+        }
+        .alias-transfer-footer {
+            padding: 16px;
+            background-color: var(--background-gray);
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+        .continue-button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--orange-accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .continue-button:disabled {
+            background-color: #fdcb6e;
+            cursor: not-allowed;
+        }
+
+
+        /* --- Confirm Transfer Page --- */
+        .confirm-transfer-main {
+            flex-grow: 1;
+            padding: 24px 16px;
+        }
+        .main-title-container {
+            margin-bottom: 24px;
+        }
+        .main-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .details-group {
+            margin-bottom: 20px;
+        }
+        .details-intro {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 4px;
+        }
+        .recipient-name {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+        .detail-label {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 4px;
+        }
+        .detail-value {
+            font-size: 16px;
+            color: var(--text-dark);
+            font-weight: 400;
+        }
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 24px 0;
+        }
+        .contact-status {
+            font-size: 14px;
+            color: var(--success-green);
+            font-weight: 500;
+        }
+        .confirm-transfer-footer {
+            padding: 16px;
+            background-color: white;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+        .confirm-continue-button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--orange-accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* --- Amount Transfer Page --- */
+        .amount-transfer-main {
+            flex-grow: 1;
+            padding: 24px 16px;
+            overflow-y: auto;
+        }
+        .transfer-question {
+            font-size: 22px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        .amount-input-container {
+            display: flex;
+            align-items: baseline;
+            border-bottom: 2px solid var(--orange-accent);
+            margin-bottom: 8px;
+        }
+        .currency-symbol {
+            font-size: 28px;
+            color: var(--text-gray);
+            padding-bottom: 8px;
+        }
+        .amount-input {
+            flex-grow: 1;
+            border: none;
+            background: none;
+            font-size: 40px;
+            font-weight: 700;
+            color: var(--text-dark);
+            padding: 8px;
+            text-align: left;
+        }
+        .amount-input:focus { outline: none; }
+        .daily-limit {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-bottom: 32px;
+        }
+        .account-selection-section { margin-top: 24px; }
+        .account-selection-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .account-selection-subtitle {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 16px;
+        }
+        .account-options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .account-option-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+        }
+        .account-option-main { display: flex; align-items: center; gap: 12px; }
+        .account-option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background-color: white;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .fima-icon-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .fima-text { font-size: 10px; color: var(--active-blue); }
+        .account-option-details { display: flex; flex-direction: column; }
+        .account-option-balance { font-size: 16px; font-weight: 500; }
+        .account-option-name { font-size: 13px; color: var(--text-gray); }
+        .custom-checkbox input { display: none; }
+        .custom-checkbox .checkmark {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #adb5bd;
+            border-radius: 50%;
+            display: inline-block;
+            position: relative;
+        }
+        .custom-checkbox input:checked + .checkmark {
+            background-color: var(--orange-accent);
+            border-color: var(--orange-accent);
+        }
+        .custom-checkbox input:checked + .checkmark:after {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 3px;
+            width: 6px;
+            height: 12px;
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+        .amount-transfer-footer {
+            padding: 16px;
+            background-color: white;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+        .amount-transfer-continue-button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--orange-accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .amount-transfer-continue-button:disabled {
+            background-color: #fdcb6e;
+            cursor: not-allowed;
+        }
+
+        /* Amount Transfer - Details Step */
+        .amount-transfer-main.details-step {
+            padding-top: 8px;
+        }
+        .transfer-recipient-info {
+            font-size: 14px;
+            color: var(--text-gray);
+            text-align: center;
+        }
+        .transfer-amount-display {
+            font-size: 40px;
+            font-weight: 700;
+            text-align: center;
+            margin: 4px 0;
+        }
+        .transfer-source-account {
+            font-size: 14px;
+            text-align: center;
+            color: var(--text-gray);
+            margin-bottom: 32px;
+        }
+        .transfer-details-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .form-group-transfer {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-group-transfer label {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+        .select-wrapper {
+            position: relative;
+        }
+        .select-wrapper::after {
+            content: '▼';
+            font-size: 12px;
+            color: var(--text-gray);
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+        .form-group-transfer select, .form-group-transfer input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: white;
+            font-size: 16px;
+            appearance: none;
+        }
+        .input-with-counter {
+            position: relative;
+        }
+        .char-counter {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: var(--text-gray);
+        }
+
+
+        /* --- Final Confirmation Page --- */
+        .final-confirmation-main {
+            flex-grow: 1;
+            padding: 24px 16px;
+            text-align: center;
+        }
+        .final-confirmation-intro {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+        .final-confirmation-amount {
+            font-size: 40px;
+            font-weight: 700;
+            margin: 4px 0 32px 0;
+        }
+        .final-confirmation-details {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            text-align: left;
+            background-color: #f8f9fa;
+            padding: 16px;
+            border-radius: 12px;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .detail-item-label {
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+        .detail-item-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-dark);
+            max-width: 60%;
+            text-align: right;
+        }
+        .final-confirmation-footer {
+            padding: 16px;
+            background-color: white;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+        .footer-note {
+            font-size: 12px;
+            color: var(--text-gray);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .confirm-button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--active-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* --- Processing Transfer Page --- */
+        .processing-transfer-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            background-color: white;
+            gap: 24px;
+        }
+        .processing-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #e9ecef;
+            border-top-color: var(--orange-accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .processing-text {
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* --- Transfer Receipt Page --- */
+        .transfer-receipt-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--background-gray);
+        }
+        .receipt-content-wrapper {
+             flex-grow: 1;
+             padding: 16px;
+             padding-top: 40px; /* Safe area */
+             display: flex;
+             flex-direction: column;
+        }
+        .fima-ad-banner {
+            background: linear-gradient(to right, #4a90e2, #2c6eb5);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+        .ad-content { flex-grow: 1; }
+        .ad-content h3 { font-size: 16px; margin-bottom: 4px; }
+        .ad-content p { font-size: 13px; opacity: 0.9; }
+        .dismiss-ad-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        .receipt-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .receipt-success-icon {
+            margin-bottom: 24px;
+        }
+        .receipt-message {
+            font-size: 20px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        .receipt-amount, .receipt-recipient {
+            font-weight: 700;
+        }
+        .receipt-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+        }
+        .receipt-action-primary, .receipt-action-secondary {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .receipt-action-primary {
+            background-color: var(--active-blue);
+            color: white;
+        }
+        .receipt-action-secondary {
+            background-color: #e9ecef;
+            color: var(--text-dark);
+        }
+        .movement-detail-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .movement-detail-label {
+            font-size: 14px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+        .movement-detail-data p {
+            font-size: 16px;
+            color: var(--text-dark);
+            line-height: 1.5;
+            word-break: break-all;
+        }
+        .movement-detail-amount {
+            font-weight: 700;
+            font-size: 18px !important;
+        }
+
+        /* --- Insufficient Funds Modal --- */
+        .insufficient-funds-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10002;
+        }
+        .insufficient-funds-modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 320px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .insufficient-funds-modal-content h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .insufficient-funds-modal-content p {
+            font-size: 15px;
+            color: var(--text-gray);
+            line-height: 1.5;
+            margin: 0;
+        }
+        .insufficient-funds-modal-content button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            background-color: var(--orange-accent);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- ICONS (as an object of SVG strings) ---
+            const icons = {
+                EyeIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+                QuestionIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+                BellIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
+                TransferIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10H4l3-3"/><path d="M8 14h12l-3 3"/></svg>`,
+                DepositIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5c2-2 5-2 7 0s5 2 7 0" /><path d="M3 17.5c2 2 5 2 7 0s5-2 7 0" /><path d="M3 6.5v11" /><path d="M21 6.5v11" /><path d="M12 14.5v-3M13 10A1.5 1.5 0 0 0 12 8.5a1.5 1.5 0 0 0-1 1.5" /><path d="M14 12a1.5 1.5 0 0 0-1-1.5 1.5 1.5 0 0 0-1 1.5" /></svg>`,
+                CopyIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+                UsdIcon: `<span class="usd-icon">U$D</span>`,
+                StarIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#868e96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
+                ChevronRightIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#868e96" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
+                ChevronLeftIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
+                MoreHorizontalIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>`,
+                PencilIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
+                CopyIconSmall: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+                FimaIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18" /><path d="M7 14l4-4 4 4 5-5" /></svg>`,
+                FimaBarIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>`,
+                TokenIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="8" rx="2" ry="2"></rect><circle cx="8" cy="11" r="0.5" fill="#0057b8" stroke="none"></circle><circle cx="12" cy="11" r="0.5" fill="#0057b8" stroke="none"></circle><circle cx="16" cy="11" r="0.5" fill="#0057b8" stroke="none"></circle><rect x="14" y="13" width="6" height="5" rx="1" fill="white"></rect><rect x="14" y="13" width="6" height="5" rx="1"></rect><path d="M18 13v-1.5a2 2 0 0 0-4 0v1.5"></path><circle cx="17" cy="15.5" r="0.5" fill="#0057b8" stroke="none"></circle></svg>`,
+                PlusIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+                ArrowRightCircleIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#0057b8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>`,
+                HomeIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`,
+                CardIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>`,
+                TransfersIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`,
+                MoreIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`,
+                FaceIdIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M16 20h2a2 2 0 0 0 2-2v-2"/><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M10 14a3.5 3.5 0 0 0 4 0"/></svg>`,
+                GenerateTokenIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.5a2.5 2.5 0 0 1-2.5 2.5H8.5L4 22V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11z"/><rect x="9" y="10" width="6" height="4" rx="1"></rect><path d="M10.5 10V9a1.5 1.5 0 0 1 3 0v1"></path></svg>`,
+                CloseIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+                InfoIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+                WarningIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+                InfoIconOrange: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+                OrangeChevronLeftIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`,
+                OrangeCloseIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+                PayCardIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5C3.5 7 5 5.5 6.5 5.5h11C19 5.5 20.5 7 20.5 8.5v8c0 1.5-1.5 3-3 3H10c-3.5 0-4.5-2-4.5-4 0-1 .5-2.5 2-3"/><path d="M12 12.5a2 2 0 0 0-2-2" /><path d="M12 15.5a2 2 0 0 1 2-2" /><path d="M12 10v1.5" /><path d="M12 16.5v1.5" /></svg>`,
+                PinResetIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M6 13h.01M10 13h.01M14 13h.01M6 17h.01M10 17h.01M14 17h.01" /><path d="M2 11h20" /></svg>`,
+                PauseCardIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
+                ReportCardIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0057b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><path d="M9 9h6v6H9z" /><path d="M9 1v3" /><path d="M15 1v3" /><path d="M9 20v3" /><path d="M15 20v3" /></svg>`,
+                MoreGesturesIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="#0057b8"><circle cx="6" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>`,
+                NoUsageIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
+                ValidatingIcon: `<svg class="validating-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#212529" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="8" rx="2" ry="2"></rect><circle cx="8" cy="11" r="0.5" fill="#212529" stroke="none"></circle><circle cx="12" cy="11" r="0.5" fill="#212529" stroke="none"></circle><circle cx="16" cy="11" r="0.5" fill="#212529" stroke="none"></circle><rect x="14" y="13" width="6" height="5" rx="1" fill="white"></rect><rect x="14" y="13" width="6" height="5" rx="1"></rect><path d="M18 13v-1.5a2 2 0 0 0-4 0v1.5"></path><circle cx="17" cy="15.5" r="0.5" fill="#212529" stroke="none"></circle></svg>`,
+                FinancialManagementIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22h20" /><path d="M4 10v11" /><path d="M9 10v11" /><path d="M15 10v11" /><path d="M20 10v11" /><path d="M2 10l10-7 10 7" /></svg>`,
+                SecurityIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><circle cx="12" cy="11" r="3" /><path d="M15 17a5 5 0 0 0-6 0" /></svg>`,
+                BenefitsIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C9.81 2 12 4.19 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C14.19 2 12 4.19 12 7z"></path></svg>`,
+                CustomerSupportIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+                ModoIcon: `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="28" font-weight="700" font-family="Roboto, sans-serif"> M </text></svg>`,
+                QrCodeIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>`,
+                SaveIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`,
+                LockIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
+                AliasIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 17l5-5-5-5"/><path d="M10 7L5 12l5 5"/></svg>`,
+                CellphoneModoIcon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="currentColor" font-size="16" font-weight="700" font-family="Roboto, sans-serif">M</text></svg>`,
+                MyAccountsIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M18 8a5 5 0 1 1-5 5"/><path d="M20 10h1v1"/></svg>`,
+                MoreOptionsIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg>`,
+                FolderIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
+                CheckCircleIcon: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="40" cy="40" r="38" stroke="#66d1b7" stroke-width="4"/><path d="M26 41.5L36.5 52L56.5 32" stroke="#212529" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+                FimaAdIcon: `<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="10" width="24" height="28" rx="3" fill="white" stroke="#e0e0e0" stroke-width="2"/><path d="M18 20h12" stroke="#4a90e2" stroke-width="2" stroke-linecap="round"/><path d="M18 26h6" stroke="#4a90e2" stroke-width="2" stroke-linecap="round"/><circle cx="32" cy="16" r="6" fill="#f5a623"/><text x="32" y="18" fill="white" font-size="9" font-weight="bold" text-anchor="middle">S</text></svg>`,
+                DismissIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+                TrashIcon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`,
+            };
+            const iconMap = {
+                transfer: icons.TransferIcon,
+                deposit: icons.DepositIcon,
+                copy: icons.CopyIcon,
+                usd: icons.UsdIcon,
+                fima: icons.FimaIcon,
+                plus: icons.PlusIcon,
+            };
+
+            // --- LOCAL STORAGE & DATA MANAGEMENT ---
+            const LOCAL_STORAGE_KEY = 'GaliciaBilleteraState';
+            
+            const generateUniqueId = () => Math.random().toString(36).substring(2, 10).toUpperCase();
+            const generateRandomNumberString = (length) => {
+                let result = '';
+                for (let i = 0; i < length; i++) {
+                    result += Math.floor(Math.random() * 10);
+                }
+                return result;
+            };
+
+            const initialAccountsData = [
+                {
+                    type: 'Caja de ahorro en pesos',
+                    balance: '2.567.106',
+                    cents: '48',
+                    currency: '$',
+                    number: 'Nº 4015282-1 097-2',
+                    alias: 'ROMERO.DIETA.DELTA',
+                    cbu: '00700979-30004015282128',
+                    cuil: '20-11387130-0',
+                    titular: 'ANDRES FERNANDO TELLERIA ',
+                    actions: [
+                        { label: 'Transferir dinero', icon: 'transfer' },
+                        { label: 'Ingresar dinero', icon: 'deposit' },
+                        { label: 'Copiar CBU', icon: 'copy' },
+                    ],
+                    movements: [
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia a terceros', amount: -113500.00, originalDate: '08/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'EMPRESA DE SERVICIOS S.A.', recipientCuit: '30-12345678-9', recipientCbu: '0170456740000001234567', concept: 'VARIOS', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                        { id: generateUniqueId(), description: 'Pago de servicios', amount: -702767.62, originalDate: '07/10/25' },
+                        { id: generateUniqueId(), description: 'Ing. brutos s/ cred', amount: -1.20, originalDate: '06/10/25' },
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de terceros', amount: 12000.00, originalDate: '06/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'GONZALEZ MARIANA', recipientCuit: '27-98765432-1', recipientCbu: '0720123488000009876543', concept: 'VARIOS', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                        { id: generateUniqueId(), description: 'Deb. autom. de serv.', amount: -15553.00, originalDate: '06/10/25' },
+                        { id: generateUniqueId(), description: 'Ing. brutos s/ cred', amount: -12.28, originalDate: '06/10/25' },
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de terceros', amount: 122797.00, originalDate: '06/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'LOPEZ CARLOS ALBERTO', recipientCuit: '20-23456789-0', recipientCbu: '1500042800058963214587', concept: 'ALQUILER', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                        { id: generateUniqueId(), description: 'Ing. brutos s/ cred', amount: -1.20, originalDate: '03/10/25' },
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de terceros', amount: 12000.00, originalDate: '03/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'PEREZ SOFIA', recipientCuit: '27-34567890-1', recipientCbu: '0140092803500851234567', concept: 'VARIOS', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                        { id: generateUniqueId(), description: 'Ing. brutos s/ cred', amount: -1.20, originalDate: '03/10/25' },
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de terceros', amount: 12000.00, originalDate: '03/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'GOMEZ ROBERTO', recipientCuit: '20-11223344-5', recipientCbu: '0290040110000000123456', concept: 'VARIOS', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                    ]
+                },
+                {
+                    type: 'Caja de ahorro en dólares',
+                    balance: '79.981',
+                    cents: '60',
+                    currency: 'U$D',
+                    number: 'Nº 4004892-5 097-3',
+                    alias: 'VERDE.VUELTA.DELTA',
+                    cbu: '00700979-31004004892533',
+                    cuil: '20-11387130-0',
+                    titular: 'ANDRES FERNANDO TELLERIA',
+                    actions: [
+                        { label: 'Transferir dinero', icon: 'transfer' },
+                        { label: 'Comprar / Vender', icon: 'usd' },
+                        { label: 'Copiar CBU', icon: 'copy' },
+                    ],
+                    movements: [
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de terceiros', amount: 195.00, originalDate: '07/10/25', details: { movementType: 'TRANSFERENCIA DE TERCEROS', recipientName: 'SMITH JOHN', recipientCuit: '50-11223344-9', recipientCbu: '9990040110000000123456', concept: 'PAYMENT', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                        { id: generateUniqueId(), description: 'Pago tarjeta visa', amount: -2125.60, originalDate: '29/09/25' },
+                        { id: generateUniqueId(), description: 'Rescate fima', amount: 0.01, originalDate: '29/09/25' },
+                        { id: generateUniqueId(), description: 'Interes capitalizado', amount: 0.01, originalDate: '22/09/25' },
+                        { id: generateUniqueId(), description: 'Pago tarjeta visa', amount: -352.53, originalDate: '27/08/25' },
+                        { id: generateUniqueId(), description: 'Rescate fima', amount: 100.00, originalDate: '25/08/25' },
+                        { id: generateUniqueId(), description: 'Suscripcion fima', amount: -100.00, originalDate: '25/08/25' },
+                        { id: generateUniqueId(), description: 'Interes capitalizado', amount: 0.01, originalDate: '22/08/25' },
+                        { id: generateUniqueId(), type: 'Transferencia', description: 'Transferencia de cuenta propia', amount: 10000.00, originalDate: '11/08/25', details: { movementType: 'TRANSFERENCIA CUENTA PROPIA', recipientName: 'ANDRES FERNANDO TELLERIA', recipientCuit: '20-11387130-0', recipientCbu: '00700979-31004004892533', concept: 'AHORRO', longId1: generateRandomNumberString(18), longId2: generateRandomNumberString(9) } },
+                        { id: generateUniqueId(), description: 'Pago tarjeta visa', amount: -310.50, originalDate: '28/07/25' },
+                        { id: generateUniqueId(), description: 'Interes capitalizado', amount: 0.01, originalDate: '22/07/25' },
+                    ]
+                }
+            ];
+            const initialUserData = {
+                userId: generateUniqueId(),
+                name: 'Andres Fernando Telleria',
+                alias: 'ROMERO.DIETA.DELTA',
+                cuil: '20-11387130-0',
+                email: 'andres.telleria@example.com',
+                phone: '11 2345-6789'
+            };
+            const initialTransferRecipients = [
+                {
+                    id: 1,
+                    userId: generateUniqueId(),
+                    recipientName: 'Juarez Nicolas Rodolfo',
+                    cbu: '4530000800014238109707',
+                    destinationBank: 'Naranja X',
+                    cuit: '20400108340',
+                    alias: 'NARANJA.FANTA.PAN',
+                }
+            ];
+            const initialCardsData = [
+                {
+                    brand: 'VISA',
+                    type: 'Crédito',
+                    number: '**** **** **** 2634',
+                    fullNumber: '4593 5400 1347 2634',
+                    validFrom: '01/24',
+                    expiry: '11/28',
+                    cvv: '233',
+                    className: 'visa-credit-card-black'
+                },
+                {
+                    brand: 'VISA',
+                    type: 'Débito',
+                    number: '**** **** **** 2469',
+                    fullNumber: '4517 6901 7489 2469',
+                    validFrom: '08/25',
+                    expiry: '09/31',
+                    cvv: '432',
+                    className: 'visa-debit-card'
+                }
+            ];
+
+            function saveStateToLocal() {
+                const stateToSave = {
+                    accounts: state.accounts,
+                    userData: state.userData,
+                    transferRecipients: state.transferRecipients,
+                    cards: state.cards,
+                };
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+            }
+
+            function loadStateFromLocal() {
+                try {
+                    const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    if (savedState) {
+                        return JSON.parse(savedState);
+                    }
+                } catch (e) {
+                    console.error("Could not load state from local storage", e);
+                    return null;
+                }
+                return null;
+            }
+
+            // --- GLOBAL STATE ---
+            const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+            
+            const savedData = loadStateFromLocal();
+
+            let state = {
+                isLoggedIn: false,
+                isAppLoading: true,
+                currentPage: 'login',
+                selectedAccount: null,
+                selectedMovement: null,
+                initialTab: 'Información',
+                accounts: savedData?.accounts || deepClone(initialAccountsData),
+                userData: savedData?.userData || deepClone(initialUserData),
+                transferRecipients: savedData?.transferRecipients || deepClone(initialTransferRecipients),
+                cards: savedData?.cards || deepClone(initialCardsData),
+                currentTransfer: null,
+                isProcessingTransfer: false,
+                isQrMode: false,
+                showInsufficientFundsModal: false,
+                tarjetas: {
+                    loadingState: 'idle', // 'idle' | 'wait' | 'load'
+                    visibleCardIndex: null,
+                    targetCardIndex: null,
+                    activeIndex: 0,
+                },
+                token: {
+                    value: '...',
+                    countdown: 39,
+                    intervalId: null
+                },
+                profilePage: {
+                    isSaving: false,
+                    isUnlocked: false,
+                    showPasswordModal: false,
+                    passwordError: '',
+                    userFormData: {},
+                    recipientsFormData: [],
+                    accountsFormData: [],
+                    cardsFormData: [],
+                },
+                transferFlow: {
+                    aliasInput: '',
+                    isAliasLoading: false,
+                    amountInput: '2.000',
+                    step: 'amount',
+                    concept: 'Varios',
+                    motivo: '',
+                    selectedAccounts: [],
+                    isProcessingAmount: false
+                }
+            };
+            
+            const root = document.getElementById('root');
+
+            // --- MAIN RENDER FUNCTION ---
+            function render() {
+                // Before rendering, detach listeners that might be duplicated
+                const profileForm = document.getElementById('profile-form');
+                if (profileForm) profileForm.removeEventListener('submit', handleProfileFormSubmit);
+
+                root.innerHTML = App();
+                addSpecificListeners();
+            }
+            
+            // Specific handler for profile form to avoid re-binding issues
+            function handleProfileFormSubmit(e) {
+                e.preventDefault();
+                handlers.saveProfile();
+            }
+
+            // --- MAIN APP COMPONENT (Router) ---
+            function App() {
+                let pageHtml;
+                if (!state.isLoggedIn) {
+                    pageHtml = LoginPage();
+                } else if (state.isProcessingTransfer) {
+                    pageHtml = ProcessingTransferPage();
+                } else if (state.currentPage === 'token') {
+                    pageHtml = TokenPage();
+                } else if (state.currentPage === 'transferReceipt') {
+                    pageHtml = TransferReceiptPage();
+                } else if (['aliasTransfer', 'confirmTransfer', 'amountTransfer', 'finalConfirmTransfer'].includes(state.currentPage)) {
+                    // Transfer flow pages have their own self-contained layout
+                    pageHtml = `<div class="mobile-screen">${Header()}<main class="app-main no-padding">${MainContent()}</main></div>`;
+                }
+                else {
+                    // Default app shell with bottom nav
+                    pageHtml = `
+                        <div class="mobile-screen">
+                            ${Header()}
+                            <main class="app-main ${state.currentPage.toLowerCase().replace(/ /g, '-')}-page">${MainContent()}</main>
+                            ${BottomNav()}
+                        </div>`;
+                }
+
+                // Modals and Overlays
+                const overlays = `
+                    ${state.tarjetas.loadingState === 'wait' ? WaitModal('Espera un Instante.') : ''}
+                    ${state.tarjetas.loadingState === 'load' ? LoadingSequence() : ''}
+                    ${state.profilePage.isSaving ? WaitModal('Guardando cambios...') : ''}
+                    ${state.profilePage.showPasswordModal ? AdminPasswordModal() : ''}
+                    ${state.transferFlow.isAliasLoading ? WaitModal('Espera un instante...') : ''}
+                    ${state.transferFlow.isProcessingAmount ? WaitModal('Espere...') : ''}
+                    ${state.showInsufficientFundsModal ? InsufficientFundsModal() : ''}
+                `;
+
+                return pageHtml + overlays;
+            }
+            
+            // --- PAGE & COMPONENT TEMPLATE FUNCTIONS ---
+            
+            function Header() {
+                const page = state.currentPage;
+                const account = state.selectedAccount;
+
+                let headerClass = "app-header";
+                let content = '';
+
+                if (['tarjetas', 'transferencias'].includes(page)) {
+                    const title = page === 'tarjetas' ? 'Tarjetas' : 'Transferencias';
+                    headerClass += ' app-header-page';
+                    content = `<h1 class="header-title">${title}</h1><div class="header-actions"><button class="icon-button">${icons.QuestionIcon}</button></div>`;
+                } else if (page === 'aliasTransfer') {
+                    headerClass += ' app-header-detail alias-transfer-header';
+                    content = `<button class="icon-button back-button" data-action="back" aria-label="Volver">${icons.ChevronLeftIcon}</button><div class="header-detail-title"><p>Cuenta de destino</p></div><button class="icon-button more-button" aria-label="Información">${icons.InfoIconOrange}</button>`;
+                } else if (page === 'movementDetail') {
+                    headerClass += ' app-header-detail';
+                    content = `<button class="icon-button back-button" data-action="backToAccountDetail" aria-label="Volver">${icons.ChevronLeftIcon}</button><div class="header-detail-title"><p>Detalle</p></div>`;
+                } else if (['confirmTransfer', 'amountTransfer', 'finalConfirmTransfer'].includes(page)) {
+                    let title = 'Nueva transferencia';
+                    if (page === 'confirmTransfer') title = 'Datos de la cuenta';
+                    if (page === 'finalConfirmTransfer') title = 'Revisá y confirmá';
+                    headerClass += ' app-header-detail app-header-confirm';
+                    content = `<button class="icon-button back-button" data-action="back" aria-label="Volver">${icons.OrangeChevronLeftIcon}</button><div class="header-detail-title"><p>${title}</p></div><button class="icon-button close-button" data-action="exitTransfer" aria-label="Cerrar">${icons.OrangeCloseIcon}</button>`;
+                } else if (page === 'accountDetail' && account) {
+                    headerClass += ' app-header-detail';
+                    content = `<button class="icon-button back-button" data-action="back" aria-label="Volver">${icons.ChevronLeftIcon}</button><div class="header-detail-title"><p>CA ${account.currency}${account.balance},${account.cents}</p><p>${account.number}</p></div><button class="icon-button more-button" aria-label="Más opciones">${icons.MoreHorizontalIcon}</button>`;
+                } else if (page === 'profile') {
+                    headerClass += ' app-header-detail';
+                    content = `<button class="icon-button back-button" data-action="back" aria-label="Volver">${icons.ChevronLeftIcon}</button><div class="header-detail-title"><p>Información Personal</p></div>`;
+                } else if (page === 'more') {
+                     return ''; // This page has its own title
+                } else if (page === 'home') {
+                    content = `<img src="https://iili.io/KGzjc92.png" alt="Galicia Logo" class="header-logo" /><div class="header-actions"><button class="icon-button">${icons.EyeIcon}</button><button class="icon-button">${icons.QuestionIcon}</button><button class="icon-button">${icons.BellIcon}</button></div>`;
+                } else {
+                    return ''; // No header for some pages
+                }
+
+                return `<header class="${headerClass}">${content}</header>`;
+            }
+
+            function BottomNav() {
+                 if (!state.isLoggedIn || !['home', 'accountDetail', 'movementDetail', 'tarjetas', 'transferencias', 'more', 'profile'].includes(state.currentPage)) {
+                    return '';
+                }
+                return `
+                <footer class="bottom-nav">
+                    <button class="nav-item ${['home', 'accountDetail', 'movementDetail'].includes(state.currentPage) ? 'active' : ''}" data-action="navigate" data-page="home">${icons.HomeIcon} <span>Inicio</span></button>
+                    <button class="nav-item ${state.currentPage === 'tarjetas' ? 'active' : ''}" data-action="navigate" data-page="tarjetas">${icons.CardIcon} <span>Tarjetas</span></button>
+                    <button class="central-button ${state.isQrMode ? 'is-flipped' : ''}" aria-label="Acción principal"><div class="flipper"><div class="front">${icons.ModoIcon}</div><div class="back">${icons.QrCodeIcon}</div></div></button>
+                    <button class="nav-item ${['transferencias', 'aliasTransfer', 'confirmTransfer', 'amountTransfer', 'finalConfirmTransfer'].includes(state.currentPage) ? 'active' : ''}" data-action="navigate" data-page="transferencias">${icons.TransfersIcon} <span>Transferencias</span></button>
+                    <button class="nav-item ${['more', 'profile'].includes(state.currentPage) ? 'active' : ''}" data-action="navigate" data-page="more">${icons.MoreIcon} <span>Más</span></button>
+                </footer>`;
+            }
+
+            function MainContent() {
+                if (state.isAppLoading && state.currentPage === 'home') return HomePageSkeleton();
+
+                switch (state.currentPage) {
+                    case 'home': return HomePage();
+                    case 'tarjetas': return TarjetasPage();
+                    case 'accountDetail': return AccountDetailPage();
+                    case 'movementDetail': return MovementDetailPage();
+                    case 'more': return MorePage();
+                    case 'profile': return ProfilePage();
+                    case 'transferencias': return TransferenciasPage();
+                    case 'aliasTransfer': return AliasTransferPage();
+                    case 'confirmTransfer': return ConfirmTransferPage();
+                    case 'amountTransfer': return AmountTransferPage();
+                    case 'finalConfirmTransfer': return FinalConfirmationPage();
+                    default: return HomePage();
+                }
+            }
+            
+            function LoginPage() {
+                const firstName = state.userData?.name?.split(' ')[0] || 'Usuario';
+                return `
+                <div class="login-container">
+                    <header class="login-top-nav"><button class="login-link-button">Cambiar usuario</button></header>
+                    <main class="login-main">
+                        <h1 class="login-greeting">¡Hola, ${firstName}! <span role="img" aria-label="smiling face">😄</span></h1>
+                        <form id="login-form">
+                            <input id="login-password" type="password" placeholder="Clave Galicia" class="login-input" maxlength="4" pattern="\\d*" inputmode="numeric" autofocus />
+                            <p class="login-error" id="login-error-msg"></p>
+                        </form>
+                        <button class="login-link-button recover-password">Recuperar Clave Galicia</button>
+                        <div class="login-actions-group"><button class="face-id-button">${icons.FaceIdIcon}<span>Ingresar con Face ID</span></button></div>
+                    </main>
+                    <footer class="login-footer">
+                        <button class="generate-token-button" data-action="forceUpdate">${icons.GenerateTokenIcon}<span>Generar Token Galicia</span></button>
+                        <p class="login-help-text">¿Necesitás ayuda para ingresar? <a href="#" class="login-help-link">Ir a Ayuda</a></p>
+                    </footer>
+                    <div id="login-loading-overlay" class="loading-overlay" style="display: none;"><div class="loader"></div></div>
+                </div>`;
+            }
+
+            function HomePage() {
+                const AccountCard = () => {
+                    const cardsHtml = state.accounts.map(account => `
+                        <div class="account-slide" data-action="selectAccount" data-number="${account.number}">
+                            <div class="account-slide-card">
+                                <div class="account-header">
+                                    <div>
+                                        <p class="account-type">${account.type}</p>
+                                        <p class="account-balance">${account.currency} ${account.balance}<sup>${account.cents}</sup></p>
+                                        <p class="account-number">${account.number}</p>
+                                    </div>
+                                    ${icons.StarIcon}
+                                </div>
+                                <div class="account-actions">
+                                    ${account.actions.map(action => `
+                                        <div class="action-item">
+                                            <button class="action-button" aria-label="${action.label}">${iconMap[action.icon]}</button>
+                                            <span>${action.label}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>`).join('');
+                    return `<div class="accounts-section"><div class="account-carousel-wrapper" id="account-carousel">${cardsHtml}</div></div>`;
+                };
+                const UpcomingPayments = () => `<div class="card upcoming-payments"><span>PRÓXIMOS VENCIMIENTOS</span><div class="payment-details"><span class="notification-badge">1</span>${icons.ChevronRightIcon}</div></div>`;
+                const InsuranceAd = () => `<div class="card insurance-ad"><div class="insurance-text"><h3>Tenemos un seguro para todo lo que necesitás.</h3><p>Ver seguros</p></div>${icons.ChevronRightIcon}</div>`;
+                const Shortcuts = () => `
+                    <div class="shortcuts-section">
+                        <h2>Accesos directos</h2>
+                        <div class="shortcuts-grid">
+                            <div class="shortcut-item"><button class="shortcut-button"><span class="fima-label">FIMA</span>${icons.FimaIcon}</button><span>Agregar / Retirar</span></div>
+                            <div class="shortcut-item"><button class="shortcut-button"><span class="usd-shortcut">U$D</span></button><span>Comprar / Vender</span></div>
+                            <div class="shortcut-item" data-action="navigate" data-page="token"><button class="shortcut-button" aria-label="Ver Token Galicia">${icons.TokenIcon}</button><span>Ver Token Galicia</span></div>
+                            <div class="shortcut-item"><button class="shortcut-button">${icons.PlusIcon}</button><span>Más accesos</span></div>
+                        </div>
+                    </div>`;
+                const CardsSection = () => `
+                    <div class="cards-section">
+                        <h2>Tarjetas</h2>
+                        <div class="cards-container">
+                            <div class="card visa-card"><h4>VISA</h4><p class="card-type">Crédito</p><p class="card-info">Tu resumen está listo.<br />Vence el 06/10</p><p class="card-last-four">2634</p></div>
+                            <div class="card go-to-cards-card" data-action="navigate" data-page="tarjetas">${icons.ArrowRightCircleIcon}<span>Ir a Tarjetas</span></div>
+                        </div>
+                    </div>`;
+                return `${AccountCard()}${UpcomingPayments()}${InsuranceAd()}${Shortcuts()}${CardsSection()}`;
+            }
+
+            function renderCardSpecificInfo(activeIndex) {
+                if (activeIndex === 0) { // Credit Card
+                    return `
+                        <div class="card resumen-card">
+                            <p class="resumen-info">Tu resumen está listo y vence el 06/10</p>
+                            <p class="resumen-total">Total: $ 4.898.870,35 + USD 2.125,60</p>
+                            <button class="resumen-action"><span>Mostrar resumen</span>${icons.ChevronRightIcon}</button>
+                        </div>`;
+                } else { // Debit Card
+                    return `
+                        <div class="card no-usage-info-card">${icons.NoUsageIcon}<p>Todavía no usaste la tarjeta</p></div>
+                        <div class="card card-info-table">
+                            <h3>Información de tu tarjeta</h3>
+                            <div class="debit-card-info-row"><span>Límite de compra</span><span>$ 1.500.000</span></div>
+                            <div class="debit-card-info-row"><span>Límite de extracción</span><span>$ 400.000</span></div>
+                        </div>`;
+                }
+            }
+
+            function TarjetasPage() {
+                const { activeIndex, visibleCardIndex } = state.tarjetas;
+                
+                const cardCarousel = state.cards.map((card, index) => `
+                    <div class="tarjeta-slide">
+                        <div class="tarjeta-card ${card.className}">
+                            <div class="tarjeta-header">
+                                <div class="tarjeta-brand"><span class="visa-logo-text">${card.brand}</span><span class="tarjeta-debit-text">${card.type}</span></div>
+                                <button class="mostrar-datos-btn" data-action="toggleCardData" data-index="${index}">${visibleCardIndex === index ? 'Ocultar datos' : 'Mostrar datos'} ${icons.EyeIcon}</button>
+                            </div>
+                            <div class="tarjeta-number"><span>${visibleCardIndex === index ? card.fullNumber : card.number}</span></div>
+                            <div class="tarjeta-details">
+                                <div><span class="tarjeta-label">Fecha de vencimiento</span><span class="tarjeta-value">${visibleCardIndex === index ? card.expiry : '••/••'}</span></div>
+                                <div><span class="tarjeta-label">Código de seguridad</span><span class="tarjeta-value">${visibleCardIndex === index ? card.cvv : '•••'}</span></div>
+                            </div>
+                        </div>
+                    </div>`).join('');
+
+                const actionsGrid = `
+                    <div class="card tarjeta-actions-grid">
+                        <div class="tarjeta-action-item"><button class="action-button">${icons.PayCardIcon}</button><span>Pagar tarjeta</span></div>
+                        <div class="tarjeta-action-item"><button class="action-button">${icons.PauseCardIcon}</button><span>Pausar tarjeta</span></div>
+                        <div class="tarjeta-action-item"><button class="action-button">${icons.ReportCardIcon}</button><span>Denunciar tarjeta</span></div>
+                        <div class="tarjeta-action-item"><button class="action-button">${icons.MoreGesturesIcon}</button><span>Más gestiones</span></div>
+                    </div>`;
+                
+                const cardSpecificInfoHtml = renderCardSpecificInfo(activeIndex);
+
+                return `
+                    <div class="tarjetas-carousel-wrapper" id="tarjetas-carousel">${cardCarousel}</div>
+                    ${actionsGrid}
+                    <div id="card-specific-info-container">
+                        ${cardSpecificInfoHtml}
+                    </div>
+                    <div class="card movimientos-card"><button class="resumen-action"><span>Mostrar movimientos</span>${icons.ChevronRightIcon}</button></div>
+                    <div class="card actividad-card"><h3>Actividad</h3>${icons.NoUsageIcon}<p>Todavía no tenés movimientos pendientes de ingresar a tu tarjeta.</p></div>
+                `;
+            }
+            
+            function AccountDetailPage() {
+                const account = state.selectedAccount;
+                if (!account) return `<p>Error: No account selected.</p>`;
+                
+                const formatCurrency = (amount, currency) => {
+                    const formattedAmount = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(amount));
+                    return amount < 0 ? `-${currency}${formattedAmount}` : `${currency}${formattedAmount}`;
+                };
+
+                const renderInfoTab = () => `
+                <div class="info-container">
+                    <div class="info-card">
+                        <div class="detail-row">
+                            <div><span class="detail-label">Alias de CBU</span><span class="detail-value">${account.alias}</span></div>
+                            <div class="detail-actions"><button class="icon-action-button">${icons.PencilIcon}</button><button class="icon-action-button">${icons.CopyIconSmall}</button></div>
+                        </div>
+                        <div class="detail-row"><div><span class="detail-label">Número de Cuenta</span><span class="detail-value">${account.number.replace('Nº ', '')}</span></div></div>
+                        <div class="detail-row"><div><span class="detail-label">CBU</span><span class="detail-value">${account.cbu}</span></div><div class="detail-actions"><button class="icon-action-button">${icons.CopyIconSmall}</button></div></div>
+                        <div class="detail-row no-border"><div><span class="detail-label">CUIL</span><span class="detail-value">${account.cuil}</span></div></div>
+                    </div>
+                    <button class="share-data-button">Compartir Datos</button>
+                    <div class="info-card">
+                        <p class="info-section-header">MÁS INFORMACIÓN</p>
+                        <div class="detail-row"><span class="detail-value gray">${account.titular}</span></div>
+                        <div class="detail-row no-border"><span class="detail-value bold">Titular Impositivo</span></div>
+                    </div>
+                    <div class="info-card">
+                        <div class="detail-row"><span class="detail-label">Valores a acreditar</span><span class="detail-value bold">${account.currency}0,00</span></div>
+                        <div class="detail-row no-border"><span class="detail-label">Adelanto CAS</span><span class="detail-value bold">${account.currency}0,00</span></div>
+                    </div>
+                </div>`;
+                
+                const renderMovementsTab = () => `
+                    <div class="info-container">
+                        ${account.movements && account.movements.length > 0 ? `
+                        <div class="movements-header"><span>ÚLTIMOS MOVIMIENTOS</span><button class="filter-button">FILTRAR</button></div>
+                        <div class="movement-list">
+                            ${account.movements.map(mov => `
+                                <div class="movement-item ${mov.type === 'Transferencia' ? 'clickable' : ''}" data-action="selectMovement" data-id="${mov.id}">
+                                    <div class="movement-details"><span class="movement-description">${mov.description}</span><span class="movement-date">${mov.originalDate}</span></div>
+                                    <span class="movement-amount">${formatCurrency(mov.amount, account.currency)}</span>
+                                </div>
+                            `).join('')}
+                        </div>` : `<p class="no-movements">No hay movimientos para mostrar.</p>`}
+                    </div>`;
+
+                return `
+                    <div class="segmented-control">
+                        <button class="${state.initialTab === 'Información' ? 'active' : ''}" data-action="switchAccountTab" data-tab="Información">Información</button>
+                        <button class="${state.initialTab === 'Movimientos' ? 'active' : ''}" data-action="switchAccountTab" data-tab="Movimientos">Movimientos</button>
+                    </div>
+                    ${state.initialTab === 'Información' ? renderInfoTab() : renderMovementsTab()}`;
+            }
+
+            function MovementDetailPage() {
+                const { selectedMovement: movement, selectedAccount } = state;
+                if (!movement || !movement.details) return `<p>Error: No movement details found.</p>`;
+                
+                const { details, amount, originalDate } = movement;
+                const accountCurrency = selectedAccount?.currency || '$';
+
+                const formatCurrency = (value, currency) => {
+                    const formattedAmount = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(value));
+                    return `${currency}${formattedAmount}`;
+                };
+                const isCredit = amount > 0;
+
+                return `
+                    <div class="movement-detail-section">
+                        <p class="movement-detail-label">Movimiento</p>
+                        <div class="movement-detail-data">
+                            <p>${details.movementType}</p><p>${details.recipientName}</p><p>${details.recipientCuit}</p>
+                            <p>${details.recipientCbu}</p><p>${details.concept}</p><p>${details.longId1}</p><p>${details.longId2}</p>
+                        </div>
+                    </div>
+                    <div class="movement-detail-section"><p class="movement-detail-label">Fecha</p><div class="movement-detail-data"><p>${originalDate}</p></div></div>
+                    <div class="movement-detail-section">
+                        <p class="movement-detail-label">${isCredit ? 'Crédito' : 'Débito'}</p>
+                        <div class="movement-detail-data"><p class="movement-detail-amount">${formatCurrency(amount, accountCurrency)}</p></div>
+                    </div>`;
+            }
+
+            function MorePage() {
+                 const financialMenuItems = ['Inversiones', 'Compra/Venta de Dólares', 'Préstamos', 'Pago de servicios', 'MODO', 'Seguros', 'NFT Galicia', 'Transferencias internacionales'];
+                 const securityMenuItems = ['Token Galicia', 'Claves'];
+                 const benefitsMenuItems = ['Promociones y ahorros', 'Tus Viajes'];
+                 const supportMenuItems = ['Ayuda', 'Cajeros y Sucursalės'];
+
+                 const createMenu = (items) => items.map(item => `
+                    <button class="menu-item">
+                        <span>${item}</span>
+                        <div class="menu-item-right-content">
+                            ${item === 'Tus Viajes' ? '<span class="new-badge">Nuevo</span>' : ''}
+                            ${icons.ChevronRightIcon}
+                        </div>
+                    </button>`).join('');
+
+                 return `
+                    <h1 class="more-page-title">Más</h1>
+                    <div class="card profile-card" data-action="navigate" data-page="profile">
+                        <div class="profile-avatar">AT</div>
+                        <div class="profile-info">
+                            <span class="profile-name">${state.userData.name}</span>
+                            <span class="profile-subtext">Información personal</span>
+                        </div>
+                        ${icons.ChevronRightIcon}
+                    </div>
+                    <div class="menu-section"><div class="menu-section-header"><h2>Gestión financiera</h2>${icons.FinancialManagementIcon}</div><div class="card menu-list">${createMenu(financialMenuItems)}</div></div>
+                    <div class="menu-section"><div class="menu-section-header"><h2>Seguridad</h2>${icons.SecurityIcon}</div><div class="card menu-list">${createMenu(securityMenuItems)}</div></div>
+                    <div class="menu-section"><div class="menu-section-header"><h2>Beneficios</h2>${icons.BenefitsIcon}</div><div class="card menu-list">${createMenu(benefitsMenuItems)}</div></div>
+                    <div class="menu-section"><div class="menu-section-header"><h2>Atención al cliente</h2>${icons.CustomerSupportIcon}</div><div class="card menu-list">${createMenu(supportMenuItems)}</div></div>
+                    <div class="card session-control-card"><button class="session-button">Cambiar de sesión</button><button class="session-button">Cerrar sesión</button></div>
+                    <div class="version-info"><p>Versión 9.21.4</p><p>Último ingreso: 06/10/2025 21:55:58</p></div>
+                 `;
+            }
+
+            function ProfilePage() {
+                const { userFormData, recipientsFormData, accountsFormData, cardsFormData } = state.profilePage;
+
+                const userForm = `
+                    <div class="card profile-form-card">
+                        <h2 class="profile-section-header">Mis Datos</h2>
+                        <div class="form-group"><label for="userId">Número de ID</label><input type="text" id="userId" name="userId" value="${userFormData.userId}" readonly /></div>
+                        <div class="form-group"><label for="name">Nombre y Apellido</label><input type="text" id="name" name="name" value="${userFormData.name}" data-form="user" /></div>
+                        <div class="form-group"><label for="cuil">Mi CUIL</label><input type="text" id="cuil" name="cuil" value="${userFormData.cuil}" data-form="user" /></div>
+                        <div class="form-group"><label for="email">Email</label><input type="email" id="email" name="email" value="${userFormData.email}" data-form="user" /></div>
+                        <div class="form-group no-border"><label for="phone">Teléfono</label><input type="tel" id="phone" name="phone" value="${userFormData.phone}" data-form="user" /></div>
+                    </div>`;
+                
+                const recipientsForm = `
+                    <div class="card profile-form-card">
+                        <div class="profile-section-header-with-action">
+                            <h2 class="profile-section-header no-padding">Datos de Destinatarios</h2>
+                            <button type="button" class="add-recipient-button" data-action="addRecipient">${icons.PlusIcon}</button>
+                        </div>
+                        ${recipientsFormData.map((r, i) => `
+                            <div class="recipient-form-container">
+                                <div class="recipient-form-header">
+                                    <span class="recipient-form-title">Destinatario ${i + 1}</span>
+                                    <button type="button" class="remove-recipient-button" data-action="removeRecipient" data-index="${i}">${icons.TrashIcon}</button>
+                                </div>
+                                <div class="form-group"><label>Número de ID</label><input type="text" value="${r.userId || ''}" readonly /></div>
+                                <div class="form-group"><label>Nombre y Apellido</label><input type="text" name="recipientName" value="${r.recipientName}" data-form="recipient" data-index="${i}" /></div>
+                                <div class="form-group"><label>Alias / CVU</label><input type="text" name="alias" value="${r.alias}" data-form="recipient" data-index="${i}" /></div>
+                                <div class="form-group"><label>CUIT</label><input type="text" name="cuit" value="${r.cuit}" data-form="recipient" data-index="${i}" /></div>
+                                <div class="form-group"><label>CBU</label><input type="text" name="cbu" value="${r.cbu}" data-form="recipient" data-index="${i}" /></div>
+                                <div class="form-group no-border"><label>Banco</label><input type="text" name="destinationBank" value="${r.destinationBank}" data-form="recipient" data-index="${i}" /></div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                
+                const accountsForm = `
+                    <div class="card profile-form-card">
+                        <h2 class="profile-section-header">Datos de Cuentas</h2>
+                        ${accountsFormData.map((acc, i) => `
+                        <div class="account-form-container">
+                             <h3 class="account-form-title">${state.accounts[i].type}</h3>
+                             <div class="form-group"><label>Número de Cuenta</label><input type="text" name="number" value="${acc.number}" data-form="account" data-index="${i}" /></div>
+                             <div class="form-group"><label>Alias de CBU</label><input type="text" name="alias" value="${acc.alias}" data-form="account" data-index="${i}" /></div>
+                             <div class="form-group"><label>CBU</label><input type="text" name="cbu" value="${acc.cbu}" data-form="account" data-index="${i}" /></div>
+                             <div class="form-group no-border">
+                                <div class="balance-label-container">
+                                    <label>Saldo</label>
+                                    ${!state.profilePage.isUnlocked ? `<button type="button" class="unlock-balance-button" data-action="showAdminModal">${icons.LockIcon}<span>Modificar</span></button>` : ''}
+                                </div>
+                                <div class="balance-input-group">
+                                    <span>${state.accounts[i].currency}</span>
+                                    <input type="text" name="balance" value="${acc.balance}" ${!state.profilePage.isUnlocked ? 'disabled' : ''} data-form="account" data-index="${i}" />
+                                    <span>,</span>
+                                    <input type="text" class="cents-input" maxlength="2" name="cents" value="${acc.cents}" ${!state.profilePage.isUnlocked ? 'disabled' : ''} data-form="account" data-index="${i}" />
+                                </div>
+                             </div>
+                        </div>
+                        `).join('')}
+                    </div>`;
+
+                const cardsForm = `
+                    <div class="card profile-form-card">
+                        <h2 class="profile-section-header">Datos de Tarjetas</h2>
+                        ${cardsFormData.map((card, i) => `
+                        <div class="account-form-container">
+                            <h3 class="account-form-title">${state.cards[i].brand} ${state.cards[i].type}</h3>
+                            <div class="form-group">
+                                <label>Número de Tarjeta</label>
+                                <input type="text" name="fullNumber" value="${card.fullNumber}" data-form="card" data-index="${i}" />
+                            </div>
+                            <div class="form-group">
+                                <label>Vencimiento (MM/AA)</label>
+                                <input type="text" name="expiry" value="${card.expiry}" data-form="card" data-index="${i}" />
+                            </div>
+                            <div class="form-group no-border">
+                                <label>CVV</label>
+                                <input type="text" name="cvv" value="${card.cvv}" maxlength="3" data-form="card" data-index="${i}" />
+                            </div>
+                        </div>
+                        `).join('')}
+                    </div>`;
+
+                return `
+                    <form id="profile-form">
+                        ${userForm}
+                        ${recipientsForm}
+                        ${accountsForm}
+                        ${cardsForm}
+                        <button type="submit" class="save-profile-button">${icons.SaveIcon}<span>Guardar Cambios</span></button>
+                    </form>
+                `;
+            }
+
+            function TransferenciasPage() {
+                return `
+                <div class="transfer-options-grid">
+                    <div class="transfer-option-card" data-action="navigate" data-page="aliasTransfer"><div class="icon-container">${icons.AliasIcon}</div><span>A un Alias, CBU o CVU</span></div>
+                    <div class="transfer-option-card"><div class="icon-container">${icons.CellphoneModoIcon}</div><span>A un celular</span></div>
+                    <div class="transfer-option-card"><div class="icon-container">${icons.MyAccountsIcon}</div><span>A una de mis cuentas</span></div>
+                    <div class="transfer-option-card"><div class="icon-container">${icons.MoreOptionsIcon}</div><span>Más opciones</span></div>
+                </div>
+                <div class="card favorite-contacts-card">
+                    <h2>Contactos favoritos</h2>
+                    <div class="no-recipients-info">
+                        ${icons.FolderIcon}
+                        <p class="fav-contacts-main-text">Agregá hasta 4 contactos favoritos para transferirles más rápido</p>
+                        <p class="fav-contacts-sub-text">Podés elegirlos y editarlos en tu lista de contactos.</p>
+                    </div>
+                    <a href="#" class="go-to-contacts-link" data-action="navigate" data-page="profile"><span>Ir a Contactos</span>${icons.ChevronRightIcon}</a>
+                </div>
+                `;
+            }
+            
+            function TokenPage() {
+                const { value, countdown } = state.token;
+                const progress = (countdown / 39) * 100;
+                return `
+                <div class="token-page-container">
+                    <header class="token-header">
+                        <button class="icon-button" data-action="back" aria-label="Cerrar">${icons.CloseIcon}</button>
+                        <h1 class="token-title">Token Galicia</h1>
+                        <button class="icon-button" aria-label="Información">${icons.InfoIcon}</button>
+                    </header>
+                    <main class="token-main">
+                        <div class="token-warning">${icons.WarningIcon}<p>Nunca compartas tu Token con nadie. Ni siquiera con nosotros.</p></div>
+                        <div class="token-display"><span class="token-label">Código Token:</span><h2 class="token-code">${value}</h2></div>
+                        <div class="token-timer">
+                            <p>Este código se renovará en ${countdown} segundos</p>
+                            <div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div>
+                        </div>
+                        <div class="token-unlock"><p>¿Lo tenés bloqueado?</p><button class="unlock-button">Desbloquear Token</button></div>
+                    </main>
+                </div>`;
+            }
+
+            function AliasTransferPage() {
+                return `
+                <div class="alias-transfer-page-container">
+                    <main class="alias-transfer-main">
+                        <h2>Escribí el Alias, CBU o CVU</h2>
+                        <input id="alias-input" type="text" value="${state.transferFlow.aliasInput}" class="alias-input" aria-label="Alias, CBU o CVU" autofocus />
+                        <p id="alias-error-msg" class="alias-error"></p>
+                    </main>
+                    <footer class="alias-transfer-footer">
+                        <button class="continue-button" data-action="aliasContinue" ${!state.transferFlow.aliasInput.trim() ? 'disabled' : ''}>Continuar</button>
+                    </footer>
+                </div>`;
+            }
+
+            function ConfirmTransferPage() {
+                const details = state.currentTransfer;
+                if (!details) return `<p>Error</p>`;
+                return `
+                <div class="confirm-transfer-page-container">
+                    <main class="confirm-transfer-main">
+                        <div class="main-title-container"><h1 class="main-title">Revisá la información</h1></div>
+                        <div class="details-group"><p class="details-intro">Los datos corresponden a</p><p class="recipient-name">${details.recipientName}</p></div>
+                        <div class="details-group"><p class="detail-label">CUIT</p><p class="detail-value">${details.cuit}</p></div>
+                        <div class="details-group"><p class="detail-label">Cuenta en</p><p class="detail-value">${details.destinationBank}</p></div>
+                        <div class="details-group"><p class="detail-label">Alias</p><p class="detail-value">${details.alias}</p></div>
+                        <div class="details-group"><p class="detail-label">CBU</p><p class="detail-value">${details.cbu}</p></div>
+                        <hr class="divider" />
+                        <p class="contact-status">Contacto ya agregado</p>
+                    </main>
+                    <footer class="confirm-transfer-footer"><button class="confirm-continue-button" data-action="navigate" data-page="amountTransfer">Continuar</button></footer>
+                </div>`;
+            }
+
+            function AmountTransferPage() {
+                 const recipient = state.currentTransfer;
+                 const { step, amountInput, selectedAccounts, motivo, concept } = state.transferFlow;
+
+                 if (step === 'details') {
+                     const sourceAccount = state.accounts.find(acc => acc.number === selectedAccounts[0]);
+                     return `
+                        <div class="amount-transfer-page-container">
+                            <main class="amount-transfer-main details-step">
+                                <p class="transfer-recipient-info">Vas a transferirle a ${recipient.recipientName}</p>
+                                <p class="transfer-amount-display">$ ${amountInput}</p>
+                                <p class="transfer-source-account">Con ${sourceAccount?.type || 'Cuenta Fima'}</p>
+                                <div class="transfer-details-form">
+                                    <div class="form-group-transfer">
+                                        <label for="concepto">Concepto</label>
+                                        <div class="select-wrapper">
+                                            <select id="concepto" data-action="setTransferConcept">
+                                                ${['Varios', 'Alquiler', 'Expensas', 'Factura', 'Cuota', 'Honorarios', 'Préstamo'].map(o => `<option ${o === concept ? 'selected' : ''}>${o}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group-transfer">
+                                        <label for="motivo">Motivo</label>
+                                        <div class="input-with-counter">
+                                            <input type="text" id="motivo" placeholder="Opcional" value="${motivo}" maxlength="12" data-action="setTransferMotivo"/>
+                                            <span class="char-counter">${motivo.length}/12</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </main>
+                            <footer class="amount-transfer-footer"><button class="amount-transfer-continue-button" data-action="confirmAmount">Continuar</button></footer>
+                        </div>`;
+                 }
+
+                 const mainPesoAccount = state.accounts.find(acc => acc.currency === '$');
+                 const sourceAccounts = [];
+                 if(mainPesoAccount) sourceAccounts.push({ id: mainPesoAccount.number, name: mainPesoAccount.type, balance: `${mainPesoAccount.balance},${mainPesoAccount.cents}`, type: 'CA' });
+                 sourceAccounts.push({ id: 'FIMA', name: 'Cuenta Fima', balance: '718,70', type: 'FIMA' });
+                 
+                 return `
+                    <div class="amount-transfer-page-container">
+                        <main class="amount-transfer-main">
+                            <h2 class="transfer-question">¿Cuánto querés transferirle a ${recipient.recipientName}?</h2>
+                            <div class="amount-input-container">
+                                <span class="currency-symbol">$</span>
+                                <input id="amount-input" type="text" class="amount-input" value="${amountInput}" inputmode="numeric" placeholder="0"/>
+                            </div>
+                            <p class="daily-limit">Tenés disponible $25.000.000,00 del límite diario</p>
+                            <div class="account-selection-section">
+                                <h3 class="account-selection-title">Elegí cómo querés transferir</h3>
+                                <p class="account-selection-subtitle">Podés seleccionar una cuenta, Cuenta Fima o combinar las 2 opciones.</p>
+                                <div class="account-options-list">
+                                ${sourceAccounts.map(acc => `
+                                   <label class="account-option-card">
+                                        <div class="account-option-main">
+                                            <div class="account-option-icon">${acc.type === 'CA' ? `<span>CA</span>` : `<div class="fima-icon-content"><span class="fima-text">FIMA</span>${icons.FimaBarIcon}</div>`}</div>
+                                            <div class="account-option-details"><span class="account-option-balance">$${acc.balance}</span><span class="account-option-name">${acc.name}</span></div>
+                                        </div>
+                                        <div class="custom-checkbox"><input type="checkbox" data-action="selectSourceAccount" data-id="${acc.id}" ${selectedAccounts.includes(acc.id) ? 'checked' : ''} /><span class="checkmark"></span></div>
+                                    </label>`).join('')}
+                                </div>
+                            </div>
+                        </main>
+                        <footer class="amount-transfer-footer"><button class="amount-transfer-continue-button" data-action="amountContinue">Continuar</button></footer>
+                    </div>`;
+            }
+
+            function FinalConfirmationPage() {
+                const details = state.currentTransfer;
+                return `
+                <div class="final-confirmation-page-container">
+                    <main class="final-confirmation-main">
+                        <p class="final-confirmation-intro">Vas a transferirle a ${details.recipientName}</p>
+                        <h1 class="final-confirmation-amount">$ ${details.amount}</h1>
+                        <div class="final-confirmation-details">
+                            <div class="detail-item"><span class="detail-item-label">A su cuenta en</span><span class="detail-item-value">${details.destinationBank}</span></div>
+                            <div class="detail-item"><span class="detail-item-label">CBU</span><span class="detail-item-value">${details.cbu}</span></div>
+                            <div class="detail-item"><span class="detail-item-label">Desde tu cuenta</span><span class="detail-item-value">${details.sourceAccount}</span></div>
+                            <div class="detail-item"><span class="detail-item-label">Concepto</span><span class="detail-item-value">${details.concept}</span></div>
+                        </div>
+                    </main>
+                    <footer class="final-confirmation-footer">
+                        <p class="footer-note">Tené en cuenta que la transferencia está sujeta a la confirmación del banco de destino.</p>
+                        <button class="confirm-button" data-action="finalConfirmTransfer">Confirmar</button>
+                    </footer>
+                </div>`;
+            }
+            
+            function ProcessingTransferPage() {
+                return `<div class="processing-transfer-container"><div class="processing-spinner"></div><p class="processing-text">Estamos procesando tu<br/>transferencia</p></div>`;
+            }
+
+            function TransferReceiptPage() {
+                 const details = state.currentTransfer;
+                 return `
+                    <div class="transfer-receipt-container">
+                        <div class="receipt-content-wrapper">
+                            <div class="fima-ad-banner" id="fima-banner">
+                                <div class="ad-content"><h3>¡Usá Cuenta Fima!</h3><p>Pagá tus servicios mientras tu plata crece todos los días.</p></div>
+                                <div class="ad-icon">${icons.FimaAdIcon}</div>
+                                <button class="dismiss-ad-button" data-action="dismissAd" aria-label="Cerrar anuncio">${icons.DismissIcon}</button>
+                            </div>
+                            <main class="receipt-main">
+                                <div class="receipt-success-icon">${icons.CheckCircleIcon}</div>
+                                <h1 class="receipt-message">¡Le transferiste <span class="receipt-amount">$${details.amount}</span> a<br/><span class="receipt-recipient">${(details.recipientName || '').toUpperCase()}!</span></h1>
+                            </main>
+                        </div>
+                        <footer class="receipt-footer">
+                            <button class="receipt-action-primary" data-action="shareReceipt">Compartir comprobante</button>
+                            <button class="receipt-action-secondary" data-action="exitTransfer">Ir a Transferencias</button>
+                        </footer>
+                    </div>`;
+            }
+
+            // --- MODALS AND OVERLAYS ---
+            function HomePageSkeleton() { return `<main class="app-main"><div class="skeleton skeleton-account-card"></div><div class="skeleton skeleton-upcoming-payments"></div><div class="skeleton skeleton-insurance"></div><div class="skeleton skeleton-shortcuts"></div><div class="skeleton skeleton-cards"></div></main>`; }
+            function WaitModal(text) { return `<div class="wait-modal-overlay"><div class="wait-modal-content"><p>${text}</p></div></div>`; }
+            function LoadingSequence() { 
+                setTimeout(() => handlers.validationComplete(), 5200);
+                return `<div class="loading-sequence-overlay"><div class="loading-sequence-content"><div class="validation-container">${icons.ValidatingIcon}<div class="loader"></div></div><p>Estamos Validando Este Dispositivo</p></div></div>`;
+            }
+            function AdminPasswordModal() { return `
+                <div class="admin-password-modal-overlay">
+                    <div class="admin-password-modal-content">
+                        <div class="admin-modal-header"><h2>Acceso de Administrador</h2><p>Ingresá la contraseña para poder editar.</p></div>
+                        <form id="admin-password-form">
+                            <input id="admin-password-input" type="password" class="admin-password-input" placeholder="Contraseña" autofocus />
+                            <p class="admin-password-error" id="admin-password-error">${state.profilePage.passwordError}</p>
+                            <div class="admin-modal-actions">
+                                <button type="button" class="admin-modal-button cancel" data-action="closeAdminModal">Cancelar</button>
+                                <button type="submit" class="admin-modal-button unlock">Desbloquear</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>`;
+            }
+             function InsufficientFundsModal() {
+                return `
+                    <div class="insufficient-funds-modal-overlay">
+                        <div class="insufficient-funds-modal-content">
+                            ${icons.InfoIconOrange}
+                            <h2>Saldo Insuficiente</h2>
+                            <p>No tenés saldo suficiente en la cuenta seleccionada para realizar esta transferencia.</p>
+                            <button data-action="closeInsufficientFundsModal">Entendido</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+
+            // --- ALL EVENT HANDLERS ---
+            const handlers = {
+                login: (password) => {
+                    const errorMsg = document.getElementById('login-error-msg');
+                    if (!errorMsg) return;
+                    errorMsg.textContent = '';
+                    if (password === '2021') {
+                        document.getElementById('login-loading-overlay').style.display = 'flex';
+                        setTimeout(() => {
+                            state.isLoggedIn = true;
+                            state.isAppLoading = true;
+                            state.currentPage = 'home';
+                            render();
+                            setTimeout(() => {
+                                state.isAppLoading = false;
+                                render();
+                            }, 2500);
+                        }, 2000);
+                    } else {
+                        errorMsg.textContent = 'Clave incorrecta.';
+                        setTimeout(() => {
+                            const input = document.getElementById('login-password');
+                            if (input) input.value = '';
+                        }, 800);
+                    }
+                },
+                navigate: (page) => {
+                    if (!['accountDetail', 'token', 'profile', 'aliasTransfer', 'confirmTransfer', 'amountTransfer', 'finalConfirmTransfer'].includes(page)) { state.selectedAccount = null; }
+                    if (page !== 'movementDetail') state.selectedMovement = null;
+                    state.currentPage = page;
+                    // Reset sub-states when navigating to a new top-level page
+                    if(page === 'tarjetas') state.tarjetas = { loadingState: 'idle', visibleCardIndex: null, targetCardIndex: null, activeIndex: 0, };
+                    if(page === 'transferencias') {
+                        const pesoAccount = state.accounts.find(acc => acc.currency === '$');
+                        const defaultSelection = pesoAccount ? [pesoAccount.number] : [];
+                        state.transferFlow = { 
+                            aliasInput: '', 
+                            isAliasLoading: false, 
+                            amountInput: '2.000', 
+                            step: 'amount', 
+                            concept: 'Varios', 
+                            motivo: '', 
+                            selectedAccounts: defaultSelection,
+                            isProcessingAmount: false 
+                        };
+                    }
+                    if(page === 'token') handlers.startTokenTimer();
+                    if(page === 'profile') handlers.initProfileForm();
+                    render();
+                },
+                back: () => {
+                     if (state.currentPage === 'accountDetail') { state.currentPage = 'home'; state.selectedAccount = null; }
+                     else if (['token', 'profile'].includes(state.currentPage)) { state.currentPage = 'more'; }
+                     else if (state.currentPage === 'aliasTransfer') { state.currentPage = 'transferencias'; }
+                     else if (state.currentPage === 'confirmTransfer') { state.currentPage = 'aliasTransfer'; }
+                     else if (state.currentPage === 'amountTransfer') { state.currentPage = 'confirmTransfer'; }
+                     else if (state.currentPage === 'finalConfirmTransfer') { state.currentPage = 'amountTransfer'; }
+                     else { state.currentPage = 'home'; }
+                    render();
+                },
+                selectAccount: (number) => { state.selectedAccount = state.accounts.find(acc => acc.number === number); state.initialTab = 'Información'; state.currentPage = 'accountDetail'; render(); },
+                switchAccountTab: (tab) => { state.initialTab = tab; render(); },
+                selectMovement: (id) => {
+                    const movement = state.selectedAccount?.movements.find(m => m.id === id);
+                    if (movement?.type === 'Transferencia') { state.selectedMovement = movement; state.currentPage = 'movementDetail'; render(); }
+                },
+                backToAccountDetail: () => { state.currentPage = 'accountDetail'; state.initialTab = 'Movimientos'; state.selectedMovement = null; render(); },
+                exitTransfer: () => { state.currentTransfer = null; state.currentPage = 'transferencias'; render(); },
+                forceUpdate: async () => {
+                    alert('La aplicación se actualizará. La página se recargará ahora.');
+                    if ('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); for(const reg of regs) { await reg.unregister(); }}
+                    if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(key => caches.delete(key))); }
+                    window.location.reload();
+                },
+                handleCarouselScroll: (e, page) => {
+                    const carousel = e.target;
+                    const cardWidth = carousel.offsetWidth * (page === 'accounts' ? 0.9 : 1);
+                    const gap = page === 'accounts' ? 16 : 0;
+                    const newIndex = Math.round(carousel.scrollLeft / (cardWidth + gap));
+                    if (page === 'tarjetas' && newIndex !== state.tarjetas.activeIndex && newIndex < state.cards.length) {
+                        state.tarjetas.activeIndex = newIndex;
+                        const infoContainer = document.getElementById('card-specific-info-container');
+                        if (infoContainer) {
+                            infoContainer.innerHTML = renderCardSpecificInfo(newIndex);
+                        }
+                    }
+                },
+                toggleCardData: (index) => {
+                    if (state.tarjetas.visibleCardIndex === index) { state.tarjetas.visibleCardIndex = null; render(); }
+                    else { state.tarjetas.targetCardIndex = index; state.tarjetas.loadingState = 'wait'; render(); setTimeout(() => { state.tarjetas.loadingState = 'load'; render(); }, 1500); }
+                },
+                validationComplete: () => { state.tarjetas.loadingState = 'idle'; state.tarjetas.visibleCardIndex = state.tarjetas.targetCardIndex; state.tarjetas.targetCardIndex = null; render(); },
+                startTokenTimer: () => {
+                    if (state.token.intervalId) clearInterval(state.token.intervalId);
+                    const generate = () => {
+                        const newToken = Math.floor(100000 + Math.random() * 900000).toString();
+                        state.token.value = `${newToken.substring(0, 3)} ${newToken.substring(3, 6)}`;
+                    };
+                    generate();
+                    state.token.countdown = 39;
+                    state.token.intervalId = setInterval(() => {
+                        state.token.countdown -= 1;
+                        if (state.token.countdown <= 0) { generate(); state.token.countdown = 39; }
+                        if (state.currentPage === 'token') render(); else clearInterval(state.token.intervalId);
+                    }, 1000);
+                },
+                handleAliasInput: (value) => {
+                    state.transferFlow.aliasInput = value;
+                    const continueButton = document.querySelector('[data-action="aliasContinue"]');
+                    if (continueButton) {
+                        continueButton.disabled = !value.trim();
+                    }
+                    const errorMsgEl = document.getElementById('alias-error-msg');
+                    if (errorMsgEl) {
+                        errorMsgEl.textContent = ''; // Clear error on new input
+                    }
+                },
+                aliasContinue: () => {
+                    const aliasOrCbu = state.transferFlow.aliasInput.trim();
+                    const foundRecipient = state.transferRecipients.find(r =>
+                        (r.alias && r.alias.toLowerCase() === aliasOrCbu.toLowerCase()) ||
+                        (r.cbu && r.cbu === aliasOrCbu)
+                    );
+
+                    if (foundRecipient) {
+                        state.transferFlow.isAliasLoading = true;
+                        render();
+                        setTimeout(() => {
+                            state.currentTransfer = { ...foundRecipient };
+                            state.transferFlow.isAliasLoading = false;
+                            state.currentPage = 'confirmTransfer';
+                            render();
+                        }, 1500);
+                    } else {
+                        const errorEl = document.getElementById('alias-error-msg');
+                        if (errorEl) {
+                            errorEl.textContent = 'Alias o CBU inválido. Verificá los datos e intentá de nuevo.';
+                        }
+                    }
+                },
+                handleAmountInput: (value) => {
+                    const numericValue = value.replace(/[^\d]/g, '');
+                    let formattedValue = '';
+                    if (numericValue !== '') {
+                        formattedValue = new Intl.NumberFormat('es-AR').format(parseInt(numericValue, 10));
+                    }
+                    state.transferFlow.amountInput = formattedValue;
+                    const amountInput = document.getElementById('amount-input');
+                    if (amountInput && amountInput.value !== formattedValue) {
+                        amountInput.value = formattedValue;
+                    }
+                },
+                selectSourceAccount: (id) => { state.transferFlow.selectedAccounts = [id]; render(); },
+                amountContinue: () => { state.transferFlow.step = 'details'; render(); },
+                setTransferConcept: (value) => { state.transferFlow.concept = value; },
+                setTransferMotivo: (value) => {
+                    state.transferFlow.motivo = value;
+                    const charCounter = document.querySelector('.char-counter');
+                    if (charCounter) {
+                        charCounter.textContent = `${value.length}/12`;
+                    }
+                },
+                confirmAmount: () => {
+                    state.transferFlow.isProcessingAmount = true; render();
+                    setTimeout(() => {
+                        const sourceAccount = state.accounts.find(acc => acc.number === state.transferFlow.selectedAccounts[0]) || {type: 'Cuenta Fima', number: 'FIMA'};
+                        state.currentTransfer = {...state.currentTransfer, amount: state.transferFlow.amountInput, concept: state.transferFlow.concept, motivo: state.transferFlow.motivo, sourceAccount: sourceAccount.type, sourceAccountNumber: sourceAccount.number};
+                        state.transferFlow.isProcessingAmount = false; state.currentPage = 'finalConfirmTransfer'; render();
+                    }, 1500);
+                },
+                finalConfirmTransfer: () => {
+                    const { currentTransfer, accounts } = state;
+                    const sourceAccountNumber = currentTransfer.sourceAccountNumber;
+                    const transferAmount = parseFloat(currentTransfer.amount.replace(/\./g, '').replace(',', '.'));
+                    let hasSufficientFunds = false;
+
+                    if (sourceAccountNumber === 'FIMA') {
+                        const fimaBalance = 718.70; // Hardcoded value from AmountTransferPage
+                        if (transferAmount <= fimaBalance) {
+                            hasSufficientFunds = true;
+                        }
+                    } else {
+                        const sourceAccount = accounts.find(acc => acc.number === sourceAccountNumber);
+                        if (sourceAccount) {
+                            const currentBalance = parseFloat(`${sourceAccount.balance.replace(/\./g, '')}.${sourceAccount.cents}`);
+                            if (transferAmount <= currentBalance) {
+                                hasSufficientFunds = true;
+                            }
+                        }
+                    }
+
+                    if (!hasSufficientFunds) {
+                        state.showInsufficientFundsModal = true;
+                        render();
+                        return; // Stop the transfer
+                    }
+
+                    // If funds are sufficient, proceed:
+                    state.isProcessingTransfer = true; 
+                    render();
+
+                    setTimeout(() => {
+                        const newAccounts = state.accounts.map(acc => {
+                            if (acc.number === state.currentTransfer.sourceAccountNumber) {
+                                const currentBalanceNum = parseFloat(`${acc.balance.replace(/\./g, '')}.${acc.cents}`);
+                                const newBalance = currentBalanceNum - transferAmount;
+                                const [newBalanceInt, newCents] = newBalance.toFixed(2).split('.');
+                                const newMovement = { 
+                                    id: generateUniqueId(), 
+                                    type: 'Transferencia', 
+                                    description: `Transferencia a ${state.currentTransfer.recipientName}`, 
+                                    amount: -transferAmount, 
+                                    originalDate: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit'}), 
+                                    details: { 
+                                        movementType: 'TRANSF. CTAS PROPIAS', 
+                                        recipientName: (state.currentTransfer.recipientName || '').toUpperCase(), 
+                                        recipientCuit: state.currentTransfer.cuit, 
+                                        recipientCbu: state.currentTransfer.cbu, 
+                                        concept: (state.currentTransfer.concept || '').toUpperCase(), 
+                                        longId1: generateRandomNumberString(18), 
+                                        longId2: generateRandomNumberString(9) 
+                                    } 
+                                };
+                                return { 
+                                    ...acc, 
+                                    balance: new Intl.NumberFormat('es-AR').format(parseInt(newBalanceInt, 10)), 
+                                    cents: newCents.padStart(2, '0'), 
+                                    movements: [newMovement, ...acc.movements] 
+                                };
+                            } 
+                            return acc;
+                        });
+                        state.accounts = newAccounts;
+                        saveStateToLocal();
+                        state.isProcessingTransfer = false; 
+                        state.currentPage = 'transferReceipt'; 
+                        render();
+                    }, 3500);
+                },
+                closeInsufficientFundsModal: () => {
+                    state.showInsufficientFundsModal = false;
+                    render();
+                },
+                dismissAd: () => { const banner = document.getElementById('fima-banner'); if (banner) banner.style.display = 'none'; },
+                shareReceipt: async () => {
+                    const details = state.currentTransfer;
+                    if (typeof window.jspdf === 'undefined') {
+                        alert('No se pudo cargar la librería para generar PDF. Por favor, intente de nuevo más tarde.');
+                        return;
+                    }
+
+                    try {
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF();
+
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(20);
+                        doc.text("Comprobante de Transferencia", 105, 25, { align: "center" });
+
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(10);
+                        doc.setTextColor(100);
+                        doc.text(`Fecha de Emisión: ${new Date().toLocaleString('es-AR')}`, 105, 35, { align: "center" });
+
+                        doc.setLineWidth(0.5);
+                        doc.line(20, 45, 190, 45);
+
+                        let yPosition = 60;
+                        const addDetail = (label, value) => {
+                            if (!value) return;
+                            if (yPosition > 270) { doc.addPage(); yPosition = 20; }
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFontSize(12);
+                            doc.text(label, 20, yPosition);
+                            doc.setFont('helvetica', 'normal');
+                            const splitValue = doc.splitTextToSize(String(value), 100);
+                            doc.text(splitValue, 80, yPosition);
+                            yPosition += (splitValue.length * 5) + 5;
+                        };
+
+                        addDetail('Importe:', `$ ${details.amount}`);
+                        addDetail('Destinatario:', (details.recipientName || '').toUpperCase());
+                        addDetail('CUIT/CUIL Destino:', details.cuit);
+                        addDetail('Banco Destino:', details.destinationBank);
+                        addDetail('CBU Destino:', details.cbu);
+                        addDetail('Cuenta Origen:', details.sourceAccount);
+                        addDetail('Concepto:', (details.concept || '').toUpperCase());
+                        addDetail('ID de Transacción:', generateUniqueId());
+                        
+                        doc.line(20, yPosition, 190, yPosition);
+                        doc.setFontSize(10);
+                        doc.setTextColor(150);
+                        doc.text("Gracias por utilizar Banco Galicia.", 105, yPosition + 10, { align: "center" });
+
+                        const pdfBlob = doc.output('blob');
+                        const fileName = `comprobante-Galicia-${Date.now()}.pdf`;
+                        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                        
+                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                            await navigator.share({
+                                title: 'Comprobante de Transferencia',
+                                text: `Te comparto el comprobante de la transferencia a ${details.recipientName}.`,
+                                files: [pdfFile],
+                            });
+                        } else {
+                            alert('Tu navegador no soporta compartir archivos. El comprobante se descargará.');
+                            doc.save(fileName);
+                        }
+                    } catch (error) {
+                         if (error.name !== 'AbortError') {
+                             console.error('Error al generar o compartir el PDF:', error);
+                             alert('Ocurrió un error al intentar compartir el comprobante.');
+                         }
+                    }
+                },
+                // Profile Page Handlers
+                initProfileForm: () => {
+                    state.profilePage.userFormData = deepClone(state.userData);
+                    state.profilePage.recipientsFormData = deepClone(state.transferRecipients);
+                    state.profilePage.accountsFormData = state.accounts.map(acc => ({ number: acc.number.replace('Nº ', ''), alias: acc.alias, cbu: acc.cbu, balance: acc.balance, cents: acc.cents }));
+                    state.profilePage.cardsFormData = deepClone(state.cards);
+                },
+                handleProfileFormInput: (formType, index, name, value) => {
+                    if (formType === 'user') { state.profilePage.userFormData[name] = value; }
+                    if (formType === 'recipient') { state.profilePage.recipientsFormData[index][name] = value; }
+                    if (formType === 'account') {
+                         let sanitized = value;
+                         if (name === 'cents') sanitized = value.replace(/[^0-9]/g, '');
+                         else if (name === 'balance') sanitized = value.replace(/[^0-9.,]/g, '');
+                         state.profilePage.accountsFormData[index][name] = sanitized;
+                    }
+                    if (formType === 'card') {
+                        state.profilePage.cardsFormData[index][name] = value;
+                    }
+                },
+                addRecipient: () => {
+                    state.profilePage.recipientsFormData.push({ id: Date.now(), userId: generateUniqueId(), recipientName: '', alias: '', cuit: '', cbu: '', destinationBank: '' });
+                    render();
+                },
+                removeRecipient: (index) => {
+                    state.profilePage.recipientsFormData.splice(index, 1);
+                    render();
+                },
+                saveProfile: () => {
+                    state.profilePage.isSaving = true; render();
+                    setTimeout(() => {
+                        state.userData = deepClone(state.profilePage.userFormData);
+                        state.transferRecipients = deepClone(state.profilePage.recipientsFormData);
+                        state.accounts = state.accounts.map((acc, i) => ({
+                            ...acc,
+                            number: `Nº ${state.profilePage.accountsFormData[i].number}`,
+                            alias: state.profilePage.accountsFormData[i].alias,
+                            cbu: state.profilePage.accountsFormData[i].cbu,
+                            balance: state.profilePage.isUnlocked ? state.profilePage.accountsFormData[i].balance : acc.balance,
+                            cents: state.profilePage.isUnlocked ? state.profilePage.accountsFormData[i].cents : acc.cents,
+                            cuil: state.profilePage.userFormData.cuil,
+                            titular: state.profilePage.userFormData.name,
+                        }));
+                        state.userData.alias = state.profilePage.accountsFormData[0].alias; // Keep alias consistent
+                        
+                        state.cards = state.cards.map((card, i) => ({
+                            ...card,
+                            fullNumber: state.profilePage.cardsFormData[i].fullNumber,
+                            number: '**** **** **** ' + state.profilePage.cardsFormData[i].fullNumber.slice(-4),
+                            expiry: state.profilePage.cardsFormData[i].expiry,
+                            cvv: state.profilePage.cardsFormData[i].cvv,
+                        }));
+                        
+                        saveStateToLocal(); // Save state after profile update
+                        state.profilePage.isSaving = false;
+                        handlers.navigate('more');
+                    }, 1500);
+                },
+                showAdminModal: () => { state.profilePage.showPasswordModal = true; render(); },
+                closeAdminModal: () => { state.profilePage.showPasswordModal = false; state.profilePage.passwordError = ''; render(); },
+                handlePasswordCheck: (password) => {
+                     if (password === 'zxcvbnm') {
+                        state.profilePage.isUnlocked = true;
+                        state.profilePage.showPasswordModal = false;
+                        state.profilePage.passwordError = '';
+                    } else {
+                        state.profilePage.passwordError = 'Contraseña incorrecta.';
+                    }
+                    render();
+                }
+            };
+
+            // --- EVENT LISTENERS ---
+            function setupDelegatedListeners() {
+                // Input Delegation
+                root.addEventListener('input', e => {
+                    const target = e.target;
+                    // Forms with automatic submit on 4-digit entry
+                    if (target.id === 'login-password' && target.value.length === 4) {
+                        handlers.login(target.value);
+                    }
+                    // Generic input handling for forms
+                    const { form, index } = target.dataset;
+                    if (form) {
+                        handlers.handleProfileFormInput(form, parseInt(index), target.name, target.value);
+                    }
+                     // Specific inputs for transfer flow (optimized)
+                    if (target.id === 'alias-input') { handlers.handleAliasInput(target.value); }
+                    if (target.id === 'amount-input') { handlers.handleAmountInput(target.value); }
+                    if (target.id === 'motivo') { handlers.setTransferMotivo(target.value); }
+                });
+
+                // Click Delegation
+                root.addEventListener('click', e => {
+                    const target = e.target.closest('[data-action]');
+                    if (!target) return;
+                    const { action, page, number, tab, id, index } = target.dataset;
+                    
+                    if (handlers[action]) {
+                        const param = page || number || tab || id || (index !== undefined ? parseInt(index) : undefined);
+                        handlers[action](param);
+                    }
+                });
+            }
+
+            function addSpecificListeners() {
+                // Forms that require explicit submission
+                const loginForm = document.getElementById('login-form');
+                if (loginForm) loginForm.addEventListener('submit', e => { e.preventDefault(); handlers.login(document.getElementById('login-password').value); });
+                
+                const adminForm = document.getElementById('admin-password-form');
+                if (adminForm) adminForm.addEventListener('submit', e => { e.preventDefault(); handlers.handlePasswordCheck(document.getElementById('admin-password-input').value); });
+                
+                const profileForm = document.getElementById('profile-form');
+                if (profileForm) {
+                    profileForm.addEventListener('submit', handleProfileFormSubmit);
+                }
+
+                // Other specific listeners
+                const conceptSelect = document.getElementById('concepto');
+                if (conceptSelect) conceptSelect.addEventListener('change', e => handlers.setTransferConcept(e.target.value));
+
+                // Scroll Listeners for Carousels
+                const accountCarousel = document.getElementById('account-carousel');
+                if (accountCarousel) accountCarousel.addEventListener('scroll', (e) => handlers.handleCarouselScroll(e, 'accounts'));
+
+                const tarjetasCarousel = document.getElementById('tarjetas-carousel');
+                if (tarjetasCarousel) tarjetasCarousel.addEventListener('scroll', (e) => handlers.handleCarouselScroll(e, 'tarjetas'));
+            }
+
+            // --- INITIALIZATION ---
+            setInterval(() => {
+                state.isQrMode = !state.isQrMode;
+                if(state.isLoggedIn && ['home', 'accountDetail', 'tarjetas', 'transferencias', 'more'].includes(state.currentPage)) {
+                    const centralButton = document.querySelector('.central-button');
+                    if (centralButton) centralButton.classList.toggle('is-flipped', state.isQrMode);
+                }
+            }, 8000);
+            
+            setupDelegatedListeners();
+            render();
+        });
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
+</body>
+</html>
