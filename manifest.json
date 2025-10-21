@@ -1,0 +1,21 @@
+{
+  "short_name": "Mi Argentina",
+  "name": "Mi Argentina",
+  "description": "Gestioná trámites, sacá turnos, accedé a tus credenciales y recibí información personalizada.",
+  "icons": [
+    {
+      "src": "https://iili.io/KXRBnta.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://iili.io/KXRBnta.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#303f9f",
+  "background_color": "#f4f6f8"
+}
