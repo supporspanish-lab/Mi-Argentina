@@ -384,8 +384,11 @@ function addEventListeners() {
         // --- NUEVO: Lógica para deslizar la barra de potencia ---
         if (isDraggingPower) {
             const rect = powerBarContainer.getBoundingClientRect();
+            // --- CORRECCIÓN: Usar e.touches si es un evento táctil ---
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
             // La posición Y del ratón relativa a la parte superior de la barra
-            const relativeY = e.clientY - rect.top;
+            const relativeY = clientY - rect.top;
             // Calcular el porcentaje de potencia (invertido, porque 0 está arriba)
             let newPower = 1 - (relativeY / rect.height);
             // Limitar entre 0 y 1
