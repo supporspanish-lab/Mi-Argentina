@@ -250,14 +250,16 @@
         }
         /* --- NUEVO: Estilo para los contenedores de bolas de jugador --- */
         .pocketed-balls-container {
-            position: absolute;
             display: flex;
-            gap: 8px;
+            /* --- SOLUCIÓN: Cambiar a disposición vertical --- */
+            flex-direction: column;
+            gap: calc(8px * var(--scale-factor));
             background-color: rgba(0, 0, 0, 0.6);
-            padding: 8px;
+            padding: calc(8px * var(--scale-factor));
             border-radius: 8px;
             z-index: 10;
-            height: 48px; /* Altura inicial, ajustable */
+            /* --- SOLUCIÓN: El tamaño ahora se basa en el ancho --- */
+            width: calc(48px * var(--scale-factor));
             align-items: center;
             box-sizing: border-box;
         }
@@ -286,8 +288,7 @@
             left: 0;
             width: 100%;
             display: flex;
-            justify-content: center; /* --- CORRECCIÓN: Centra los elementos en lugar de espaciarlos --- */
-            gap: 2vw; /* Añade un espacio entre los dos contenedores */
+            justify-content: space-between; /* --- SOLUCIÓN: Separa los elementos a los extremos --- */
             align-items: flex-start;
             padding: 2vh 2vw; /* Espaciado desde los bordes de la pantalla */
             box-sizing: border-box;
@@ -295,13 +296,20 @@
         }
         /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
         #player1PocketedContainer {
-            position: absolute; /* --- SOLUCIÓN: Posicionamiento absoluto dentro del área segura --- */
+            position: absolute;
+            /* --- SOLUCIÓN: Posicionar a la izquierda y centrado verticalmente --- */
+            left: calc(var(--safe-area-offset-x) + 15px * var(--scale-factor));
+            top: 50%;
+            transform: translateY(-50%);
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
-            height: calc(48px * var(--scale-factor));
         }
         #player2PocketedContainer {
-            position: absolute; /* --- SOLUCIÓN: Debe ser absoluto para no afectar el layout --- */
+            position: absolute;
+            /* --- SOLUCIÓN: Posicionar a la derecha y centrado verticalmente --- */
+            right: calc(var(--safe-area-offset-x) + 15px * var(--scale-factor));
+            top: 50%;
+            transform: translateY(-50%);
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
         }
@@ -461,6 +469,49 @@
             height: auto; /* La altura la da el contenido */
             padding: calc(15px * var(--scale-factor));
         }
+
+        /* --- SOLUCIÓN: Estilos para el modal de error --- */
+        #error-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999; /* Por encima de todo */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #error-modal {
+            background-color: #2c3e50;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            border: 2px solid #e74c3c;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #error-modal h2 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        #error-details {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap; /* Para que el texto se ajuste */
+            word-break: break-all; /* Para romper palabras largas si es necesario */
+            overflow-y: auto; /* Scroll si el error es muy largo */
+            flex-grow: 1;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -561,6 +612,18 @@
         <div id="turnIndicator"></div>
 
     </div>
+
+    <!-- --- SOLUCIÓN: Modal para mostrar errores --- -->
+    <div id="error-overlay">
+        <div id="error-modal">
+            <h2>¡Oh no! Ocurrió un error inesperado.</h2>
+            <p>Por favor, copia este error y envíalo al desarrollador para ayudar a solucionarlo.</p>
+            <pre id="error-details"></pre>
+            <button id="copy-error-btn" style="padding: 10px; font-size: 16px; cursor: pointer;">Copiar Error</button>
+        </div>
+    </div>
+
+
     <!-- 
         1. Import map: Le dice al navegador qué archivo cargar cuando vea "import 'three'".
     -->
@@ -574,6 +637,49 @@
     </script>
     <!-- 2. Cargar pool.js como un módulo para permitir el uso de 'import' -->
     <script type="module" src="pool.js"></script>
+
+    <!-- --- SOLUCIÓN: Script para capturar errores globales --- -->
+    <script>
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorDetails = document.getElementById('error-details');
+        const copyErrorBtn = document.getElementById('copy-error-btn');
+
+        function showErrorModal(errorInfo) {
+            errorDetails.textContent = errorInfo;
+            errorOverlay.style.display = 'flex';
+        }
+
+        copyErrorBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(errorDetails.textContent).then(() => {
+                copyErrorBtn.textContent = '¡Copiado!';
+                setTimeout(() => {
+                    copyErrorBtn.textContent = 'Copiar Error';
+                }, 2000);
+            }).catch(err => {
+                console.error('No se pudo copiar el error: ', err);
+                copyErrorBtn.textContent = 'Error al copiar';
+            });
+        });
+
+        // Capturar errores de JavaScript estándar
+        window.onerror = function (message, source, lineno, colno, error) {
+            const errorInfo = `Error: ${message}\nArchivo: ${source}\nLínea: ${lineno}, Columna: ${colno}\n\nPila de llamadas:\n${error ? error.stack : 'No disponible'}`;
+            showErrorModal(errorInfo);
+            return true; // Evita que el error se muestre en la consola del navegador por defecto
+        };
+
+        // Capturar errores en promesas que no fueron manejados (ej. fetch)
+        window.addEventListener('unhandledrejection', function (event) {
+            const reason = event.reason;
+            let errorInfo = 'Error en una promesa no manejada.\n';
+            if (reason instanceof Error) {
+                errorInfo += `Error: ${reason.message}\n\nPila de llamadas:\n${reason.stack}`;
+            } else {
+                errorInfo += `Razón: ${JSON.stringify(reason, null, 2)}`;
+            }
+            showErrorModal(errorInfo);
+        });
+    </script>
 
     <!-- 3. Registrar el Service Worker -->
     <script>
