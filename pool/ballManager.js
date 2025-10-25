@@ -222,7 +222,6 @@ export function loadBallModels() {
 
     addPendingResource(); // 1. Notificar que empezamos a cargar los modelos de las bolas.
     loader.load(ballModelPath, (gltf) => {
-        console.log('Modelo de bola cargado exitosamente.');
         const modelScene = gltf.scene; 
 
         modelScene.traverse(child => {
@@ -348,3 +347,8 @@ const getBallModelName = (ballNumber) => {
             return `ball_${ballNumber}`;
     }
 };
+
+/** --- NUEVO: Devuelve todas las bolas actualmente en la escena. */
+export function getSceneBalls() {
+    return balls;
+}

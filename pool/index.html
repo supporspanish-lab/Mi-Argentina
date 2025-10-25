@@ -20,6 +20,41 @@
             user-select: none; /* Evita que el texto se seleccione al tocar */
             box-sizing: border-box; /* Incluye padding y border en el ancho/alto */
         }
+        /* --- NUEVO: Estilos para forzar la orientación horizontal en móviles --- */
+        #orientation-lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0d203b;
+            z-index: 200; /* Por encima de todo */
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #orientation-lock-screen svg {
+            width: 64px;
+            height: 64px;
+            fill: white;
+            margin-bottom: 20px;
+            animation: rotate-animation 2s infinite linear;
+        }
+        @keyframes rotate-animation {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(90deg); }
+        }
+        /* Mostrar la pantalla de bloqueo solo en modo vertical */
+        @media (orientation: portrait) {
+            #orientation-lock-screen {
+                display: flex;
+            }
+        }
+
         /* --- NUEVO: Estilos para la pantalla de carga --- */
         #loading-screen {
             position: fixed;
@@ -56,82 +91,19 @@
         body {
             background-color: #0d203b; /* Un azul oscuro más profundo */
         }
-        /* --- NUEVO: Estilo para el botón de edición de UI --- */
-        #editUIModeButton {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 20; /* Por encima de otros elementos */
-            cursor: pointer;
-        }
-        /* --- NUEVO: Estilo para el botón de copiar configuración --- */
-        #copyConfigButton {
-            position: absolute;
-            top: 60px; /* Debajo del botón de Editar UI */
-            left: 20px;
-            z-index: 20;
-            display: none; /* Oculto por defecto */
-        }
-        /* --- NUEVO: Estilo para el botón de ver bordes --- */
-        #toggleBoundsButton {
+        /* --- NUEVO: Estilos para los controles de tamaño de la mesa --- */
+        #table-resize-controls {
             position: absolute;
             top: 100px;
             left: 20px;
             z-index: 20;
-        }
-        /* --- NUEVO: Estilo para el botón de copiar bordes --- */
-        #copyBoundsConfigButton {
-            position: absolute;
-            top: 140px;
-            left: 20px;
-            z-index: 20;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
             display: none; /* Oculto por defecto */
         }
-        /* --- NUEVO: Estilo para el botón de zoom de bordes --- */
-        #zoomBoundsButton {
-            position: absolute;
-            top: 180px;
-            left: 20px;
-            z-index: 20;
-            display: none; /* Oculto por defecto */
-        }
-        /* --- NUEVO: Estilo para el botón de ver troneras --- */
-        #togglePocketsButton {
-            position: absolute;
-            top: 220px;
-            left: 20px;
-            z-index: 20;
-            display: none; /* Oculto por defecto */
-        }
-        /* --- NUEVO: Estilo para el botón de copiar troneras --- */
-        #copyPocketsConfigButton {
-            position: absolute;
-            top: 260px;
-            left: 20px;
-            z-index: 20;
-            display: none; /* Oculto por defecto */
-        }
-        /* --- NUEVO: Estilo para el botón de subdividir troneras --- */
-        #subdividePocketsButton {
-            position: absolute;
-            top: 260px; /* Debajo del botón de copiar troneras */
-            left: 20px;
-            z-index: 20;
-            display: none; /* Oculto por defecto */
-        }
-        /* --- NUEVO: Estilo para el botón de frenado --- */
-        #toggleDampingButton {
-            position: absolute;
-            top: 300px;
-            left: 20px;
-            z-index: 20;
-        }
-        /* --- NUEVO: Estilo para el botón de textura de la mesa --- */
-        #toggleTableTextureButton {
-            position: absolute;
-            top: 340px; /* Debajo del botón de frenado */
-            left: 20px;
-            z-index: 20;
+        #table-resize-controls input {
+            width: 60px;
         }
         #gameContainer {
             position: absolute;
@@ -145,12 +117,12 @@
         /* --- NUEVO: Estilos para el selector de efecto --- */
         #spinSelectorContainer {
             position: absolute;
-            left: 1098.977px; /* Valor del JSON */
-            top: 18.068px; /* Valor del JSON */
-            width: 58.523px; /* Valor del JSON */
-            height: 53.523px; /* Valor del JSON */
+            right: 0; /* --- CORRECCIÓN: Pegado al borde derecho --- */
+            top: 0;   /* --- CORRECCIÓN: Pegado al borde superior --- */
+            width: 8vw; /* --- MODIFICACIÓN: Ancho relativo al ancho de la pantalla --- */
+            height: 8vw;/* --- MODIFICACIÓN: Alto relativo al ancho de la pantalla --- */
             background-color: rgba(0, 0, 0, 0.5);
-            border: 2px solid #fff;
+            border: 0.3vh solid #fff;
             border-radius: 50%; /* Círculo */
             z-index: 10;
             cursor: pointer;
@@ -160,19 +132,68 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            background-color: #f0f0f0;
+            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
+            background-image: url('imajenes/bolasMetidas/blanca.png');
+            background-size: cover; /* Asegura que la imagen llene el círculo */
+            background-position: center;
             border-radius: 50%;
+            /* --- NUEVO: Añadir una sombra interior para dar profundidad --- */
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
         }
-        #spinSelectorDot {
+        /* --- MODIFICACIÓN: Usar una clase para que ambos puntos compartan estilo --- */
+        .spin-selector-dot {
             position: absolute;
-            width: 15px;
-            height: 15px;
+            width: 20%; /* --- MODIFICACIÓN: Punto un poco más pequeño --- */
+            height: 20%;
             background-color: #e74c3c; /* Rojo */
             border-radius: 50%;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%); /* Centrado por defecto */
+            border: 1px solid rgba(0,0,0,0.5);
+            box-shadow: 0 0 5px #e74c3c;
+            /* --- MODIFICACIÓN: El centrado ahora se hará con la posición calculada --- */
+            transform: translate(-50%, -50%);
         }
+
+        /* --- NUEVO: Estilos para el modal del selector de efecto --- */
+        #spinModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        #largeSpinSelector {
+            width: 35vh; /* Tamaño grande, relativo a la altura de la pantalla */
+            height: 35vh;
+            max-width: 90vw; /* Evitar que sea demasiado grande en pantallas anchas */
+            max-height: 90vw;
+            position: relative;
+            cursor: pointer;
+            transform: scale(0.8);
+            /* --- SOLUCIÓN: Añadir la imagen de la bola blanca como fondo --- */
+            background-image: url('imajenes/bolasMetidas/blanca.png');
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            transition: transform 0.2s ease-in-out;
+        }
+        #spinModalOverlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+        #spinModalOverlay.visible #largeSpinSelector {
+            transform: scale(1);
+        }
+        /* --- SOLUCIÓN: Indicar explícitamente al navegador que el canvas no es para hacer scroll --- */
+        /* Esto ayuda a eliminar las advertencias de "non-passive event listener". */
         canvas {
             width: 100%;
             height: 100%;
@@ -226,49 +247,6 @@
             background-position: center; /* Asegura que la imagen esté centrada */
             flex-shrink: 0; /* Evita que los iconos se encojan */
         }
-        /* --- NUEVO: Estilo para elementos de UI en modo edición --- */
-        .ui-draggable {
-            cursor: move !important;
-            border: 2px dashed #f39c12 !important; /* Borde naranja para indicar que se puede mover */
-            user-select: none; /* Evita seleccionar texto mientras se arrastra */
-            position: relative; /* Necesario para posicionar el handle de redimensionar */
-        }
-        /* --- NUEVO: Estilo para el handle de redimensionar --- */
-        .resize-handle {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 15px;
-            height: 15px;
-            background-color: #f39c12;
-            border: 2px solid white;
-            cursor: nwse-resize;
-            display: none; /* Oculto por defecto */
-        }
-        .ui-draggable .resize-handle {
-            display: block; /* Visible solo en modo edición */
-        }
-        /* --- NUEVO: Estilo para el handle de rotación --- */
-        .rotate-handle {
-            position: absolute;
-            top: -25px; /* Posicionarlo por encima del elemento */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 20px;
-            height: 20px;
-            background-color: #3498db; /* Azul para diferenciarlo */
-            border: 2px solid white;
-            border-radius: 50%;
-            cursor: grab;
-            display: none; /* Oculto por defecto */
-            z-index: 1; /* Asegurarse de que esté visible */
-        }
-        .ui-draggable .rotate-handle {
-            display: block; /* Visible solo en modo edición */
-        }
-        .rotate-handle:active {
-            cursor: grabbing;
-        }
         /* --- NUEVO: Estilo para los contenedores de bolas de jugador --- */
         .pocketed-balls-container {
             position: absolute;
@@ -300,27 +278,42 @@
             background-position: center;
             background-repeat: no-repeat;
         }
+        /* --- NUEVO: Contenedor flexible para la UI superior --- */
+        #top-ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center; /* --- CORRECCIÓN: Centra los elementos en lugar de espaciarlos --- */
+            gap: 2vw; /* Añade un espacio entre los dos contenedores */
+            align-items: flex-start;
+            padding: 2vh 2vw; /* Espaciado desde los bordes de la pantalla */
+            box-sizing: border-box;
+            pointer-events: none; /* Permite hacer clic a través del contenedor */
+        }
+        /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
         #player1PocketedContainer {
-            left: 170px;
-            top: 6.989px;
-            width: 251.804px;
-            height: 40.9375px;
+            position: relative; /* Ya no necesita ser absoluto */
+            max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
+            height: 6vh; /* Alto relativo */
+            pointer-events: auto; /* Reactivar eventos para este elemento */
         }
         #player2PocketedContainer {
-            left: 814.560px; /* Valor del JSON */
-            top: 6.989px; /* Valor del JSON */
-            width: 251.804px; /* Valor del JSON */
-            height: 40.9375px; /* Igual que el 'height' del jugador 1 */
+            position: relative; /* Ya no necesita ser absoluto */
+            max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
+            height: 6vh; /* Alto relativo */
+            pointer-events: auto; /* Reactivar eventos para este elemento */
         }
 
         /* --- NUEVO: Estilos para la barra de potencia --- */
         #powerBarContainer {
             position: absolute;
-            left: 30px; /* Posición a la izquierda */
+            left: 2vw; /* Posición relativa a la izquierda */
             top: 50%;
             transform: translateY(-50%); /* Centrado verticalmente */
             width: 20px; /* Ancho de la barra vertical */
-            height: 250px; /* Alto de la barra vertical */
+            height: 35vh; /* Alto relativo a la altura de la pantalla */
             background-color: rgba(0, 0, 0, 0.5);
             border: 2px solid #fff;
             border-radius: 10px;
@@ -328,32 +321,40 @@
             display: none; /* Oculto por defecto */
         }
         #powerBarFill {
-            position: absolute; /* Para posicionar desde abajo */
-            bottom: 0;
+            position: absolute;
+            top: 0; /* --- CORRECCIÓN: Posicionar desde arriba --- */
             left: 0;
             width: 100%;
             height: 0%; /* La altura se animará */
-            background: linear-gradient(to top, #3498db, #f1c40f, #e74c3c); /* Gradiente vertical */
+            background: linear-gradient(to bottom, #3498db, #f1c40f, #e74c3c); /* --- CORRECCIÓN: Gradiente hacia abajo --- */
             transition: height 0.05s linear; /* Transición suave de la altura */
+            /* --- NUEVO: Redondear las esquinas superiores del relleno --- */
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
         /* --- NUEVO: Estilo para el handle deslizable de la barra de potencia --- */
         #powerBarHandle {
             position: absolute;
             left: 50%; /* Centrado horizontalmente en la barra */
-            bottom: 0%; /* Empieza en la parte inferior */
-            width: 24px; /* Un poco más ancho que la barra */
-            height: 24px;
-            background-color: #f1c40f;
-            border: 2px solid white;
-            border-radius: 50%;
-            transform: translate(-50%, 50%); /* Centrado en el eje y sobre la línea de potencia */
+            top: 0%; /* --- CORRECCIÓN: Posicionar desde arriba --- */
+            /* --- CORRECCIÓN: Cambiar el círculo por un triángulo --- */
+            width: 0;
+            height: 0; 
+            background-color: transparent;
+            /* --- CORRECCIÓN: Hacer que el triángulo esté "parado" (apuntando hacia abajo) --- */
+            /* --- CORRECCIÓN: Hacer que el triángulo apunte hacia arriba --- */
+            border-left: 10px solid transparent;   /* Mitad del ancho */
+            border-right: 10px solid transparent;  /* Mitad del ancho */
+            border-bottom: 15px solid #f1c40f; /* La base del triángulo es el borde inferior */
             cursor: pointer;
+            /* --- SOLUCIÓN: Centrar el triángulo horizontalmente desde el inicio --- */
+            transform: translateX(-50%);
         }
         /* --- NUEVO: Estilo para redondear el borde del medidor al llegar a cierto punto --- */
         #powerBarFill.rounding-edge {
-            border-top-left-radius: 8px; /* Redondear esquinas superiores */
-            border-top-right-radius: 8px;
+            border-bottom-left-radius: 8px; /* --- CORRECCIÓN: Redondear esquinas inferiores --- */
+            border-bottom-right-radius: 8px;
         }
 
 
@@ -397,23 +398,55 @@
             transform: translateY(50%);
         }
 
-
-        /* --- NUEVO: Estilo para los números --- */
-        .power-marker-number {
+        /* --- SOLUCIÓN: Estilos para el nuevo indicador de turno --- */
+        #turnIndicator {
             position: absolute;
-            left: 25px; /* Posicionado a la derecha de la barra */
-            transform: translateY(50%); /* Centrado verticalmente con la línea */
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(44, 62, 80, 0.85);
             color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
             font-family: Arial, sans-serif;
-            font-size: 14px;
+            font-size: 22px;
             font-weight: bold;
-            text-shadow: 1px 1px 2px black; /* Sombra para legibilidad */
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            pointer-events: none; /* Para que no interfiera con el ratón */
         }
 
-
+        /* --- SOLUCIÓN: Estilos para el mensaje de falta que no se veían --- */
+        #foulMessage {
+            position: absolute;
+            top: 25%; /* Misma posición que el indicador de turno */
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8); /* Inicia un poco más pequeño */
+            background-color: rgba(231, 76, 60, 0.9); /* Rojo de falta, más opaco */
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            border: 2px solid #c0392b; /* Borde rojo oscuro */
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 21; /* Por encima del indicador de turno */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
+    <!-- --- NUEVO: Pantalla para solicitar la rotación del dispositivo --- -->
+    <div id="orientation-lock-screen">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M18.5,6.5H14.5a1,1,0,0,1,0-2h6a1,1,0,0,1,1,1V11.5a1,1,0,0,1-2,0V7.53l-3.22,3.22a1,1,0,0,1-1.42-1.42Z"/><path d="M5.5,17.5h4a1,1,0,0,1,0,2h-6a1,1,0,0,1-1-1V12.5a1,1,0,0,1,2,0v3.97l3.22-3.22a1,1,0,0,1,1.42,1.42Z"/>
+        </svg>
+        <p>Por favor, rota tu dispositivo a modo horizontal para jugar.</p>
+    </div>
     <!-- --- NUEVO: Pantalla de carga --- -->
     <div id="loading-screen">
         <div id="progress-container">
@@ -423,43 +456,44 @@
     </div>
 
     <div id="gameContainer">
-        <button id="copyConfigButton">Copiar Configuración</button>
-        <button id="editUIModeButton">Editar UI</button>
-
+        <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->
         <!-- --- NUEVO: Contenedor para el selector de efecto --- -->
         <div id="spinSelectorContainer">
             <div id="spinSelectorCueBall">
-                <div id="spinSelectorDot"></div>
+                <!-- SOLUCIÓN: Añadir el punto rojo también a la miniatura -->
+                <div id="smallSpinSelectorDot" class="spin-selector-dot"></div>
             </div>
-            <div class="resize-handle"></div>
-            <div class="rotate-handle"></div>
         </div>
 
-        <!-- --- NUEVO: Contenedor para mostrar bolas entroneradas --- -->
-        <div id="pocketedInfo"></div>
-
-        <!-- --- NUEVO: Contenedores para las bolas de cada jugador --- -->
-        <div id="player1PocketedContainer" class="pocketed-balls-container">
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="resize-handle"></div>
-            <div class="rotate-handle"></div>
+        <!-- --- NUEVO: Modal para el selector de efecto en grande --- -->
+        <div id="spinModalOverlay">
+            <div id="largeSpinSelector">
+                <div id="spinSelectorDot" class="spin-selector-dot"></div>
+            </div>
         </div>
-        <div id="player2PocketedContainer" class="pocketed-balls-container">
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="resize-handle"></div>
-            <div class="rotate-handle"></div>
+
+        <!-- --- NUEVO: Contenedor flexible para la UI superior --- -->
+        <div id="top-ui-container">
+            <!-- Contenedor para las bolas del jugador 1 -->
+            <div id="player1PocketedContainer" class="pocketed-balls-container">
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+            </div>
+            <!-- Contenedor para las bolas del jugador 2 -->
+            <div id="player2PocketedContainer" class="pocketed-balls-container">
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+            </div>
         </div>
 
         <!-- --- NUEVO: Barra de potencia --- -->
@@ -470,35 +504,38 @@
             <!-- --- NUEVO: Marcadores para la barra de potencia --- -->
             <div id="powerBarMarkers">
                 <!-- --- NUEVO: Líneas diminutas (cada 5%) --- -->
-                <div class="power-marker-line-tiny" style="bottom: 5%;"></div>
-                <div class="power-marker-line-tiny" style="bottom: 15%;"></div>
-                <div class="power-marker-line-tiny" style="bottom: 35%;"></div>
-                <div class="power-marker-line-tiny" style="bottom: 45%;"></div>
-                <div class="power-marker-line-tiny" style="bottom: 55%;"></div>
-                <div class="power-marker-line-tiny" style="bottom: 65%;"></div>
-                <div class="power-marker-line-tiny" style="bottom: 85%;"></div>
-                <div class="power-marker-line-tiny" style="bottom: 95%;"></div>
+                <div class="power-marker-line-tiny" style="top: 5%;"></div>
+                <div class="power-marker-line-tiny" style="top: 15%;"></div>
+                <div class="power-marker-line-tiny" style="top: 35%;"></div>
+                <div class="power-marker-line-tiny" style="top: 45%;"></div>
+                <div class="power-marker-line-tiny" style="top: 55%;"></div>
+                <div class="power-marker-line-tiny" style="top: 65%;"></div>
+                <div class="power-marker-line-tiny" style="top: 85%;"></div>
+                <div class="power-marker-line-tiny" style="top: 95%;"></div>
                 <!-- --- NUEVO: Líneas pequeñas (cada 10%) --- -->
-                <div class="power-marker-line-small" style="bottom: 10%;"></div>
-                <div class="power-marker-line-small" style="bottom: 20%;"></div>
-                <div class="power-marker-line-small" style="bottom: 30%;"></div>
-                <div class="power-marker-line-small" style="bottom: 40%;"></div>
-                <div class="power-marker-line-small" style="bottom: 60%;"></div>
-                <div class="power-marker-line-small" style="bottom: 70%;"></div>
-                <div class="power-marker-line-small" style="bottom: 80%;"></div>
-                <div class="power-marker-line-small" style="bottom: 90%;"></div>
-                <span class="power-marker-number" style="bottom: 0%;">0</span>
-                <div class="power-marker-line" style="bottom: 25%;"></div>
-                <span class="power-marker-number" style="bottom: 25%;">25</span>
-                <div class="power-marker-line" style="bottom: 50%;"></div>
-                <span class="power-marker-number" style="bottom: 50%;">50</span>
-                <div class="power-marker-line" style="bottom: 75%;"></div>
-                <span class="power-marker-number" style="bottom: 75%;">75</span>
-                <span class="power-marker-number" style="bottom: 100%;">100</span>
+                <div class="power-marker-line-small" style="top: 10%;"></div>
+                <div class="power-marker-line-small" style="top: 20%;"></div>
+                <div class="power-marker-line-small" style="top: 30%;"></div>
+                <div class="power-marker-line-small" style="top: 40%;"></div>
+                <div class="power-marker-line-small" style="top: 60%;"></div>
+                <div class="power-marker-line-small" style="top: 70%;"></div>
+                <div class="power-marker-line-small" style="top: 80%;"></div>
+                <div class="power-marker-line-small" style="top: 90%;"></div>
+                <div class="power-marker-line" style="top: 25%;"></div>
+                <div class="power-marker-line" style="top: 50%;"></div>
+                <div class="power-marker-line" style="top: 75%;"></div>
             </div>
         </div>
 
-        <canvas id="poolCanvas"></canvas>        
+        <canvas id="poolCanvas"></canvas>
+
+        <!-- --- CORRECCIÓN: Mover los elementos de la UI aquí para que estén dentro del gameContainer --- -->
+        <div id="pocketedInfo"></div>
+        <div id="foulMessage"></div> <!-- CORRECCIÓN: El ID ya estaba, pero lo confirmo. El problema estaba en otro lado. -->
+
+        <!-- --- SOLUCIÓN: Nuevo elemento para el indicador de turno --- -->
+        <div id="turnIndicator"></div>
+
     </div>
     <!-- 
         1. Import map: Le dice al navegador qué archivo cargar cuando vea "import 'three'".
@@ -519,13 +556,27 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registrado con éxito:', registration);
-                    })
+                    .then(registration => { /* El Service Worker se registró correctamente. */ })
                     .catch(error => {
                         console.log('Error en el registro del Service Worker:', error);
                     });
             });
         }
+
+        // --- NUEVO: Lógica para forzar la orientación horizontal ---
+        window.addEventListener('load', () => {
+            // Intentar bloquear la orientación en horizontal
+            if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                screen.orientation.lock('landscape').catch(error => {
+                    // El error es común si el usuario no interactúa primero,
+                    // la pantalla de aviso CSS actuará como fallback.
+                });
+            }
+
+            // Escuchar cambios de orientación para asegurar que la UI se actualice
+            screen.orientation.addEventListener('change', () => {
+                window.dispatchEvent(new Event('resize'));
+            });
+        });
     </script>
 </body></html>

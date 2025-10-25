@@ -1,5 +1,6 @@
 // --- Módulo de Gestión de Carga ---
 import * as THREE from 'three';
+import { randomizeStartingPlayer } from './gameState.js';
 
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
@@ -17,12 +18,10 @@ let completedSteps = 0;
 export const loadingManager = new THREE.LoadingManager();
 
 loadingManager.onStart = function (url, itemsLoaded, itemsTotal) {
-    console.log(`Iniciando la carga de ${itemsTotal} recursos.`);
     loadingScreen.style.display = 'flex';
 };
 
 loadingManager.onLoad = function () {
-    console.log('LoadingManager: Todos los archivos han sido descargados.');
     managerLoaded = true;
     // Intentar iniciar el juego. Si aún hay recursos pendientes, no hará nada.
     tryStartGame();
@@ -87,17 +86,17 @@ function resolveProcessingStep() {
  */
 function tryStartGame() {
     if (managerLoaded && pendingResources === 0 && completedSteps === processingSteps.length) {
-        console.log('¡CARGA COMPLETA! Todos los archivos descargados y todo el juego inicializado.');
         progressText.textContent = '100%';
         progressBar.style.width = '100%';
         setTimeout(() => {
             loadingScreen.style.opacity = '0';
             setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
+            // --- SOLUCIÓN: Asignar el jugador inicial de forma aleatoria al terminar la carga ---
+            randomizeStartingPlayer();
         }, 250); // Pequeña pausa en 100% para que se vea que ha terminado.
     } else if (managerLoaded && pendingResources === 0 && completedSteps < processingSteps.length) {
         // Si los archivos están listos, ejecutamos el siguiente paso de procesamiento.
         const nextStep = processingSteps[completedSteps];
-        console.log(`Ejecutando paso de procesamiento: ${nextStep}`);
         progressText.textContent = `Inicializando: ${nextStep.replace('_', ' ')}...`;
         onLoadingCompleteCallback(nextStep, resolveProcessingStep);
     }

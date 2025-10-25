@@ -15,32 +15,68 @@ export let isPlacingCueBall = false; // --- NUEVO: Estado para cuando el jugador
 export let isDampingEnabled = true; // --- NUEVO: Controla si el frenado en la tronera está activo
 export let gamePaused = false;
 
+export let isLoading = true; // --- NUEVO: Estado para saber si el juego está cargando/calentando
 export function startShot() {
+    // --- LOG: Indica que se ha iniciado un tiro.
     shotInProgress = true;
     shotStartTime = performance.now(); // --- NUEVO: Registrar el tiempo de inicio
     firstBallHitThisTurn = null; // --- NUEVO: Reiniciar en cada tiro
 }
 
+/**
+ * --- NUEVO: Selecciona aleatoriamente al jugador que comenzará la partida.
+ */
+export function randomizeStartingPlayer() {
+    isLoading = false; // --- NUEVO: La carga termina cuando se asigna el primer jugador
+    currentPlayer = Math.random() < 0.5 ? 1 : 2;
+}
+
 export function setPlacingCueBall(isPlacing) { // --- NUEVO: Función para controlar el estado de colocación
+    // --- LOG: Indica un cambio en el estado de colocación de la bola blanca.
     isPlacingCueBall = isPlacing;
 }
 
 export function toggleDamping() { // --- NUEVO: Función para alternar el estado del frenado
+    // --- LOG: Indica que se ha cambiado el estado del frenado en tronera.
     isDampingEnabled = !isDampingEnabled;
 }
 
 export function setGamePaused(isPaused) {
+    // --- LOG: Indica un cambio en el estado de pausa del juego.
     gamePaused = isPaused;
+}
+
+/**
+ * --- SOLUCIÓN: Añade la función que faltaba para establecer el jugador actual.
+ * @param {number} player - El número del jugador (1 o 2).
+ */
+export function setCurrentPlayer(player) {
+    currentPlayer = player;
+}
+
+/**
+ * --- NUEVO: Muestra un mensaje de falta en el centro de la pantalla.
+ * @param {string} reason - El texto que se mostrará como motivo de la falta.
+ */
+export function showFoulMessage(reason) {
+    const foulMessageEl = document.getElementById('foulMessage');
+    if (foulMessageEl) {
+        foulMessageEl.textContent = reason;
+        foulMessageEl.style.opacity = '1';
+        foulMessageEl.style.transform = 'translate(-50%, -50%) scale(1)';
+        setTimeout(() => { foulMessageEl.style.opacity = '0'; foulMessageEl.style.transform = 'translate(-50%, -50%) scale(0.8)'; }, 2500);
+    }
 }
 
 // --- NUEVO: Función para registrar la primera bola golpeada en un turno ---
 export function setFirstHitBall(ball) {
+    // --- LOG: Indica que se está intentando registrar la primera bola golpeada.
+    // console.log(`[GameState] Llamando a setFirstHitBall() para bola #${ball.number}`);
     if (!firstBallHitThisTurn) { // Solo registrar la primera
         firstBallHitThisTurn = ball;
-        console.log(`DEBUG: Primera bola golpeada en este tiro: #${ball.number}`);
     }
 }
-
+ 
 export function addPocketedBall(ball) {
     pocketedThisTurn.push(ball);
 
@@ -51,9 +87,6 @@ export function addPocketedBall(ball) {
         playerAssignments[currentPlayer === 1 ? 2 : 1] = (type === 'solids' ? 'stripes' : 'solids');
         ballsAssigned = true;
         const typeToSpanish = (t) => t === 'solids' ? 'Lisas (1-7)' : 'Rayadas (9-15)';
-        console.log("----------------------------------------");
-        console.log(`¡Bolas asignadas! Jugador 1 tiene las ${typeToSpanish(playerAssignments[1])}. Jugador 2 tiene las ${typeToSpanish(playerAssignments[2])}.`);
-        console.log("----------------------------------------");
     }
 
     addPocketedBallToUI(ball);
@@ -135,93 +168,18 @@ function updatePocketedBallsUI() {
 // --- Lógica de Fin de Turno ---
 
 export function handleTurnEnd() {
+    // --- SOLUCIÓN: La lógica de faltas y turno se ha movido a revisar.js ---
+    // Esta función ahora solo marca el fin del tiro y limpia los arrays para la siguiente revisión.
     shotInProgress = false;
-    const pocketedBalls = [...pocketedThisTurn];
-    pocketedThisTurn = []; // Limpiar para el siguiente turno
+    if (cueBall) cueBall.spin = { x: 0, y: 0 };
+}
 
-    // --- NUEVO: Comprobar si se ha cometido una falta al golpear la bola incorrecta ---
-    let foulCommitted = false;
-    let foulReason = "";
-
-    // --- CORRECCIÓN: Asegurarse de que la bola golpeada es una bola de objeto válida ---
-    if (ballsAssigned && firstBallHitThisTurn && firstBallHitThisTurn.number !== null) {
-        const firstHitType = (firstBallHitThisTurn.number >= 1 && firstBallHitThisTurn.number <= 7) ? 'solids' : 'stripes';
-        if (playerAssignments[currentPlayer] !== firstHitType) {
-            // --- CORRECCIÓN: La falta es inmediata, a menos que la bola golpeada sea la 8.
-            if (firstBallHitThisTurn.number === 8) {
-                // Si se golpea la 8, solo es falta si al jugador aún le quedan bolas de su tipo.
-                const playerBallsLeft = balls.some(b => b.isActive && playerAssignments[currentPlayer] === ((b.number >= 1 && b.number <= 7) ? 'solids' : 'stripes'));
-                if (playerBallsLeft) {
-                    foulCommitted = true;
-                    foulReason = `¡Falta! No se puede golpear la bola 8 primero.`;
-                    console.log(`FALTA: Jugador ${currentPlayer} golpeó la bola 8 primero cuando aún le quedaban bolas.`);
-                }
-            } else {
-                // Si se golpea cualquier otra bola del oponente, es falta siempre.
-                foulCommitted = true;
-                foulReason = `¡Falta! La primera bola golpeada fue del oponente.`;
-                console.log(`FALTA: Jugador ${currentPlayer} golpeó una bola del oponente (${firstBallHitThisTurn.number}) primero.`);
-            }
-        }
-    }
-
-    // --- CORRECCIÓN: Declarar cueBallPocketed ANTES de su primer uso ---
-    const cueBallPocketed = pocketedBalls.some(ball => ball.number === null);
-
-    const pocketedInfoEl = document.getElementById('pocketedInfo');
-
-    if (cueBallPocketed) {
-        foulCommitted = true; // Meter la blanca también es falta
-        pocketedInfoEl.textContent = '¡Falta! Bola blanca entronerada.';
-        pocketedInfoEl.style.display = 'block';
-        // --- CORRECCIÓN: Eliminar el setTimeout para activar "bola en mano" inmediatamente ---
-        // El retraso causaba que el estado del juego se bloqueara.
-        isPlacingCueBall = true;
-        console.log("Bola en mano. Coloca la bola blanca detrás de la línea de saque.");
-    } else if (foulCommitted) {
-        pocketedInfoEl.textContent = foulReason;
-        pocketedInfoEl.style.display = 'block';
-        isPlacingCueBall = true; // Bola en mano para el oponente
-    } else if (pocketedBalls.some(b => b.number !== null)) {
-        const ballNumbers = pocketedBalls.map(b => b.number).join(', ');
-        pocketedInfoEl.textContent = `Bolas entroneradas: ${ballNumbers}`;
-        pocketedInfoEl.style.display = 'block';
-        setTimeout(() => { pocketedInfoEl.style.display = 'none'; }, 3000);
-    } else {
-        // --- CORRECCIÓN: Si no se metió ninguna bola, pero el turno cambia, ocultar el mensaje.
-        // Esto evita que el mensaje del turno anterior persista.
-        if (pocketedBalls.length === 0) {
-            pocketedInfoEl.style.display = 'none';
-        }
-        pocketedInfoEl.style.display = 'none';
-    }
-
-    // --- CORRECCIÓN: Mover estas comprobaciones aquí, DESPUÉS de evaluar las faltas ---
-    const playerPocketedOwnBall = pocketedBalls.some(ball => {
-        if (!playerAssignments[currentPlayer] || ball.number === null) return false;
-        const ballType = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-        return ballType === playerAssignments[currentPlayer];
-    });
-
-    // --- CORRECCIÓN: Lógica de cambio de turno ---
-    let switchTurn = false;
-
-    // Condición 1: Si no se metió ninguna bola o se cometió una falta, se cambia de turno.
-    if (pocketedBalls.length === 0 || foulCommitted) {
-        switchTurn = true;
-    }
-    // Condición 2: Si se metieron bolas y no hubo falta, pero ninguna era del jugador actual, también se cambia.
-    // (Esto cubre el caso de meter solo bolas del oponente).
-    else if (ballsAssigned && !playerPocketedOwnBall) {
-        switchTurn = true;
-    }
-
-    if (switchTurn) {
-        currentPlayer = (currentPlayer === 1) ? 2 : 1;
-        console.log(`Turno cambiado al Jugador ${currentPlayer}`);
-    } else {
-        console.log(`Jugador ${currentPlayer} continúa su turno.`);
-    }
+/**
+ * --- SOLUCIÓN: Limpia el array de bolas entroneradas.
+ * Se llama después de que un turno ha sido completamente revisado.
+ */
+export function clearPocketedBalls() {
+    pocketedThisTurn = [];
 }
 
 export function getGameState() {
@@ -231,7 +189,9 @@ export function getGameState() {
         ballsAssigned, 
         isPlacingCueBall, // --- NUEVO: Exponer el estado
         isDampingEnabled, // --- NUEVO: Exponer el estado del frenado
-        gamePaused // --- CORRECCIÓN: Exponer el estado de pausa
+        gamePaused, // --- CORRECCIÓN: Exponer el estado de pausa
+        firstBallHitThisTurn, // --- SOLUCIÓN: Exponer la primera bola golpeada para que revisar.js pueda consultarla
+        pocketedThisTurn // --- SOLUCIÓN: Exponer las bolas entroneradas para que revisar.js pueda consultarlas
     };
 }
 
@@ -241,6 +201,15 @@ export function getGameState() {
  * @returns {boolean} - True si alguna bola se está animando, false en caso contrario.
  */
 export function areBallsAnimating(balls) {
+    // --- LOG: Indica que se está comprobando si hay bolas en animación.
+    // console.log('[GameState] Llamando a areBallsAnimating()...');
+    // --- CORRECCIÓN: Una bola solo está "animándose" si está cayendo. El estado 'rolling' ya no se usa y podría bloquear el turno.
+    const animatingBall = balls.find(ball => ball.isPocketed && ball.pocketedState === 'falling');
+    if (animatingBall) {
+        return true;
+    }
     // El turno no debe terminar si una bola está cayendo o rodando bajo la mesa.
-    return balls.some(ball => ball.isPocketed && (ball.pocketedState === 'falling' || ball.pocketedState === 'rolling'));
+    // --- LOG: Indica el final de la comprobación de animación.
+    // console.log('%c[GameState]%c areBallsAnimating() finalizado. Resultado: false.', 'color: #e67e22; font-weight: bold;', 'color: inherit;');
+    return false;
 }

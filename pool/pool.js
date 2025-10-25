@@ -1,16 +1,17 @@
 import * as THREE from 'three';
 import { updateBallPositions, areBallsMoving } from './fisicas.js';
 import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
-import { scene, camera, renderer, updateCameraPositionForResponsiveness, loadTableTexture } from './scene.js';
+import { scene, camera, renderer, updateCameraPositionForResponsiveness, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders } from './ballManager.js';
-import { handleInput, initializeUI, spinOffset, updateUI, prepareUIResources } from './ui.js'; // ui.js importa powerBar.js
+import { handleInput, initializeUI, updateUI, prepareUIResources } from './ui.js';
 import { initAudio, loadSound, prepareAudio } from './audioManager.js';
-import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js';
+import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
 import { prepareAimingResources } from './aiming.js';
-import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall } from './gameState.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage } from './gameState.js';
 
 let lastTime;
+window.currentShotAngle = 0; // Ángulo de tiro global, gestionado por inputManager
 
 // --- NUEVO: Variables para el efecto de vibración de la cámara ---
 let shakeIntensity = 0;
@@ -18,6 +19,9 @@ let shakeDuration = 0;
 let originalCameraPosition = new THREE.Vector3();
 
 function gameLoop(time) {
+    // --- LOG: Indica el inicio de un nuevo fotograma en el bucle del juego.
+    // console.log('[GameLoop] Iniciando nuevo fotograma...');
+
     // Vuelve a llamar a gameLoop para el siguiente fotograma
     requestAnimationFrame(gameLoop);
 
@@ -26,6 +30,8 @@ function gameLoop(time) {
 
     // --- NUEVO: Si el juego está pausado, no se actualiza la lógica, solo se renderiza. ---
     if (getGameState().gamePaused) {
+        // --- LOG: Indica que el bucle está en modo pausa.
+        // console.log('[GameLoop] Juego en pausa, solo renderizando.');
         renderer.render(scene, camera); // Renderizar la escena
         return; // Detener la ejecución del resto del bucle
     }
@@ -48,6 +54,8 @@ function gameLoop(time) {
     let dt = 0;
     if (lastTime !== undefined) {
         dt = (time - lastTime) / 1000; // Delta time en segundos
+        // --- LOG: Indica que se va a actualizar la física de las bolas.
+        // console.log('[GameLoop] Llamando a updateBallPositions...');
         const pocketedInFrame = updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS);
 
         if (pocketedInFrame.length > 0) {
@@ -56,6 +64,10 @@ function gameLoop(time) {
 
         // --- MODIFICACIÓN: El turno solo termina si no hay bolas moviéndose NI animándose ---
         if (getGameState().shotInProgress && !areBallsMoving(balls) && !areBallsAnimating(balls)) {
+            // --- LOG: Indica que se cumplen las condiciones para finalizar el turno.
+            // --- MODIFICACIÓN: El log ahora se muestra dentro de handleTurnEnd para ser más preciso.
+            
+            // handleTurnEnd ahora se encarga de toda la lógica, incluida la notificación de "listo para jugar".
             handleTurnEnd();
             // --- MEJORA: Restablecer la rotación visual de la bola blanca para el siguiente tiro ---
             if (cueBall && cueBall.mesh) {
@@ -72,160 +84,47 @@ function gameLoop(time) {
         // --- CORRECCIÓN: Iterar hacia atrás para poder eliminar elementos de forma segura ---
         for (let i = balls.length - 1; i >= 0; i--) {
             const ball = balls[i];
-            // --- NUEVO: Animación de caída y rodadura para bolas entroneradas ---
-            if (ball.isPocketed && !ball.physicsBody) { // Si está entronerada pero no en la simulación 3D
-                if (ball.pocketedState === 'falling') { // Cuando se marca para caer
-                    addBallToFallSimulation(ball); // Añadirla al motor de física 3D
-                }
-            }
 
             // --- CORRECCIÓN: Reestructurar la lógica de estados para que sea más clara ---
 
-            // Estado 1: La bola está siendo simulada por el motor de física 3D (Cannon-es)
-            if (ball.physicsBody) { // Si la bola está siendo simulada por Cannon-es
-                if (ball.mesh.position.z < -150) { // Umbral cuando la bola ha caído lo suficiente
-                    ball.physicsBody.world.removeBody(ball.physicsBody);
-                    ball.physicsBody = null;
-
-                    // Si es la bola blanca, la ocultamos y pausamos para reposicionarla
-                    if (ball === cueBall) {
-                        ball.mesh.visible = false;
-                        ball.pocketedState = 'collected'; // Marcar como gestionada
-                        // --- CORRECCIÓN: Activar "bola en mano" inmediatamente ---
-                        // En lugar de pausar el juego, activamos el modo de colocación.
-                        setPlacingCueBall(true);
-                        // --- CORRECCIÓN: Reiniciar el estado de la bola blanca para que pueda ser colocada ---
-                        ball.isPocketed = false;
-                        ball.isActive = false; // Se activará al hacer clic para colocarla
-                        ball.vx = 0;
-                        ball.vy = 0;
-                        // --- CORRECCIÓN: Reposicionar la bola en su punto de partida inicial ---
-                        ball.mesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, BALL_RADIUS);
-                        ball.mesh.visible = true;
-                        if (ball.shadowMesh) ball.shadowMesh.visible = true;
-                        console.log("Bola en mano. Coloca la bola blanca detrás de la línea de saque.");
-                    } else {
-                        // Para otras bolas, iniciamos la fase de rodadura
-                        ball.pocketedState = 'rolling';
-                        ball.vx = 0;
-                        ball.vy = 0;
-                        ball.mesh.position.z = -BALL_RADIUS * 2; // Posicionarla bajo la mesa
-                    }
-                }
-            } 
-            // Estado 2: La bola ha caído y ahora rueda por debajo de la mesa
-            else if (ball.pocketedState === 'rolling') {
-                // --- SOLUCIÓN DEFINITIVA: Implementar sub-pasos para la animación de rodadura ---
-                // Esto evita que la bola atraviese las paredes a altas velocidades.
-                const speed = Math.sqrt(ball.vx**2 + ball.vy**2);
-                const maxMovement = speed * dt;
-                const numSubSteps = Math.ceil(maxMovement / (BALL_RADIUS * 0.5)) || 1;
-                const subDt = dt / numSubSteps;
-
-                for (let step = 0; step < numSubSteps; step++) {
-                    const targetPos = new THREE.Vector2(TABLE_WIDTH / 2, TABLE_HEIGHT / 2);
-                    const currentPos = new THREE.Vector2(ball.mesh.position.x, ball.mesh.position.y);
-                    const acceleration = 1000; // --- CORRECCIÓN: Reducimos la aceleración para que la fricción domine.
-                    const frictionDeceleration = 1500; // --- CORRECCIÓN: Aumentamos drásticamente la fricción para que la bola se frene rápidamente.
-                    const MAX_ROLLING_SPEED = 250; // --- CORRECCIÓN: Reducimos la velocidad máxima para evitar que atraviese los límites
-
-                    const direction = targetPos.sub(currentPos);
-                    if (direction.length() > 1) { // Evitar aceleración loca en el centro
-                        direction.normalize();
-                        ball.vx += direction.x * acceleration * subDt;
-                        ball.vy += direction.y * acceleration * subDt;
-                    }
-
-                    // --- CORRECCIÓN: Aplicar fricción por deceleración y límite de velocidad ---
-                    const currentSpeed = Math.sqrt(ball.vx**2 + ball.vy**2);
-                    if (currentSpeed > frictionDeceleration * subDt) {
-                        ball.vx -= (ball.vx / currentSpeed) * frictionDeceleration * subDt;
-                        ball.vy -= (ball.vy / currentSpeed) * frictionDeceleration * subDt;
-                    } else {
-                        ball.vx = 0;
-                        ball.vy = 0;
-                    }
-                    if (currentSpeed > MAX_ROLLING_SPEED) {
-                        ball.vx = (ball.vx / currentSpeed) * MAX_ROLLING_SPEED;
-                        ball.vy = (ball.vy / currentSpeed) * MAX_ROLLING_SPEED;
-                    }
-
-                    let nextX = ball.mesh.position.x + ball.vx * subDt;
-                    let nextY = ball.mesh.position.y + ball.vy * subDt;
-
-                    if (nextX < BALL_RADIUS) {
-                        nextX = BALL_RADIUS;
-                        ball.vx *= -0.7;
-                    } else if (nextX > TABLE_WIDTH - BALL_RADIUS) {
-                        nextX = TABLE_WIDTH - BALL_RADIUS;
-                        ball.vx *= -0.7;
-                    }
-                    if (nextY < BALL_RADIUS) {
-                        nextY = BALL_RADIUS;
-                        ball.vy *= -0.7;
-                    } else if (nextY > TABLE_HEIGHT - BALL_RADIUS) {
-                        nextY = TABLE_HEIGHT - BALL_RADIUS;
-                        ball.vy *= -0.7;
-                    }
-
-                    ball.mesh.position.x = nextX;
-                    ball.mesh.position.y = nextY;
-                }
-
-                // --- CORRECCIÓN: Comprobar si la bola sale de los límites en CADA frame de la rodadura ---
-                const pos = ball.mesh.position;
-                const margin = 1; // Un margen pequeño es suficiente aquí
-                if (pos.x < -margin || pos.x > TABLE_WIDTH + margin || pos.y < -margin || pos.y > TABLE_HEIGHT + margin) {
-                    console.error(`¡ALERTA! Bola #${ball.number} ha salido de los límites durante la rodadura.`, {
-                        position: pos.clone()
-                    });
-                }
-                
-                const distToCenter = ball.mesh.position.distanceTo(new THREE.Vector3(TABLE_WIDTH / 2, TABLE_HEIGHT / 2, ball.mesh.position.z));
-                if (distToCenter < 10) {
+    // Estado 1: La bola está siendo simulada por el motor de física 3D (Cannon.js)
+            // --- NUEVO: Comprobar si una bola de color fue recolectada para eliminarla ---
+            if (ball.pocketedState === 'collected') {
+                if (ball.number === null) { // Si es la bola blanca
+                    // La marcamos como inactiva y la añadimos a la lista de entroneradas para que se gestione la falta.
+                    ball.isActive = false;
+                    ball.vx = 0; ball.vy = 0;
+                    addPocketedBall(ball);
+                } else { // Si es una bola de color
+                    // La eliminamos de la escena y del array de bolas.
                     scene.remove(ball.mesh);
                     if (ball.shadowMesh) scene.remove(ball.shadowMesh);
                     balls.splice(i, 1);
                 }
-            }
+            } 
         }
 
         balls.forEach(ball => {
             if (ball.isActive && (ball.vx !== 0 || ball.vy !== 0)) {
-                // La distancia recorrida en este frame es la velocidad (en unidades/tick) * ticks
-                const distance = Math.sqrt(Math.pow(ball.vx * timeStep, 2) + Math.pow(ball.vy * timeStep, 2));
+                // --- CORRECCIÓN: La rotación debe ser proporcional a la distancia recorrida ---
+                // Esto hace que la animación de giro sea realista y dependa de la velocidad.
+                const distance = Math.sqrt((ball.vx * timeStep)**2 + (ball.vy * timeStep)**2);
                 const rotationAngle = distance / BALL_RADIUS;
 
-                // El eje de rotación es perpendicular a la dirección del movimiento (vx, vy)
+                // --- CORRECCIÓN: El eje de rotación debe ser perpendicular a la dirección del movimiento.
+                // Esto asegura que la bola "ruede" en la dirección en la que se mueve.
+                // La velocidad de la animación es fija, pero la dirección del giro es dinámica.
                 const rotationAxis = new THREE.Vector3(-ball.vy, ball.vx, 0).normalize();
 
                 const deltaQuaternion = new THREE.Quaternion();
                 deltaQuaternion.setFromAxisAngle(rotationAxis, rotationAngle);
 
-                ball.mesh.quaternion.premultiply(deltaQuaternion);
+                ball.mesh.children[0].quaternion.premultiply(deltaQuaternion); // Aplicar rotación a la malla de la esfera real
             }
         });
     }
 
-    // --- NUEVO: Actualizar la simulación de física 3D para las bolas que caen ---
-    updateFallPhysics(dt);
-
-    // --- MEJORA: Mover el punto rojo según el efecto (spin) seleccionado ---
-    if (cueBallRedDot) {
-        // La posición base es en la parte superior de la bola.
-        // Movemos el punto en X e Y según el spinOffset, escalado por el radio de la bola.
-        cueBallRedDot.position.x = -spinOffset.x * BALL_RADIUS * 0.7;
-        cueBallRedDot.position.y = -spinOffset.y * BALL_RADIUS * 0.7;
-
-        // --- CORRECCIÓN: Contrarrestar la rotación de la bola para que el punto siempre apunte al taco ---
-        // La rotación del punto ahora se controla por la dirección del apuntado.
-        // Hacemos que el punto "mire" en la dirección opuesta a la que apunta el taco.
-        // Esto se logra copiando la rotación del contenedor de la bola, que ya se alinea con la mira.
-        if (cueBall && cueBall.mesh) {
-            cueBallRedDot.quaternion.copy(cueBall.mesh.quaternion);
-        }
-    }
-
+    
     handleInput();
     updateUI(); // --- NUEVO: Actualizar la UI (incluyendo el taco)
     renderer.render(scene, camera);
@@ -249,7 +148,7 @@ window.triggerScreenShake = (intensity, duration) => {
 
 function initGame() {
     initializeHandles(); // Inicializamos los puntos de los bordes
-    initFallPhysics(); 
+    // initFallPhysics(); // Ya no es necesario
 
     // --- MODIFICACIÓN: La inicialización de audio y UI se hace aquí, pero la carga se dispara después ---
     initAudio(camera); 
@@ -257,12 +156,12 @@ function initGame() {
     // --- CORRECCIÓN: setupBalls() ya no se llama aquí. Se pasa como callback a loadBallModels.
     initializeUI(); // Inicializamos los listeners y elementos de la UI
     gameLoop(); // Iniciar el bucle del juego
-
 }
 
 // --- MODIFICACIÓN: El juego se inicializa por pasos controlados por el loadingManager ---
 setOnLoadingComplete((step, onStepComplete) => {
     // El loadingManager nos dice qué paso ejecutar.
+    // --- LOG: Indica qué paso de procesamiento posterior a la carga se está ejecutando.
     switch (step) {
         case 'init_game':
             initGame();
@@ -276,7 +175,6 @@ setOnLoadingComplete((step, onStepComplete) => {
 
         case 'warmup_physics':
             // Ejecuta una simulación muy breve para forzar la compilación JIT del navegador.
-            console.log("Realizando calentamiento de la física para optimizar el primer tiro...");
             const warmUpFrames = 15; // Aumentamos un poco para asegurar la compilación
             for (let i = 0; i < warmUpFrames; i++) {
                 updateBallPositions(1 / 60, balls, pockets, handles, BALL_RADIUS);
@@ -286,13 +184,10 @@ setOnLoadingComplete((step, onStepComplete) => {
                 ball.vx = 0;
                 ball.vy = 0;
             });
-            console.log("Calentamiento finalizado.");
             break;
         
         case 'super_warmup':
             // --- SOLUCIÓN DEFINITIVA: Simular un golpe real de forma invisible ---
-            console.log("Iniciando Super Calentamiento (Física, Audio, Shaders)...");
-            
             // 1. Silenciar todos los sonidos temporalmente.
             window.muteAllSounds(true);
 
@@ -312,7 +207,6 @@ setOnLoadingComplete((step, onStepComplete) => {
             // 4. Resetear completamente el estado del juego a su posición inicial.
             setupBalls(true); // Esto recoloca todas las bolas y resetea sus velocidades.
             window.muteAllSounds(false); // 5. Reactivar los sonidos.
-            console.log("Super Calentamiento finalizado. El juego está 100% listo.");
             break;
     }
 

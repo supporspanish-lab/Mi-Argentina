@@ -18,7 +18,6 @@ export function initSpatialManager(ballRadius) {
     gridHeight = Math.ceil(TABLE_HEIGHT / CELL_SIZE);
     grid = Array(gridWidth * gridHeight).fill(null).map(() => ({ balls: [], segments: [] }));
     initialized = true;
-    console.log(`Gestor espacial inicializado: ${gridWidth}x${gridHeight} celdas de ${CELL_SIZE.toFixed(2)}px`);
 }
 
 /**

@@ -20,7 +20,6 @@ export function initAudio(camera) {
 // --- NUEVO: Función global para silenciar/reactivar todos los sonidos ---
 window.muteAllSounds = (mute) => {
     isMutedGlobally = mute;
-    console.log(`Sonidos ${mute ? 'silenciados' : 'reactivados'} para el calentamiento.`);
 };
 
 export function prepareAudio() {
@@ -28,6 +27,7 @@ export function prepareAudio() {
     loadSound('cushionHit', 'audio/cushionHit.wav');
     loadSound('pocket', 'audio/EntrarPelotaTronera.mp3');
     loadSound('cueHit', 'audio/cueHit.wav');
+    // loadSound('foul', 'audio/error.mp3'); // --- NUEVO: Sonido para las faltas
 }
 
 /**
@@ -37,8 +37,7 @@ export function prepareAudio() {
  */
 export function loadSound(name, path) {
     audioLoader.load(path, (buffer) => {
-        sounds[name] = buffer;
-        console.log(`Sonido '${name}' cargado exitosamente.`);
+        sounds[name] = buffer; // El sonido se carga silenciosamente.
     }, undefined, (error) => {
         console.error(`Error al cargar el sonido '${name}' desde ${path}:`, error);
     });
@@ -53,6 +52,12 @@ export function playSound(name, volume = 0.5) {
     if (!listener || !sounds[name] || isMutedGlobally) { // --- MODIFICACIÓN: No reproducir si está silenciado globalmente
         // console.warn(`El sonido '${name}' no se puede reproducir. ¿Está cargado y el audio inicializado?`);
         return;
+    }
+
+    // --- CORRECCIÓN: Asegurarse de que el volumen sea un número finito ---
+    if (!isFinite(volume) || volume < 0) {
+        console.warn(`Intento de reproducir sonido '${name}' con volumen inválido: ${volume}. Se usará 0.`);
+        volume = 0;
     }
 
     // Creamos una nueva fuente de audio para cada reproducción para permitir sonidos superpuestos (polifonía)

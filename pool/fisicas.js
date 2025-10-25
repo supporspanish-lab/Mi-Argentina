@@ -14,6 +14,9 @@ let physicsInitialized = false;
  * @param {number} BALL_RADIUS - El radio de las bolas.
  */
 export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
+    // --- LOG: Indica el inicio de la actualización de la física. Es muy frecuente, por lo que está comentado.
+    // console.log('[Fisica] Llamando a updateBallPositions()...');
+
     // --- MODIFICADO: Inicializar el gestor espacial en la primera ejecución ---
     if (!physicsInitialized) {
         initSpatialManager(BALL_RADIUS);
@@ -41,6 +44,9 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
     // dividimos el frame en sub-pasos para evitar que las bolas atraviesen las paredes.
     const numSubSteps = Math.ceil(maxMovement / (BALL_RADIUS * 0.25)); // --- MEJORA: Mayor granularidad para los sub-pasos para evitar tunneling
     const subTimeStep = timeStep / numSubSteps;
+
+    // --- LOG: Bucle de sub-pasos de la física.
+    // if (numSubSteps > 1) console.log(`[Fisica] Bucle de sub-pasos activo: ${numSubSteps} pasos.`);
 
     for (let step = 0; step < numSubSteps; step++) {
         // --- MODIFICADO: Actualizar la rejilla espacial con las posiciones actuales ---
@@ -82,23 +88,6 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                 // --- NUEVO: Actualizar la posición de la sombra suave ---
                 if (ball.shadowMesh) {
                     ball.shadowMesh.position.set(ball.mesh.position.x, ball.mesh.position.y, 0);
-                }
-
-                // --- NUEVO: Lógica para cuando la bola está entrando en la tronera ---
-                if (ball.pocketedState === 'entering_pocket') {
-                    const pocket = pockets[ball.pocketIndex];
-                    const pocketCenter = pocket.points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-                    pocketCenter.x /= pocket.points.length;
-                    pocketCenter.y /= pocket.points.length;
-
-                    // Aplicar una fuerza de "gravedad" hacia el centro de la tronera
-                    const gravityPull = 0.05 * subTimeStep;
-                    const dirX = pocketCenter.x - ball.mesh.position.x;
-                    const dirY = pocketCenter.y - ball.mesh.position.y;
-                    const dist = Math.sqrt(dirX * dirX + dirY * dirY);
-
-                    ball.vx += (dirX / dist) * gravityPull;
-                    ball.vy += (dirY / dist) * gravityPull;
                 }
 
                 // --- OPTIMIZADO: Colisión con bordes usando la rejilla espacial ---
@@ -156,7 +145,10 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                         const impactSpeed = Math.abs(v_normal);
                         if (impactSpeed > IMPACT_THRESHOLD) {
                             const normalizedImpact = Math.min(impactSpeed / 10, 1.0);
-                            const volume = Math.pow(normalizedImpact, 2);
+                            let volume = Math.pow(normalizedImpact, 2);
+                            // --- CORRECCIÓN: Asegurarse de que el volumen sea un número finito ---
+                            if (!isFinite(volume)) volume = 0;
+                            
                             playSound('cushionHit', volume * 0.8);
                         }
 
@@ -188,61 +180,17 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
 
                     // --- MODIFICACIÓN: Lógica de entronerado en dos fases ---
                     if (isInside) {
-                        if (!ball.isPocketed) { // Si es la primera vez que entra
-                            ball.isPocketed = true;
-                            ball.pocketedTime = performance.now();
-                            ball.pocketedState = 'entering_pocket'; // Fase 1: Entrando, la física aún se aplica
-                            ball.pocketIndex = pocketIndex; // Guardar en qué tronera está entrando
-                            pocketedInFrame.push({ number: ball.number });
-                            // --- MODIFICACIÓN: Aplicar frenado solo si está activado ---
-                            if (getGameState().isDampingEnabled) {
-                                const DAMPING_FACTOR = 0.03; // --- CORRECCIÓN: Reducimos aún más la velocidad para máxima estabilidad.
-                                ball.vx *= DAMPING_FACTOR;
-                                ball.vy *= DAMPING_FACTOR;
-                            }
-                            // --- NUEVO: Log detallado al entronerar una bola ---
-                            const duration = (performance.now() - shotStartTime) / 1000;
-                            const speed = Math.sqrt(ball.vx**2 + ball.vy**2);
-                            const averageSpeed = duration > 0 ? (ball.distanceTraveled / duration).toFixed(2) : 'N/A';
-                            let spinInfo = '';
-                            if (ball.number === null) { // Si es la bola blanca
-                                // --- CORRECCIÓN: Usar ball.spin en lugar del spinOffset global que ya no se pasa.
-                                spinInfo = `\n  Efecto (Spin): { x: ${ball.spin.x.toFixed(2)}, y: ${ball.spin.y.toFixed(2)} }`;
-                            }
-
-                            console.log(`--- BOLA ENTRONERADA ---
-  Bola: #${ball.number}
-  Velocidad de viaje (promedio): ${averageSpeed} unidades/s
-  Velocidad de entrada: ${speed.toFixed(2)}
-  Duración del tiro: ${duration.toFixed(2)}s
-  Distancia recorrida: ${ball.distanceTraveled.toFixed(0)} unidades${spinInfo}
-  Estado inicial: 'entering_pocket'
-  Tronera: ${pocketIndex}
--------------------------`);
-                            playSound('pocket', 0.7);
-                        }
-
-                        // Comprobar si la bola está lo suficientemente cerca del centro para caer
-                        const pocketCenter = pocket.points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-                        pocketCenter.x /= pocket.points.length;
-                        pocketCenter.y /= pocket.points.length;
-                        const distToCenter = Math.sqrt(Math.pow(ballPos.x - pocketCenter.x, 2) + Math.pow(ballPos.y - pocketCenter.y, 2));
-
-                        if (distToCenter < BALL_RADIUS * 0.8) { // Cuando está casi en el centro
-                            // --- CORRECCIÓN: No desactivar la física aquí. ---
-                            // En lugar de `ball.isActive = false`, simplemente cambiamos el estado.
-                            // La física se desactivará naturalmente en el siguiente frame porque
-                            // el estado 'falling' no está dentro del bucle `if (ball.isActive)`.
-                            // Esto permite que la bola conserve su velocidad final al entrar en la animación de caída.
-                            ball.pocketedState = 'falling'; // Fase 2: Iniciar la animación de caída
-                            // --- CORRECCIÓN: Si se dispara desde una posición inválida, la bola vuelve al inicio ---
-                            if (ball === balls[0] && ball.mesh.position.x > 10000) {
-                                ball.mesh.position.set(250, 250, BALL_RADIUS);
-                                ball.vx = 0;
-                                ball.vy = 0;
-                            }
-                            ball.isActive = false; // --- NUEVO: Desactivar de la simulación 2D
+                        // --- MODIFICACIÓN: La bola se entronera instantáneamente ---
+                        // Si la bola no ha sido entronerada aún en este turno, la procesamos.
+                        if (!ball.isPocketed) {
+                            ball.isPocketed = true; // Marcar como entronerada para no procesarla de nuevo
+                            pocketedInFrame.push({ number: ball.number }); // Añadir a la lista del turno
+                            playSound('pocket', 0.7); // Reproducir sonido
+                            // Marcar para ser eliminada inmediatamente
+                            ball.pocketedState = 'collected';
+                            ball.isActive = false;
                             if (ball.shadowMesh) ball.shadowMesh.visible = false;
+                            ball.mesh.visible = false;
                         }
                         break; // Salir del bucle de troneras, la bola ya ha caído
                     }
@@ -320,6 +268,9 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
         };
     }
 
+    // --- LOG: Indica que el bucle de sub-pasos ha terminado.
+    // if (numSubSteps > 1) console.log(`%c[Fisica]%c Bucle de sub-pasos detenido.`, 'color: #e67e22; font-weight: bold;', 'color: inherit;');
+
     return pocketedInFrame; // --- NUEVO: Devolver las bolas entroneradas
 }
 
@@ -327,6 +278,8 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
  * Comprueba si un segmento de pared está cerca de alguna tronera para evitar colisiones falsas.
  */
 function isSegmentNearPocket(p1, p2, pockets) {
+    // --- LOG: Indica que se está comprobando si un segmento está cerca de una tronera.
+    // console.log('[Fisica] Llamando a isSegmentNearPocket()...');
     for (const pocket of pockets) {
         const pocketCenter = pocket.points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
         pocketCenter.x /= pocket.points.length;
@@ -342,6 +295,8 @@ function isSegmentNearPocket(p1, p2, pockets) {
             return true;
         }
     }
+    // --- LOG: Indica que el bucle de comprobación de troneras ha terminado.
+    // console.log('%c[Fisica]%c isSegmentNearPocket() finalizado.', 'color: #e67e22; font-weight: bold;', 'color: inherit;');
     return false;
 }
 
@@ -351,10 +306,15 @@ function isSegmentNearPocket(p1, p2, pockets) {
  * @returns {boolean} - True si alguna bola se está moviendo, false en caso contrario.
  */
 export function areBallsMoving(balls) {
+    // --- LOG: Indica que se está comprobando si las bolas se mueven. Es muy frecuente.
+    // console.log('[Fisica] Llamando a areBallsMoving()...');
     for (const ball of balls) {
-        if (ball.isActive && (Math.abs(ball.vx) > 0 || Math.abs(ball.vy) > 0)) {
+        // --- CORRECCIÓN: Comprobar solo las bolas activas ---
+        if (ball.isActive && (Math.abs(ball.vx) > 1e-6 || Math.abs(ball.vy) > 1e-6)) {
             return true;
         }
     }
     return false;
+    // --- LOG: Indica que el bucle de comprobación de movimiento ha terminado.
+    // console.log('%c[Fisica]%c areBallsMoving() finalizado. Resultado: false.', 'color: #e67e22; font-weight: bold;', 'color: inherit;');
 }

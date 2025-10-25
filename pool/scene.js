@@ -84,7 +84,9 @@ export function updateCameraPositionForResponsiveness() {
         cameraZ = (effectiveHeight / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     }
 
-    camera.position.set(zoomState.centerX, zoomState.centerY, cameraZ * 1.20);
+    // --- MODIFICACIÓN: Eliminar el margen del 20% (el `* 1.20`) ---
+    // Ahora la cámara se posicionará para que la mesa ocupe todo el espacio disponible.
+    camera.position.set(zoomState.centerX, zoomState.centerY, cameraZ);
     camera.lookAt(zoomState.centerX, zoomState.centerY, 0);
 
     // --- NUEVO: Ajustar los límites de la sombra dinámicamente con el zoom ---
@@ -99,3 +101,18 @@ export function updateCameraPositionForResponsiveness() {
 
 // Llamar al inicio para configurar la cámara
 updateCameraPositionForResponsiveness();
+
+// --- NUEVO: Manejo de redimensionamiento de la ventana para responsividad ---
+function onWindowResize() {
+    // Actualizar el aspect ratio de la cámara
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    // Actualizar el tamaño del renderizador
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Recalcular la posición de la cámara para que la mesa se ajuste
+    updateCameraPositionForResponsiveness();
+}
+
+window.addEventListener('resize', onWindowResize, false);
