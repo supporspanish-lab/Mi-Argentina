@@ -59,7 +59,7 @@ scene.add(tableMesh);
 
 // --- NUEVO: Función para cargar la textura de la mesa bajo demanda ---
 export function loadTableTexture() {
-    addPendingResource(); // 1. Notificar que empezamos a cargar la mesa.
+    // --- SOLUCIÓN: El loadingManager ya se encarga de esperar a que la textura se cargue.
     new THREE.TextureLoader(loadingManager).load('imajenes/mesa.png', (texture) => {
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.needsUpdate = true;
@@ -67,7 +67,6 @@ export function loadTableTexture() {
         texture.anisotropy = maxAnisotropy;
         tableMesh.material.map = texture; // Asignar la textura una vez cargada
         tableMesh.material.needsUpdate = true;
-        resolvePendingResource(); // 2. Notificar que la mesa está lista.
     });
 }
 
