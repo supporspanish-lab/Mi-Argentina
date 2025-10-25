@@ -1,5 +1,5 @@
 // --- Módulo de Revisión ---
-import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls } from './gameState.js';
+import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls, clearFirstHitBall, handleTurnEnd } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { playSound } from './audioManager.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
@@ -152,4 +152,8 @@ export function revisarEstado() {
 
     // --- SOLUCIÓN: Limpiar el array de bolas entroneradas para el siguiente turno ---
     clearPocketedBalls();
+    clearFirstHitBall();
+
+    // --- SOLUCIÓN DEFINITIVA: Marcar el tiro como finalizado para desbloquear el siguiente turno ---
+    handleTurnEnd();
 }

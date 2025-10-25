@@ -119,10 +119,11 @@ const createBall = (props) => {
         const dotGeometry = new THREE.CircleGeometry(BALL_RADIUS * 0.2, 16); // El punto tendrá un 20% del radio de la bola
         const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xe74c3c, side: THREE.DoubleSide }); // Rojo, visible por ambos lados
         cueBallRedDot = new THREE.Mesh(dotGeometry, dotMaterial);
-        // --- CORRECCIÓN: Posicionar el punto en la superficie del contenedor, no en coordenadas del mundo ---
+        // --- CORRECCIÓN: Posicionar el punto en la superficie de la malla de la bola, no del contenedor. ---
+        // Esto asegura que rote junto con la bola.
         cueBallRedDot.position.z = BALL_RADIUS + 0.1; // Un poco por encima para evitar z-fighting
-        // El punto rojo no necesita rotación inicial, ya que el contenedor no la tiene.
-        ballContainer.add(cueBallRedDot); // Añadir el punto al contenedor de la bola
+        // El punto rojo no necesita rotación inicial.
+        ballMesh.add(cueBallRedDot); // Añadir el punto a la malla de la bola, no al contenedor.
     }
 
     const shadowGeometry = new THREE.PlaneGeometry(BALL_RADIUS * 3.0, BALL_RADIUS * 3.0); // --- NUEVO: Geometría para el plano de la sombra

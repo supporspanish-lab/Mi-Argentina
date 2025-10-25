@@ -88,10 +88,11 @@ function tryStartGame() {
     if (managerLoaded && pendingResources === 0 && completedSteps === processingSteps.length) {
         progressText.textContent = '100%';
         progressBar.style.width = '100%';
+
+        // --- MODIFICADO: Iniciar el juego directamente al finalizar la carga ---
         setTimeout(() => {
             loadingScreen.style.opacity = '0';
             setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
-            // --- SOLUCIÓN: Asignar el jugador inicial de forma aleatoria al terminar la carga ---
             randomizeStartingPlayer();
         }, 250); // Pequeña pausa en 100% para que se vea que ha terminado.
     } else if (managerLoaded && pendingResources === 0 && completedSteps < processingSteps.length) {

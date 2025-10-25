@@ -6,7 +6,7 @@ import { cueBall, balls, cueBallRedDot } from './ballManager.js';
 import { cueMesh } from './aiming.js';
 import { BALL_RADIUS } from './config.js'; // --- SOLUCIÓN: Importar BALL_RADIUS desde su fuente original
 import * as spinControls from './spinControls.js';
-import * as powerControls from './powerControls.js';
+import * as powerControls from './powerControls.js'; // --- SOLUCIÓN: Volver a importar powerControls
 import * as cuePlacement from './cuePlacement.js';
 import { shoot } from './shooting.js';
 
@@ -61,29 +61,26 @@ export function initializeInputManager() {
         const pointerPos = getPointerPos(e);
         isMouseDown = true;
 
-        // --- LOG: Indica que se ha presionado el puntero.
-        // Lógica para colocar la bola blanca
+        // --- SOLUCIÓN: Separar la lógica de colocación y apuntado para que no sean excluyentes ---
+
+        // 1. Comprobar si se debe iniciar el movimiento de la bola blanca.
         if (getGameState().isPlacingCueBall) {
-            // --- SOLUCIÓN: Solo iniciar el movimiento si se hace clic SOBRE la bola blanca ---
             const cueBallPos = cueBall.mesh.position;
             const distSq = (pointerPos.x - cueBallPos.x)**2 + (pointerPos.y - cueBallPos.y)**2;
             
-            // Usamos un radio un poco más grande para que sea más fácil hacer clic
             if (distSq < (BALL_RADIUS * 1.5)**2) { 
-                if (cueBall && cueBall.shadowMesh) {
-                    cueBall.shadowMesh.visible = true;
-                }
+                if (cueBall && cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
                 cuePlacement.startCueBallMove();
             }
-        } else {
-            // --- NUEVO: Iniciar el modo de apuntado por arrastre ---
-            // Si no estamos colocando la bola ni jalando el taco, iniciamos el arrastre para apuntar.
-            if (!powerControls.isPullingBack()) {
-                isAimingDrag = true;
-                initialAimAngle = window.currentShotAngle || 0;
-                initialPointerPosForAim = { ...pointerPos };
-                lastPointerPosForAim = { ...pointerPos }; // --- SOLUCIÓN: Inicializar la última posición
-            }
+        }
+
+        // 2. Comprobar si se debe iniciar el apuntado por arrastre.
+        // Esto puede ocurrir incluso con "bola en mano", siempre que no estemos ya moviendo la bola.
+        if (!powerControls.isPullingBack() && !cuePlacement.isMovingCueBall()) {
+            isAimingDrag = true;
+            initialAimAngle = window.currentShotAngle || 0;
+            initialPointerPosForAim = { ...pointerPos };
+            lastPointerPosForAim = { ...pointerPos };
         }
 
         // Lógica para jalar el taco
@@ -114,7 +111,7 @@ export function initializeInputManager() {
 
     const powerBarHandle = document.getElementById('powerBarHandle');
     powerBarHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); powerControls.startPowerDrag(); });
-    powerBarHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); powerControls.startPowerDrag(); });
+    powerBarHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); powerControls.startPowerDrag(); }, { passive: false });
 
     // --- NUEVO: Listeners para el nuevo modal de efecto ---
     const largeSpinSelector = document.getElementById('largeSpinSelector');
@@ -132,10 +129,6 @@ export function initializeInputManager() {
         // console.log('[Input] Evento onPointerMove detectado.');
         const pointerPos = getPointerPos(e);
 
-        // Actualizar ángulo de tiro si se está apuntando
-        // --- SOLUCIÓN: El ángulo solo debe actualizarse si el puntero está presionado ---
-        // Esto evita que el simple hecho de mover el ratón sobre la mesa (sin hacer clic)
-        // active el modo de apuntado y bloquee la lógica de fin de turno.
         if (isAimingDrag) {
             // --- NUEVO: Lógica de apuntado por arrastre ---
             // --- SOLUCIÓN: Lógica de apuntado incremental para evitar saltos ---

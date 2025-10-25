@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { updateBallPositions, areBallsMoving } from './fisicas.js';
 import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
-import { scene, camera, renderer, updateCameraPositionForResponsiveness, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
+import { scene, camera, renderer, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders } from './ballManager.js';
-import { handleInput, initializeUI, updateUI, prepareUIResources } from './ui.js';
+import { handleInput, initializeUI, updateUI, prepareUIResources, updateSafeArea } from './ui.js';
 import { initAudio, loadSound, prepareAudio } from './audioManager.js';
 import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
@@ -119,12 +119,26 @@ function gameLoop(time) {
                 const deltaQuaternion = new THREE.Quaternion();
                 deltaQuaternion.setFromAxisAngle(rotationAxis, rotationAngle);
 
-                ball.mesh.children[0].quaternion.premultiply(deltaQuaternion); // Aplicar rotación a la malla de la esfera real
+                // --- SOLUCIÓN DEFINITIVA: Aplicar primero la rotación de rodado y luego la de efecto ---
+                // 1. Aplicar la rotación de rodado natural a la malla de la bola.
+                ball.mesh.children[0].quaternion.premultiply(deltaQuaternion);
+
+                // 2. Si es la bola blanca y tiene efecto, aplicar esa rotación adicionalmente en su espacio local.
+                if (ball === cueBall && (ball.spin.x !== 0 || ball.spin.y !== 0)) {
+                    // Efecto lateral (spin.x) alrededor del eje Y local de la bola
+                    const sideSpinAxis = new THREE.Vector3(0, 1, 0); 
+                    const sideSpinAngle = -ball.spin.x * 0.05 * timeStep; // Reducimos un poco la velocidad del efecto visual
+                    ball.mesh.children[0].rotateOnWorldAxis(sideSpinAxis, sideSpinAngle);
+
+                    // Efecto vertical (spin.y) alrededor del eje X local de la bola
+                    const verticalSpinAxis = new THREE.Vector3(1, 0, 0); 
+                    const verticalSpinAngle = ball.spin.y * 0.05 * timeStep; // Reducimos un poco la velocidad del efecto visual
+                    ball.mesh.children[0].rotateOnWorldAxis(verticalSpinAxis, verticalSpinAngle);
+                }
             }
         });
     }
 
-    
     handleInput();
     updateUI(); // --- NUEVO: Actualizar la UI (incluyendo el taco)
     renderer.render(scene, camera);
@@ -155,7 +169,11 @@ function initGame() {
 
     // --- CORRECCIÓN: setupBalls() ya no se llama aquí. Se pasa como callback a loadBallModels.
     initializeUI(); // Inicializamos los listeners y elementos de la UI
+    updateSafeArea(); // --- SOLUCIÓN: Llamar a la función de layout al iniciar
     gameLoop(); // Iniciar el bucle del juego
+
+    // --- SOLUCIÓN: Centralizar el evento de redimensionamiento aquí ---
+    window.addEventListener('resize', updateSafeArea, false);
 }
 
 // --- MODIFICACIÓN: El juego se inicializa por pasos controlados por el loadingManager ---

@@ -19,6 +19,17 @@
             touch-action: none; /* Evita acciones del navegador como hacer zoom o scroll */
             user-select: none; /* Evita que el texto se seleccione al tocar */
             box-sizing: border-box; /* Incluye padding y border en el ancho/alto */
+            /* --- SOLUCIÓN: Variables CSS para el layout dinámico --- */
+            --safe-area-width: 100vw;
+            --safe-area-height: 100vh;
+            --safe-area-offset-x: 0px;
+            --safe-area-offset-y: 0px;
+            --scale-factor: 1; /* Factor de escala general para la UI */
+        }
+        #gameContainer {
+            position: relative; /* Cambiado de absolute para que los cálculos sean más sencillos */
+            width: 100%;
+            height: 100%;
         }
         /* --- NUEVO: Estilos para forzar la orientación horizontal en móviles --- */
         #orientation-lock-screen {
@@ -88,6 +99,7 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+
         body {
             background-color: #0d203b; /* Un azul oscuro más profundo */
         }
@@ -105,25 +117,21 @@
         #table-resize-controls input {
             width: 60px;
         }
-        #gameContainer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
 
         /* --- NUEVO: Estilos para el selector de efecto --- */
         #spinSelectorContainer {
-            position: absolute;
-            right: 0; /* --- CORRECCIÓN: Pegado al borde derecho --- */
-            top: 0;   /* --- CORRECCIÓN: Pegado al borde superior --- */
-            width: 8vw; /* --- MODIFICACIÓN: Ancho relativo al ancho de la pantalla --- */
-            height: 8vw;/* --- MODIFICACIÓN: Alto relativo al ancho de la pantalla --- */
-            background-color: rgba(0, 0, 0, 0.5);
+            position: absolute; /* --- SOLUCIÓN: Posicionamiento relativo al área de juego visible --- */
+            right: 2vw; /* Espaciado desde el borde derecho */
+            top: calc(6vh + 4vh); /* 6vh de la altura de la UI + 4vh de padding (2vh arriba + 2vh abajo) */
+            width: 8vw;
+            height: 8vw; /* --- CORRECCIÓN: Eliminar el color de fondo y las propiedades duplicadas --- */
+            background-color: transparent;
+            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
+            background-image: url('imajenes/bolasMetidas/blanca.png');
+            background-size: cover; /* Asegura que la imagen llene el círculo */
+            background-position: center;
+            border-radius: 50%;
             border: 0.3vh solid #fff;
-            border-radius: 50%; /* Círculo */
             z-index: 10;
             cursor: pointer;
             display: none; /* Oculto por defecto */
@@ -132,13 +140,6 @@
             position: absolute;
             width: 100%;
             height: 100%;
-            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
-            background-image: url('imajenes/bolasMetidas/blanca.png');
-            background-size: cover; /* Asegura que la imagen llene el círculo */
-            background-position: center;
-            border-radius: 50%;
-            /* --- NUEVO: Añadir una sombra interior para dar profundidad --- */
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
         }
         /* --- MODIFICACIÓN: Usar una clase para que ambos puntos compartan estilo --- */
         .spin-selector-dot {
@@ -294,26 +295,27 @@
         }
         /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
         #player1PocketedContainer {
-            position: relative; /* Ya no necesita ser absoluto */
+            position: absolute; /* --- SOLUCIÓN: Posicionamiento absoluto dentro del área segura --- */
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
-            height: 6vh; /* Alto relativo */
             pointer-events: auto; /* Reactivar eventos para este elemento */
+            height: calc(48px * var(--scale-factor));
         }
         #player2PocketedContainer {
-            position: relative; /* Ya no necesita ser absoluto */
+            position: absolute; /* --- SOLUCIÓN: Debe ser absoluto para no afectar el layout --- */
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
-            height: 6vh; /* Alto relativo */
             pointer-events: auto; /* Reactivar eventos para este elemento */
         }
+
 
         /* --- NUEVO: Estilos para la barra de potencia --- */
         #powerBarContainer {
             position: absolute;
-            left: 2vw; /* Posición relativa a la izquierda */
+            /* --- SOLUCIÓN: Posicionamiento y tamaño basados en el área segura --- */
             top: 50%;
-            transform: translateY(-50%); /* Centrado verticalmente */
-            width: 20px; /* Ancho de la barra vertical */
-            height: 35vh; /* Alto relativo a la altura de la pantalla */
+            right: calc(var(--safe-area-offset-x) + 20px * var(--scale-factor)); /* --- SOLUCIÓN: Mover a la derecha --- */
+            transform: translateY(-50%);
+            width: calc(20px * var(--scale-factor));
+            height: calc(250px * var(--scale-factor));
             background-color: rgba(0, 0, 0, 0.5);
             border: 2px solid #fff;
             border-radius: 10px;
@@ -332,6 +334,18 @@
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
         }
+
+        /* --- SOLUCIÓN: Ajustar el selector de efecto al área segura --- */
+        #spinSelectorContainer {
+            position: absolute;
+            right: calc(var(--safe-area-offset-x) + 20px * var(--scale-factor));
+            top: calc(var(--safe-area-offset-y) + 80px * var(--scale-factor));
+            width: calc(80px * var(--scale-factor));
+            height: calc(80px * var(--scale-factor));
+            border-width: calc(2px * var(--scale-factor));
+        }
+
+
 
         /* --- NUEVO: Estilo para el handle deslizable de la barra de potencia --- */
         #powerBarHandle {
@@ -436,6 +450,16 @@
             opacity: 0;
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             pointer-events: none;
+        }
+
+        /* --- SOLUCIÓN: Ajustar la UI superior al área segura --- */
+        #top-ui-container {
+            position: absolute;
+            top: var(--safe-area-offset-y);
+            left: var(--safe-area-offset-x);
+            width: var(--safe-area-width);
+            height: auto; /* La altura la da el contenido */
+            padding: calc(15px * var(--scale-factor));
         }
     </style>
 </head>
@@ -565,12 +589,15 @@
 
         // --- NUEVO: Lógica para forzar la orientación horizontal ---
         window.addEventListener('load', () => {
-            // Intentar bloquear la orientación en horizontal
-            if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                screen.orientation.lock('landscape').catch(error => {
-                    // El error es común si el usuario no interactúa primero,
-                    // la pantalla de aviso CSS actuará como fallback.
-                });
+            const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (isMobile) {
+                // Intentar bloquear la orientación en horizontal solo en móviles
+                if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                    screen.orientation.lock('landscape').catch(error => {
+                        // El error es común si el usuario no interactúa primero,
+                        // la pantalla de aviso CSS actuará como fallback.
+                    });
+                }
             }
 
             // Escuchar cambios de orientación para asegurar que la UI se actualice

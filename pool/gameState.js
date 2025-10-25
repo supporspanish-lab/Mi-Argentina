@@ -182,6 +182,14 @@ export function clearPocketedBalls() {
     pocketedThisTurn = [];
 }
 
+/**
+ * --- SOLUCIÓN: Limpia la referencia a la primera bola golpeada.
+ * Se llama después de que un turno ha sido completamente revisado.
+ */
+export function clearFirstHitBall() {
+    firstBallHitThisTurn = null;
+}
+
 export function getGameState() {
     return {
         currentPlayer,

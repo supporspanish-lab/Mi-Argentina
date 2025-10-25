@@ -5,11 +5,14 @@ import { loadingManager } from './loadingManager.js';
 export const TABLE_WIDTH = 1000;
 export const TABLE_HEIGHT = 500;
 
+// --- SOLUCIÓN: Definir y exportar la relación de aspecto de la mesa ---
+export const TABLE_ASPECT_RATIO = TABLE_WIDTH / TABLE_HEIGHT;
+
 // Radio de la bola
-export const BALL_RADIUS = 11; // --- MODIFICADO: Reducimos el radio de 12 a 11
+export const BALL_RADIUS = 12; // --- CORRECCIÓN: Aumentamos el radio para que coincida con el tamaño visual
 
 // Espaciado para el rack inicial
-export const RACK_SPACING_DIAMETER = 22; // --- MODIFICADO: Ajustado al nuevo radio (11 * 2)
+export const RACK_SPACING_DIAMETER = 24; // --- CORRECCIÓN: Ajustado al nuevo radio (12 * 2)
 
 // Puntos de control para los bordes de la mesa
 export let handles = [];
