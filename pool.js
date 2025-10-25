@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { updateBallPositions, areBallsMoving } from './fisicas.js';
 import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
 import { scene, camera, renderer, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
-import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders } from './ballManager.js';
-import { handleInput, initializeUI, updateUI, prepareUIResources, updateSafeArea } from './ui.js';
+import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders } from './ballManager.js'; // --- SOLUCIÓN: Quitar updateSafeArea
+import { handleInput, initializeUI, updateUI, prepareUIResources } from './ui.js'; // --- SOLUCIÓN: Quitar updateSafeArea
 import { initAudio, loadSound, prepareAudio } from './audioManager.js';
 import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
@@ -169,11 +169,7 @@ function initGame() {
 
     // --- CORRECCIÓN: setupBalls() ya no se llama aquí. Se pasa como callback a loadBallModels.
     initializeUI(); // Inicializamos los listeners y elementos de la UI
-    updateSafeArea(); // --- SOLUCIÓN: Llamar a la función de layout al iniciar
     gameLoop(); // Iniciar el bucle del juego
-
-    // --- SOLUCIÓN: Centralizar el evento de redimensionamiento aquí ---
-    window.addEventListener('resize', updateSafeArea, false);
 }
 
 // --- MODIFICACIÓN: El juego se inicializa por pasos controlados por el loadingManager ---

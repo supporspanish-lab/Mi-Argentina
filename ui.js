@@ -5,68 +5,45 @@ import { revisarEstado } from './revisar.js'; // --- SOLUCIÓN: Importar la nuev
 import { getGameState } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { prepareTableTexture, TABLE_WIDTH, TABLE_ASPECT_RATIO } from './config.js';
-import { camera, updateCameraPositionForResponsiveness } from './scene.js'; // --- NUEVO: Importar la cámara para proyecciones
+import { camera } from './scene.js'; // --- NUEVO: Importar la cámara para proyecciones
+import { loadingManager } from './loadingManager.js'; // --- SOLUCIÓN: Importar el gestor de carga
 import { initializeAiming, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
 import { initializeInputManager, isPointerDown, isPullingBack, isMovingCueBall, getPullBackDistance, getCurrentShotAngle } from './inputManager.js';
 
 // --- Referencias a elementos del DOM ---
 const spinSelectorContainer = document.getElementById('spinSelectorContainer');
 const powerBarContainer = document.getElementById('powerBarContainer');
+const fullscreenBtn = document.getElementById('fullscreen-btn');
 
 // --- Estado de la UI ---
 // --- NUEVO: Variable para rastrear si las bolas se estaban moviendo en el frame anterior ---
 let ballsWereMoving = true; // Inicia en true para mostrar el mensaje al empezar la partida.
 // El estado ahora se gestiona en módulos dedicados (inputManager, powerControls, etc.)
 
-// --- SOLUCIÓN: Nueva función para gestionar el layout responsive ---
-export function updateSafeArea() {
-    // --- SOLUCIÓN: Medir la altura real de la UI superior ---
-    const topUiElement = document.getElementById('top-ui-container');
-    const topUiHeight = topUiElement ? topUiElement.getBoundingClientRect().height : 0;
-
-    const screenWidth = window.innerWidth;
-    // --- SOLUCIÓN: El área de juego real es la pantalla menos la UI superior ---
-    const availableHeight = window.innerHeight - topUiHeight;
-    const availableAspect = screenWidth / availableHeight;
-
-    let safeWidth, safeHeight, offsetX, offsetY;
-
-    // Comparamos el aspect ratio del área disponible con el de la mesa
-    if (availableAspect > TABLE_ASPECT_RATIO) {
-        // El área es más ancha que la mesa (sobra espacio a los lados -> pillarbox)
-        safeHeight = availableHeight;
-        safeWidth = safeHeight * TABLE_ASPECT_RATIO;
-        offsetY = topUiHeight; // El desplazamiento superior es solo la altura de la UI
-        offsetX = (screenWidth - safeWidth) / 2;
+/**
+ * --- SOLUCIÓN: Activa o desactiva el modo de pantalla completa.
+ */
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        // Si no estamos en pantalla completa, la solicitamos.
+        document.documentElement.requestFullscreen().catch(err => {
+            alert(`Error al intentar entrar en pantalla completa: ${err.message} (${err.name})`);
+        });
     } else {
-        // El área es más alta que la mesa (sobra espacio arriba/abajo -> letterbox)
-        safeWidth = screenWidth;
-        safeHeight = (safeWidth / TABLE_ASPECT_RATIO);
-        offsetX = 0;
-        offsetY = topUiHeight + (availableHeight - safeHeight) / 2; // Centramos en el espacio restante, debajo de la UI
+        // Si ya estamos en pantalla completa, salimos.
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
     }
-
-    // El factor de escala se basa en cuánto ha crecido/encogido el área segura
-    // respecto a las dimensiones de la mesa de billar (que son nuestra referencia base).
-    const scaleFactor = safeWidth / TABLE_WIDTH;
-
-    // Actualizamos las variables CSS en el elemento raíz (el <html>)
-    const root = document.documentElement;
-    root.style.setProperty('--safe-area-width', `${safeWidth}px`);
-    root.style.setProperty('--safe-area-height', `${safeHeight}px`);
-    root.style.setProperty('--safe-area-offset-x', `${offsetX}px`);
-    root.style.setProperty('--safe-area-offset-y', `${offsetY}px`);
-    root.style.setProperty('--scale-factor', scaleFactor);
-
-    // Forzar la actualización de la cámara 3D para que coincida con el área segura
-    // Pasamos el área calculada para que no tenga que recalcularla.
-    updateCameraPositionForResponsiveness({
-        availableWidth: safeWidth, // --- SOLUCIÓN: Pasar también el ancho del área segura
-        availableHeight: safeHeight,
-        topUiOffset: topUiHeight // --- SOLUCIÓN: Pasar la altura real de la UI, no el offset calculado
-    });
 }
 
+/**
+ * --- SOLUCIÓN: Se ejecuta cuando cambia el estado de la pantalla completa.
+ */
+function onFullScreenChange() {
+    // Oculta el botón si estamos en pantalla completa, lo muestra si no.
+    fullscreenBtn.style.display = document.fullscreenElement ? 'none' : 'flex';
+}
 // `window.currentShotAngle` se usa como variable global temporal para el ángulo.
 window.currentShotAngle = 0;
 
@@ -74,10 +51,21 @@ window.currentShotAngle = 0;
 export function initializeUI() {
     initializeAiming();
     initializeInputManager();
+
+    // --- SOLUCIÓN: Lógica para el botón de pantalla completa ---
+    if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', toggleFullScreen);
+    }
+    // Escuchar cambios en el estado de pantalla completa (ej. si el usuario presiona Esc)
+    document.addEventListener('fullscreenchange', onFullScreenChange);
 }
 
 export function prepareUIResources() {
     prepareTableTexture();
+    // --- SOLUCIÓN: Precargar la imagen del selector de efecto ---
+    // Aunque la imagen se usa en CSS, la cargamos aquí para que el loadingManager
+    // la rastree y se asegure de que esté lista antes de iniciar el juego.
+    new THREE.TextureLoader(loadingManager).load('imajenes/bolasMetidas/blanca.png');
 }
 
 export function handleInput() {

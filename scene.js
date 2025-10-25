@@ -72,20 +72,12 @@ export function loadTableTexture() {
 }
 
 // Función para calcular la posición Z de la cámara para que la mesa se ajuste a la pantalla
-export function updateCameraPositionForResponsiveness({ availableWidth, availableHeight, topUiOffset } = {}) {
-    // --- SOLUCIÓN: La función ahora recibe el área segura calculada desde ui.js ---
-
-    // --- SOLUCIÓN DEFINITIVA: Añadir un padding directamente al tamaño de la mesa para el cálculo del zoom ---
-    const PADDING_FACTOR = 1.0; // Ya no necesitamos padding, el área segura lo gestiona.
-    const effectiveWidth = (TABLE_WIDTH / zoomState.level) * PADDING_FACTOR;
-    const effectiveHeight = (TABLE_HEIGHT / zoomState.level) * PADDING_FACTOR;
+export function updateCameraPositionForResponsiveness() {
+    const effectiveWidth = TABLE_WIDTH / zoomState.level;
+    const effectiveHeight = TABLE_HEIGHT / zoomState.level;
 
     // Usar el aspect ratio del área de juego disponible.
-    // --- SOLUCIÓN: Usar el ancho y alto del área segura para un cálculo de aspecto correcto ---
-    // Si alguno de los valores no está disponible (en la carga inicial), usamos los de la ventana como fallback.
-    const safeWidth = availableWidth || window.innerWidth;
-    const safeHeight = availableHeight || window.innerHeight;
-    const aspect = safeWidth / safeHeight;
+    const aspect = window.innerWidth / window.innerHeight;
     const tableAspect = effectiveWidth / effectiveHeight;
 
     let cameraZ;
@@ -94,21 +86,15 @@ export function updateCameraPositionForResponsiveness({ availableWidth, availabl
         cameraZ = (effectiveWidth / 2) / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect);
     } else {
         // El alto limita el zoom.
-        cameraZ = (effectiveHeight / 2) / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+        cameraZ = (effectiveHeight / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     }
-
-    // 1. Calcular el centro del área visible en coordenadas del mundo.
-    const visibleWorldHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * cameraZ;
-    const worldUnitsPerPixel = visibleWorldHeight / safeHeight;
-    // El centro del área visible está desplazado hacia abajo en la pantalla por la mitad de la altura de la UI.
-    // --- SOLUCIÓN: Centrar la cámara en el centro de la mesa y luego desplazarla hacia abajo ---
-    // El desplazamiento necesario es la mitad de la altura de la UI, convertida a unidades del mundo.
-    const yOffset = (topUiOffset * worldUnitsPerPixel) / 2;
-    const targetY = (TABLE_HEIGHT / 2.17) + yOffset; // --- SOLUCIÓN: Sumar el offset para bajar la mesa
+    
+    // Añadir un pequeño margen para que la mesa no toque los bordes
+    cameraZ *= 1.1;
 
     // 2. Establecer la posición y el punto de mira finales de la cámara.
-    camera.position.set(TABLE_WIDTH / 2, targetY, cameraZ);
-    camera.lookAt(TABLE_WIDTH / 2, targetY, 0);
+    camera.position.set(zoomState.centerX, zoomState.centerY, cameraZ);
+    camera.lookAt(zoomState.centerX, zoomState.centerY, 0);
 
     // --- NUEVO: Ajustar los límites de la sombra dinámicamente con el zoom ---
     directionalLight.shadow.camera.left = zoomState.centerX - (effectiveWidth / 2) * 1.20;
@@ -125,9 +111,6 @@ updateCameraPositionForResponsiveness();
 
 // --- NUEVO: Manejo de redimensionamiento de la ventana para responsividad ---
 function onWindowResize() {
-    // --- SOLUCIÓN: La lógica de redimensionamiento ahora se centraliza en updateSafeArea (llamado desde pool.js) ---
-    // Esta función solo se encarga de actualizar las propiedades del renderizador y la cámara.
-
     // Actualizar el aspect ratio de la cámara
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -135,6 +118,9 @@ function onWindowResize() {
     // Actualizar el tamaño del renderizador
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Recalcular la posición de la cámara para que la mesa se ajuste
+    updateCameraPositionForResponsiveness();
 }
 
-window.addEventListener('resize', onWindowResize, false); // Mantenemos el listener para el renderizador, pero el principal es el de pool.js
+window.addEventListener('resize', onWindowResize, false);

@@ -19,12 +19,6 @@
             touch-action: none; /* Evita acciones del navegador como hacer zoom o scroll */
             user-select: none; /* Evita que el texto se seleccione al tocar */
             box-sizing: border-box; /* Incluye padding y border en el ancho/alto */
-            /* --- SOLUCIÓN: Variables CSS para el layout dinámico --- */
-            --safe-area-width: 100vw;
-            --safe-area-height: 100vh;
-            --safe-area-offset-x: 0px;
-            --safe-area-offset-y: 0px;
-            --scale-factor: 1; /* Factor de escala general para la UI */
         }
         #gameContainer {
             position: relative; /* Cambiado de absolute para que los cálculos sean más sencillos */
@@ -120,18 +114,13 @@
 
         /* --- NUEVO: Estilos para el selector de efecto --- */
         #spinSelectorContainer {
-            position: absolute; /* --- SOLUCIÓN: Posicionamiento relativo al área de juego visible --- */
-            right: 2vw; /* Espaciado desde el borde derecho */
-            top: calc(6vh + 4vh); /* 6vh de la altura de la UI + 4vh de padding (2vh arriba + 2vh abajo) */
+            position: absolute;
+            right: 2vw;
+            top: 10vh;
             width: 8vw;
-            height: 8vw; /* --- CORRECCIÓN: Eliminar el color de fondo y las propiedades duplicadas --- */
-            background-color: transparent;
-            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
-            background-image: url('imajenes/bolasMetidas/blanca.png');
-            background-size: cover; /* Asegura que la imagen llene el círculo */
-            background-position: center;
+            height: 8vw;
             border-radius: 50%;
-            border: 0.3vh solid #fff;
+            border: 2px solid #fff;
             z-index: 10;
             cursor: pointer;
             display: none; /* Oculto por defecto */
@@ -140,6 +129,10 @@
             position: absolute;
             width: 100%;
             height: 100%;
+            /* --- SOLUCIÓN: Añadir la imagen de la bola blanca como fondo --- */
+            background-image: url('imajenes/bolasMetidas/blanca.png');
+            background-size: cover;
+            background-position: center;
         }
         /* --- MODIFICACIÓN: Usar una clase para que ambos puntos compartan estilo --- */
         .spin-selector-dot {
@@ -251,15 +244,12 @@
         /* --- NUEVO: Estilo para los contenedores de bolas de jugador --- */
         .pocketed-balls-container {
             display: flex;
-            /* --- SOLUCIÓN: Cambiar a disposición vertical --- */
-            flex-direction: column;
-            gap: calc(8px * var(--scale-factor));
+            gap: 8px;
             background-color: rgba(0, 0, 0, 0.6);
-            padding: calc(8px * var(--scale-factor));
+            padding: 8px;
             border-radius: 8px;
             z-index: 10;
-            /* --- SOLUCIÓN: El tamaño ahora se basa en el ancho --- */
-            width: calc(48px * var(--scale-factor));
+            height: 48px; /* Altura inicial, ajustable */
             align-items: center;
             box-sizing: border-box;
         }
@@ -296,20 +286,12 @@
         }
         /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
         #player1PocketedContainer {
-            position: absolute;
-            /* --- SOLUCIÓN: Posicionar a la izquierda y centrado verticalmente --- */
-            left: calc(var(--safe-area-offset-x) + 15px * var(--scale-factor));
-            top: 50%;
-            transform: translateY(-50%);
+            position: relative;
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
         }
         #player2PocketedContainer {
-            position: absolute;
-            /* --- SOLUCIÓN: Posicionar a la derecha y centrado verticalmente --- */
-            right: calc(var(--safe-area-offset-x) + 15px * var(--scale-factor));
-            top: 50%;
-            transform: translateY(-50%);
+            position: relative;
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
         }
@@ -318,12 +300,11 @@
         /* --- NUEVO: Estilos para la barra de potencia --- */
         #powerBarContainer {
             position: absolute;
-            /* --- SOLUCIÓN: Posicionamiento y tamaño basados en el área segura --- */
             top: 50%;
-            right: calc(var(--safe-area-offset-x) + 20px * var(--scale-factor)); /* --- SOLUCIÓN: Mover a la derecha --- */
+            right: 2vw;
             transform: translateY(-50%);
-            width: calc(20px * var(--scale-factor));
-            height: calc(250px * var(--scale-factor));
+            width: 20px;
+            height: 35vh;
             background-color: rgba(0, 0, 0, 0.5);
             border: 2px solid #fff;
             border-radius: 10px;
@@ -332,28 +313,17 @@
         }
         #powerBarFill {
             position: absolute;
-            top: 0; /* --- CORRECCIÓN: Posicionar desde arriba --- */
+            /* --- SOLUCIÓN: La barra se llena desde abajo hacia arriba --- */
+            top: 0;
             left: 0;
             width: 100%;
-            height: 0%; /* La altura se animará */
-            background: linear-gradient(to bottom, #3498db, #f1c40f, #e74c3c); /* --- CORRECCIÓN: Gradiente hacia abajo --- */
-            transition: height 0.05s linear; /* Transición suave de la altura */
-            /* --- NUEVO: Redondear las esquinas superiores del relleno --- */
+            height: 0%; /* La altura se animará con JS */
+            /* --- SOLUCIÓN: Restaurar el gradiente de colores --- */
+            background: linear-gradient(to bottom, #3498db, #f1c40f, #e74c3c);
+            transition: height 0.05s linear;
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
         }
-
-        /* --- SOLUCIÓN: Ajustar el selector de efecto al área segura --- */
-        #spinSelectorContainer {
-            position: absolute;
-            right: calc(var(--safe-area-offset-x) + 20px * var(--scale-factor));
-            top: calc(var(--safe-area-offset-y) + 80px * var(--scale-factor));
-            width: calc(80px * var(--scale-factor));
-            height: calc(80px * var(--scale-factor));
-            border-width: calc(2px * var(--scale-factor));
-        }
-
-
 
         /* --- NUEVO: Estilo para el handle deslizable de la barra de potencia --- */
         #powerBarHandle {
@@ -460,14 +430,32 @@
             pointer-events: none;
         }
 
+        /* --- SOLUCIÓN: Estilos para el botón de pantalla completa --- */
+        #fullscreen-btn {
+            position: absolute;
+            top: 2vh;
+            left: 2vw;
+            width: 44px;
+            height: 44px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 2px solid white;
+            border-radius: 50%;
+            z-index: 20;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.2s;
+        }
+        #fullscreen-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: white;
+        }
+
         /* --- SOLUCIÓN: Ajustar la UI superior al área segura --- */
         #top-ui-container {
-            position: absolute;
-            top: var(--safe-area-offset-y);
-            left: var(--safe-area-offset-x);
-            width: var(--safe-area-width);
-            height: auto; /* La altura la da el contenido */
-            padding: calc(15px * var(--scale-factor));
+            /* This container is already a flexbox, its default positioning is fine */
         }
 
         /* --- SOLUCIÓN: Estilos para el modal de error --- */
@@ -531,6 +519,14 @@
     </div>
 
     <div id="gameContainer">
+        <!-- --- SOLUCIÓN: Botón para activar la pantalla completa --- -->
+        <div id="fullscreen-btn" title="Pantalla Completa">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 2h-2v3h-3v2h5v-5zm-3-4V5h-2v2h3v3h2V5h-5z"/>
+            </svg>
+        </div>
+
+
         <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->
         <!-- --- NUEVO: Contenedor para el selector de efecto --- -->
         <div id="spinSelectorContainer">
