@@ -2,7 +2,7 @@ const CACHE_NAME = 'pool-game-cache-v1';
 
 // A list of all the essential files to be cached when the service worker is installed.
 const ASSETS_TO_CACHE = [
-    '/',
+    './', // --- CORRECCIÓN: Usar ruta relativa para el directorio raíz
     'index.html',
     'pool.js',
     'ui.js',

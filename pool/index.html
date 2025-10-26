@@ -19,12 +19,6 @@
             touch-action: none; /* Evita acciones del navegador como hacer zoom o scroll */
             user-select: none; /* Evita que el texto se seleccione al tocar */
             box-sizing: border-box; /* Incluye padding y border en el ancho/alto */
-            /* --- SOLUCIÓN: Variables CSS para el layout dinámico --- */
-            --safe-area-width: 100vw;
-            --safe-area-height: 100vh;
-            --safe-area-offset-x: 0px;
-            --safe-area-offset-y: 0px;
-            --scale-factor: 1; /* Factor de escala general para la UI */
         }
         #gameContainer {
             position: relative; /* Cambiado de absolute para que los cálculos sean más sencillos */
@@ -119,21 +113,17 @@
         }
 
         /* --- NUEVO: Estilos para el selector de efecto --- */
-        #spinSelectorContainer {
-            position: absolute; /* --- SOLUCIÓN: Posicionamiento relativo al área de juego visible --- */
-            right: 2vw; /* Espaciado desde el borde derecho */
-            top: calc(6vh + 4vh); /* 6vh de la altura de la UI + 4vh de padding (2vh arriba + 2vh abajo) */
+        #spinSelectorContainer.editable-ui { /* --- MODIFICACIÓN: Aplicar a la nueva clase --- */
+            position: absolute;
+            right: 2vw;
+            top: 10vh;
             width: 8vw;
-            height: 8vw; /* --- CORRECCIÓN: Eliminar el color de fondo y las propiedades duplicadas --- */
-            background-color: transparent;
-            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
-            background-image: url('imajenes/bolasMetidas/blanca.png');
-            background-size: cover; /* Asegura que la imagen llene el círculo */
-            background-position: center;
+            height: 8vw;
             border-radius: 50%;
-            border: 0.3vh solid #fff;
+            border: 2px solid #fff;
             z-index: 10;
             cursor: pointer;
+            background-color: #e8e8e8; /* --- SOLUCIÓN: Color de fondo para placeholder --- */
             display: none; /* Oculto por defecto */
         }
         #spinSelectorCueBall {
@@ -179,11 +169,8 @@
             position: relative;
             cursor: pointer;
             transform: scale(0.8);
-            /* --- SOLUCIÓN: Añadir la imagen de la bola blanca como fondo --- */
-            background-image: url('imajenes/bolasMetidas/blanca.png');
-            background-size: cover;
-            background-position: center;
             border-radius: 50%;
+            background-color: #e8e8e8; /* --- SOLUCIÓN: Color de fondo para placeholder --- */
             transition: transform 0.2s ease-in-out;
         }
         #spinModalOverlay.visible {
@@ -250,19 +237,19 @@
         }
         /* --- NUEVO: Estilo para los contenedores de bolas de jugador --- */
         .pocketed-balls-container {
-            position: absolute;
             display: flex;
+            flex-direction: column; /* --- SOLUCIÓN: Apilar bolas verticalmente --- */
             gap: 8px;
             background-color: rgba(0, 0, 0, 0.6);
             padding: 8px;
             border-radius: 8px;
             z-index: 10;
-            height: 48px; /* Altura inicial, ajustable */
+            width: 48px; /* --- SOLUCIÓN: Ancho fijo para la columna --- */
             align-items: center;
             box-sizing: border-box;
         }
         .pocketed-ball-placeholder {
-            height: 100%; /* Ocupa toda la altura disponible dentro del padding */
+            width: 100%; /* --- CORRECCIÓN: Usar el ancho completo del contenedor padre --- */
             aspect-ratio: 1 / 1; /* Mantiene la proporción cuadrada para que sea un círculo */
             border-radius: 50%;
             background-color: rgba(255, 255, 255, 0.2); /* Un color tenue para el placeholder */
@@ -271,7 +258,7 @@
         }
         /* --- NUEVO: Estilo para el icono de la bola entronerada en el contenedor del jugador --- */
         .player-ball-icon {
-            height: 100%;
+            width: 100%; /* --- SOLUCIÓN: Usar el ancho completo, igual que el placeholder --- */
             aspect-ratio: 1 / 1;
             border-radius: 50%;
             flex-shrink: 0;
@@ -286,130 +273,26 @@
             left: 0;
             width: 100%;
             display: flex;
-            justify-content: center; /* --- CORRECCIÓN: Centra los elementos en lugar de espaciarlos --- */
-            gap: 2vw; /* Añade un espacio entre los dos contenedores */
+            justify-content: space-between; /* --- SOLUCIÓN: Separa los elementos a los extremos --- */
             align-items: flex-start;
             padding: 2vh 2vw; /* Espaciado desde los bordes de la pantalla */
             box-sizing: border-box;
             pointer-events: none; /* Permite hacer clic a través del contenedor */
         }
         /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
-        #player1PocketedContainer {
-            position: absolute; /* --- SOLUCIÓN: Posicionamiento absoluto dentro del área segura --- */
-            max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
-            pointer-events: auto; /* Reactivar eventos para este elemento */
-            height: calc(48px * var(--scale-factor));
-        }
-        #player2PocketedContainer {
-            position: absolute; /* --- SOLUCIÓN: Debe ser absoluto para no afectar el layout --- */
+        #player1PocketedContainer.editable-ui {
+            position: absolute; /* --- SOLUCIÓN: Posicionamiento absoluto para los laterales --- */
+            left: 2vw;
+            bottom: 2vh; /* --- SOLUCIÓN: Posicionar en la parte inferior --- */
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
         }
-
-
-        /* --- NUEVO: Estilos para la barra de potencia --- */
-        #powerBarContainer {
-            position: absolute;
-            /* --- SOLUCIÓN: Posicionamiento y tamaño basados en el área segura --- */
-            top: 50%;
-            right: calc(var(--safe-area-offset-x) + 20px * var(--scale-factor)); /* --- SOLUCIÓN: Mover a la derecha --- */
-            transform: translateY(-50%);
-            width: calc(20px * var(--scale-factor));
-            height: calc(250px * var(--scale-factor));
-            background-color: rgba(0, 0, 0, 0.5);
-            border: 2px solid #fff;
-            border-radius: 10px;
-            z-index: 10;
-            display: none; /* Oculto por defecto */
-        }
-        #powerBarFill {
-            position: absolute;
-            top: 0; /* --- CORRECCIÓN: Posicionar desde arriba --- */
-            left: 0;
-            width: 100%;
-            height: 0%; /* La altura se animará */
-            background: linear-gradient(to bottom, #3498db, #f1c40f, #e74c3c); /* --- CORRECCIÓN: Gradiente hacia abajo --- */
-            transition: height 0.05s linear; /* Transición suave de la altura */
-            /* --- NUEVO: Redondear las esquinas superiores del relleno --- */
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-        }
-
-        /* --- SOLUCIÓN: Ajustar el selector de efecto al área segura --- */
-        #spinSelectorContainer {
-            position: absolute;
-            right: calc(var(--safe-area-offset-x) + 20px * var(--scale-factor));
-            top: calc(var(--safe-area-offset-y) + 80px * var(--scale-factor));
-            width: calc(80px * var(--scale-factor));
-            height: calc(80px * var(--scale-factor));
-            border-width: calc(2px * var(--scale-factor));
-        }
-
-
-
-        /* --- NUEVO: Estilo para el handle deslizable de la barra de potencia --- */
-        #powerBarHandle {
-            position: absolute;
-            left: 50%; /* Centrado horizontalmente en la barra */
-            top: 0%; /* --- CORRECCIÓN: Posicionar desde arriba --- */
-            /* --- CORRECCIÓN: Cambiar el círculo por un triángulo --- */
-            width: 0;
-            height: 0; 
-            background-color: transparent;
-            /* --- CORRECCIÓN: Hacer que el triángulo esté "parado" (apuntando hacia abajo) --- */
-            /* --- CORRECCIÓN: Hacer que el triángulo apunte hacia arriba --- */
-            border-left: 10px solid transparent;   /* Mitad del ancho */
-            border-right: 10px solid transparent;  /* Mitad del ancho */
-            border-bottom: 15px solid #f1c40f; /* La base del triángulo es el borde inferior */
-            cursor: pointer;
-            /* --- SOLUCIÓN: Centrar el triángulo horizontalmente desde el inicio --- */
-            transform: translateX(-50%);
-        }
-        /* --- NUEVO: Estilo para redondear el borde del medidor al llegar a cierto punto --- */
-        #powerBarFill.rounding-edge {
-            border-bottom-left-radius: 8px; /* --- CORRECCIÓN: Redondear esquinas inferiores --- */
-            border-bottom-right-radius: 8px;
-        }
-
-
-        /* --- NUEVO: Contenedor para las marcas y números --- */
-        #powerBarMarkers {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Para que no interfiera con el ratón */
-        }
-
-        /* --- NUEVO: Estilo para las líneas de marca --- */
-        .power-marker-line {
-            position: absolute;
-            left: 0;
-            width: 100%; /* Ancho completo de la barra */
-            height: 2px; /* Grosor de la línea */
-            background-color: rgba(255, 255, 255, 0.7); /* --- CORRECCIÓN: Líneas blancas --- */
-            transform: translateY(50%); /* Centrado vertical */
-        }
-
-        /* --- NUEVO: Estilo para las líneas de marca más pequeñas --- */
-        .power-marker-line-small {
-            position: absolute;
-            left: 25%; /* Empiezan más adentro */
-            width: 50%; /* Más cortas */
-            height: 1px; /* Más delgadas */
-            background-color: rgba(255, 255, 255, 0.5); /* Blancas y más tenues */
-            transform: translateY(50%);
-        }
-
-        /* --- NUEVO: Estilo para las líneas de marca más diminutas --- */
-        .power-marker-line-tiny {
-            position: absolute;
-            left: 35%;
-            width: 30%;
-            height: 1px; /* Grosor de la línea */
-            background-color: rgba(255, 255, 255, 0.3); /* Aún más tenues */
-            transform: translateY(50%);
+        #player2PocketedContainer.editable-ui {
+            position: absolute; /* --- SOLUCIÓN: Posicionamiento absoluto para los laterales --- */
+            right: 2vw;
+            bottom: 2vh; /* --- SOLUCIÓN: Posicionar en la parte inferior --- */
+            max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
+            pointer-events: auto; /* Reactivar eventos para este elemento */
         }
 
         /* --- SOLUCIÓN: Estilos para el nuevo indicador de turno --- */
@@ -432,6 +315,96 @@
             pointer-events: none; /* Para que no interfiera con el ratón */
         }
 
+        /* --- NUEVO: Estilos para los sliders en el panel de opciones --- */
+        #options-panel label {
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        #options-panel input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #555;
+            border-radius: 5px;
+            outline: none;
+        }
+        #options-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3498db;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        /* --- NUEVO: Estilo para los botones dentro del panel de opciones --- */
+        #options-panel button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            background-color: #3498db;
+            border: 1px solid #2980b9;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #options-panel button:hover {
+            background-color: #4aa3df;
+        }
+
+        /* --- NUEVO: Estilos para el panel de opciones deslizable --- */
+        #options-panel {
+            position: fixed;
+            top: 0; /* Pegado a la parte superior */
+            left: 0; /* Pegado a la izquierda */
+            width: 300px; /* Ancho fijo para el panel */
+            max-width: 80vw; /* Ancho máximo en pantallas pequeñas */
+            height: auto; /* La altura se ajusta al contenido */
+            background-color: rgba(13, 32, 59, 0.95); /* Mismo color de fondo que el body */
+            border-bottom: 2px solid #3498db;
+            border-right: 2px solid #3498db; /* Borde derecho */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transform: translateY(-100%); /* Inicia oculto arriba */
+            transition: transform 0.3s ease-in-out;
+            z-index: 200;
+            padding: 45px 20px 20px 20px; /* Padding superior para no solaparse con el botón */
+            box-sizing: border-box;
+            color: white;
+            font-family: Arial, sans-serif;
+            border-bottom-right-radius: 10px;
+        }
+        #options-panel.open {
+            transform: translateY(0); /* Muestra el panel */
+        }
+        #options-toggle-btn {
+            position: fixed;
+            top: 0;
+            left: 0; /* Pegado a la izquierda */
+            transform: none; /* Sin transformación inicial */
+            width: 80px;
+            height: 30px;
+            background-color: #3498db;
+            border: none;
+            border-bottom-right-radius: 10px;
+            cursor: pointer;
+            z-index: 201; /* Por encima del panel cuando está cerrado */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0 5px 0; /* Pequeño ajuste para centrar el icono */
+            transition: transform 0.3s ease-in-out;
+        }
+        #options-toggle-btn span {
+            color: white;
+            font-size: 24px;
+        }
+
         /* --- SOLUCIÓN: Estilos para el mensaje de falta que no se veían --- */
         #foulMessage {
             position: absolute;
@@ -452,14 +425,134 @@
             pointer-events: none;
         }
 
+        /* --- NUEVO: Estilos para la barra de potencia horizontal --- */
+        #powerBarContainer {
+            position: absolute;
+            top: 2vh;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50vw;
+            max-width: 400px;
+            height: 15px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            z-index: 10;
+            display: none; /* Oculto por defecto */
+        }
+        #powerBarFill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%; /* El ancho se animará con JS */
+            background: linear-gradient(to right, #3498db, #f1c40f, #e74c3c);
+            border-radius: 8px;
+            transition: width 0.05s linear;
+        }
+        #powerBarHandle {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            width: 10px;
+            height: 25px;
+            background-color: #f1c40f;
+            border: 2px solid white;
+            border-radius: 3px;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+        }
+
+        /* --- NUEVO: Estilos para modales personalizados --- */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000; /* Muy alto para estar por encima de todo */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            font-family: Arial, sans-serif;
+        }
+        .custom-modal-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .custom-modal-box {
+            background-color: #1a2b42;
+            padding: 20px 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 450px;
+            border: 2px solid #3498db;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            color: white;
+            text-align: center;
+        }
+        .custom-modal-box h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        .custom-modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 25px;
+        }
+        .custom-modal-buttons button {
+            padding: 10px 25px;
+        }
+
         /* --- SOLUCIÓN: Ajustar la UI superior al área segura --- */
         #top-ui-container {
-            position: absolute;
-            top: var(--safe-area-offset-y);
-            left: var(--safe-area-offset-x);
-            width: var(--safe-area-width);
-            height: auto; /* La altura la da el contenido */
-            padding: calc(15px * var(--scale-factor));
+            /* This container is already a flexbox, its default positioning is fine */
+        }
+
+        /* --- SOLUCIÓN: Estilos para el modal de error --- */
+        #error-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999; /* Por encima de todo */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #error-modal {
+            background-color: #2c3e50;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            border: 2px solid #e74c3c;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #error-modal h2 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        #error-details {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap; /* Para que el texto se ajuste */
+            word-break: break-all; /* Para romper palabras largas si es necesario */
+            overflow-y: auto; /* Scroll si el error es muy largo */
+            flex-grow: 1;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -480,12 +573,44 @@
     </div>
 
     <div id="gameContainer">
+        <!-- --- NUEVO: Barra de potencia horizontal --- -->
+        <div id="powerBarContainer" class="editable-ui">
+            <div id="powerBarFill"></div>
+            <div id="powerBarHandle"></div>
+            <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+            <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+        </div>
+
+        <!-- --- NUEVO: Panel de opciones deslizable --- -->
+        <div id="options-panel">
+            <div id="main-options-view">
+                <h3>Opciones</h3>
+                <button id="modify-ui-btn">Modificar UI</button>
+            </div>
+            <div id="edit-ui-options-view" style="display: none;">
+                <h3>Ajustar Interfaz</h3>
+                <label for="player-pockets-size">Tamaño Marcadores</label>
+                <input type="range" id="player-pockets-size" min="30" max="100" value="48">
+                <label for="spin-selector-size">Tamaño Selector Efecto</label>
+                <input type="range" id="spin-selector-size" min="30" max="200" value="80">
+                <label for="power-bar-size">Ancho Medidor Potencia</label>
+                <input type="range" id="power-bar-size" min="100" max="600" value="400">
+                <label for="power-bar-height">Grosor Medidor Potencia</label>
+                <input type="range" id="power-bar-height" min="10" max="50" value="15">
+                <button id="reset-ui-btn">Restablecer Configuración</button>
+                <button id="exit-edit-mode-btn">Volver</button>
+            </div>
+        </div>
+        <button id="options-toggle-btn"><span>&#9881;</span></button>
+
         <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->
         <!-- --- NUEVO: Contenedor para el selector de efecto --- -->
-        <div id="spinSelectorContainer">
+        <div id="spinSelectorContainer" class="editable-ui">
             <div id="spinSelectorCueBall">
                 <!-- SOLUCIÓN: Añadir el punto rojo también a la miniatura -->
                 <div id="smallSpinSelectorDot" class="spin-selector-dot"></div>
+                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
             </div>
         </div>
 
@@ -496,62 +621,45 @@
             </div>
         </div>
 
-        <!-- --- NUEVO: Contenedor flexible para la UI superior --- -->
-        <div id="top-ui-container">
-            <!-- Contenedor para las bolas del jugador 1 -->
-            <div id="player1PocketedContainer" class="pocketed-balls-container">
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-            </div>
-            <!-- Contenedor para las bolas del jugador 2 -->
-            <div id="player2PocketedContainer" class="pocketed-balls-container">
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-                <div class="pocketed-ball-placeholder"></div>
-            </div>
-        </div>
-
-        <!-- --- NUEVO: Barra de potencia --- -->
-        <div id="powerBarContainer">
-            <div id="powerBarFill"></div>
-            <!-- --- NUEVO: Handle para deslizar la potencia --- -->
-            <div id="powerBarHandle"></div>
-            <!-- --- NUEVO: Marcadores para la barra de potencia --- -->
-            <div id="powerBarMarkers">
-                <!-- --- NUEVO: Líneas diminutas (cada 5%) --- -->
-                <div class="power-marker-line-tiny" style="top: 5%;"></div>
-                <div class="power-marker-line-tiny" style="top: 15%;"></div>
-                <div class="power-marker-line-tiny" style="top: 35%;"></div>
-                <div class="power-marker-line-tiny" style="top: 45%;"></div>
-                <div class="power-marker-line-tiny" style="top: 55%;"></div>
-                <div class="power-marker-line-tiny" style="top: 65%;"></div>
-                <div class="power-marker-line-tiny" style="top: 85%;"></div>
-                <div class="power-marker-line-tiny" style="top: 95%;"></div>
-                <!-- --- NUEVO: Líneas pequeñas (cada 10%) --- -->
-                <div class="power-marker-line-small" style="top: 10%;"></div>
-                <div class="power-marker-line-small" style="top: 20%;"></div>
-                <div class="power-marker-line-small" style="top: 30%;"></div>
-                <div class="power-marker-line-small" style="top: 40%;"></div>
-                <div class="power-marker-line-small" style="top: 60%;"></div>
-                <div class="power-marker-line-small" style="top: 70%;"></div>
-                <div class="power-marker-line-small" style="top: 80%;"></div>
-                <div class="power-marker-line-small" style="top: 90%;"></div>
-                <div class="power-marker-line" style="top: 25%;"></div>
-                <div class="power-marker-line" style="top: 50%;"></div>
-                <div class="power-marker-line" style="top: 75%;"></div>
+        <!-- --- NUEVO: Modal de confirmación personalizado --- -->
+        <div id="confirm-reset-modal" class="custom-modal-overlay">
+            <div class="custom-modal-box">
+                <h3>Restablecer Configuración</h3>
+                <p>¿Estás seguro de que quieres restablecer la interfaz a sus valores por defecto? Esta acción no se puede deshacer.</p>
+                <div class="custom-modal-buttons">
+                    <button id="confirm-reset-no" class="modal-btn cancel" style="background-color: #555;">Cancelar</button>
+                    <button id="confirm-reset-yes" class="modal-btn confirm" style="background-color: #c0392b;">Confirmar</button>
+                </div>
             </div>
         </div>
 
         <canvas id="poolCanvas"></canvas>
+
+        <!-- --- SOLUCIÓN: Mover los contenedores de bolas fuera del contenedor superior --- -->
+        <!-- Contenedor para las bolas del jugador 1 -->
+        <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+            <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+        </div>
+        <!-- Contenedor para las bolas del jugador 2 -->
+        <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <div class="pocketed-ball-placeholder"></div>
+            <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+            <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+        </div>
 
         <!-- --- CORRECCIÓN: Mover los elementos de la UI aquí para que estén dentro del gameContainer --- -->
         <div id="pocketedInfo"></div>
@@ -561,6 +669,18 @@
         <div id="turnIndicator"></div>
 
     </div>
+
+    <!-- --- SOLUCIÓN: Modal para mostrar errores --- -->
+    <div id="error-overlay">
+        <div id="error-modal">
+            <h2>¡Oh no! Ocurrió un error inesperado.</h2>
+            <p>Por favor, copia este error y envíalo al desarrollador para ayudar a solucionarlo.</p>
+            <pre id="error-details"></pre>
+            <button id="copy-error-btn" style="padding: 10px; font-size: 16px; cursor: pointer;">Copiar Error</button>
+        </div>
+    </div>
+
+
     <!-- 
         1. Import map: Le dice al navegador qué archivo cargar cuando vea "import 'three'".
     -->
@@ -575,11 +695,54 @@
     <!-- 2. Cargar pool.js como un módulo para permitir el uso de 'import' -->
     <script type="module" src="pool.js"></script>
 
+    <!-- --- SOLUCIÓN: Script para capturar errores globales --- -->
+    <script>
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorDetails = document.getElementById('error-details');
+        const copyErrorBtn = document.getElementById('copy-error-btn');
+
+        function showErrorModal(errorInfo) {
+            errorDetails.textContent = errorInfo;
+            errorOverlay.style.display = 'flex';
+        }
+
+        copyErrorBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(errorDetails.textContent).then(() => {
+                copyErrorBtn.textContent = '¡Copiado!';
+                setTimeout(() => {
+                    copyErrorBtn.textContent = 'Copiar Error';
+                }, 2000);
+            }).catch(err => {
+                console.error('No se pudo copiar el error: ', err);
+                copyErrorBtn.textContent = 'Error al copiar';
+            });
+        });
+
+        // Capturar errores de JavaScript estándar
+        window.onerror = function (message, source, lineno, colno, error) {
+            const errorInfo = `Error: ${message}\nArchivo: ${source}\nLínea: ${lineno}, Columna: ${colno}\n\nPila de llamadas:\n${error ? error.stack : 'No disponible'}`;
+            showErrorModal(errorInfo);
+            return true; // Evita que el error se muestre en la consola del navegador por defecto
+        };
+
+        // Capturar errores en promesas que no fueron manejados (ej. fetch)
+        window.addEventListener('unhandledrejection', function (event) {
+            const reason = event.reason;
+            let errorInfo = 'Error en una promesa no manejada.\n';
+            if (reason instanceof Error) {
+                errorInfo += `Error: ${reason.message}\n\nPila de llamadas:\n${reason.stack}`;
+            } else {
+                errorInfo += `Razón: ${JSON.stringify(reason, null, 2)}`;
+            }
+            showErrorModal(errorInfo);
+        });
+    </script>
+
     <!-- 3. Registrar el Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('sw.js')
                     .then(registration => { /* El Service Worker se registró correctamente. */ })
                     .catch(error => {
                         console.log('Error en el registro del Service Worker:', error);

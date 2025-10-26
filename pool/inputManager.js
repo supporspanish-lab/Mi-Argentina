@@ -9,6 +9,7 @@ import * as spinControls from './spinControls.js';
 import * as powerControls from './powerControls.js'; // --- SOLUCIÓN: Volver a importar powerControls
 import * as cuePlacement from './cuePlacement.js';
 import { shoot } from './shooting.js';
+import { isUIEditModeActive } from './ui.js'; // --- NUEVO: Importar estado del modo de edición
 
 // --- Estado Interno ---
 let isMouseDown = false;
@@ -82,19 +83,6 @@ export function initializeInputManager() {
             initialPointerPosForAim = { ...pointerPos };
             lastPointerPosForAim = { ...pointerPos };
         }
-
-        // Lógica para jalar el taco
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const raycaster = new THREE.Raycaster();
-        const mouseVector = new THREE.Vector2(((clientX - canvas.getBoundingClientRect().left) / canvas.width) * 2 - 1, -((clientY - canvas.getBoundingClientRect().top) / canvas.height) * 2 + 1);
-        raycaster.setFromCamera(mouseVector, camera);
-        const intersects = raycaster.intersectObject(cueMesh, true);
-
-        if (intersects.length > 0) {
-            // --- LOG: Indica que se ha iniciado el arrastre del taco.
-            powerControls.startPullBack(pointerPos);
-        }
     };
 
     canvas.addEventListener('mousedown', onPointerDown);
@@ -110,8 +98,14 @@ export function initializeInputManager() {
     });
 
     const powerBarHandle = document.getElementById('powerBarHandle');
-    powerBarHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); powerControls.startPowerDrag(); });
-    powerBarHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); powerControls.startPowerDrag(); }, { passive: false });
+    const onPowerDragStart = (e) => {
+        // --- SOLUCIÓN: No iniciar el arrastre de potencia si estamos en modo edición ---
+        if (isUIEditModeActive()) return;
+        e.stopPropagation();
+        powerControls.startPowerDrag();
+    };
+    powerBarHandle.addEventListener('mousedown', onPowerDragStart);
+    powerBarHandle.addEventListener('touchstart', onPowerDragStart, { passive: false });
 
     // --- NUEVO: Listeners para el nuevo modal de efecto ---
     const largeSpinSelector = document.getElementById('largeSpinSelector');
@@ -181,18 +175,14 @@ export function initializeInputManager() {
             cueBallRedDot.material.color.set(isValid ? 0xe74c3c : 0x888888);
         }
 
-        // Arrastrar para potencia (pull back)
-        if (powerControls.isPullingBack()) {
-            powerControls.dragPullBack(pointerPos, window.currentShotAngle);
-        }
-
         // Arrastrar selector de efecto
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         spinControls.dragSpin({ clientX, clientY });
 
-        // Arrastrar barra de potencia
-        powerControls.dragPower({ clientY });
+        // --- SOLUCIÓN: Añadir la llamada que faltaba para arrastrar la barra de potencia ---
+        powerControls.dragPower({ clientX });
+
     };
 
     window.addEventListener('mousemove', onPointerMove);
@@ -203,31 +193,28 @@ export function initializeInputManager() {
 
     // --- Eventos de Finalización (mouseup, touchend) ---
     const onPointerUp = (e) => {
-        const isTouchEvent = e.type === 'touchend';
+        let power = 0;
+        let shotTaken = false;
 
-        // Soltar la bola blanca
-        if (cuePlacement.isMovingCueBall()) {
-            // --- MODIFICACIÓN: Ya no finalizamos la colocación aquí ---
-            // Ahora, el jugador puede soltar la bola y volver a moverla
-            // si lo desea. El estado 'isPlacingCueBall' solo se pondrá
-            // en 'false' cuando se realice el disparo (lógica en shooting.js).
-            cuePlacement.stopCueBallMove(); // Simplemente dejamos de moverla
+        // Comprobar si se estaba disparando con la barra de potencia.
+        if (powerControls.isDraggingPower()) {
+            power = powerControls.stopPowerDrag();
+            shotTaken = true;
         }
-        // Disparar al soltar el taco
-        else if (powerControls.isPullingBack()) {
-            const power = powerControls.stopPullBack();
+
+        if (shotTaken && power > 0) {
             shoot(power);
         }
 
         // Finalizar arrastre de efecto
         spinControls.stopSpinDrag();
 
-        // Finalizar y disparar con la barra de potencia
-        if (powerControls.isDraggingPower()) {
-            const power = powerControls.stopPowerDrag();
-            shoot(power);
+        // --- SOLUCIÓN: Finalizar el movimiento de la bola blanca al soltarla ---
+        if (cuePlacement.isMovingCueBall()) {
+            // Simplemente dejamos de mover la bola. La validación final y el cambio de estado
+            // se harán cuando el jugador intente disparar.
+            cuePlacement.stopCueBallMove();
         }
-
         // --- NUEVO: Finalizar el arrastre de apuntado ---
         isAimingDrag = false;
 
