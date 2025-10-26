@@ -180,13 +180,14 @@ export function handleInput() {
     const isPlacingWithoutDragging = isPlacing && !isMovingCueBall();
     // --- CORRECCIÓN: La condición para poder disparar ahora incluye el estado de "bola en mano" (cuando no se está arrastrando). ---
     const canShoot = (!ballsAreCurrentlyMoving && !cueBall.isPocketed) && (!isPlacing || isPlacingWithoutDragging);
-
-    const shouldShowGuides = (canShoot || isPlacingWithoutDragging) || isPullingBack();
+    
+    // --- MODIFICACIÓN: Las guías siempre deben intentar mostrarse si se puede disparar.
+    // La lógica interna de updateAimingGuides decidirá qué partes mostrar.
+    const shouldShowGuides = canShoot || isPullingBack();
 
     // --- CORRECCIÓN: Usar la nueva lógica de 'canShoot' para mostrar los controles. ---
     spinSelectorContainer.style.display = (canShoot && !isPullingBack() && !isMovingCueBall()) ? 'block' : 'none';
     powerBarContainer.style.display = canShoot ? 'block' : 'none';
-
     // --- NUEVO: Lógica para redimensionar dinámicamente el selector de efecto ---
     if (spinSelectorContainer.style.display === 'block' && !isUIEditMode) {
         // 1. Proyectar el borde derecho de la mesa a coordenadas de pantalla.
@@ -223,7 +224,8 @@ export function handleInput() {
         // cuando el puntero está presionado.
 
         if (cueMesh) cueMesh.visible = true;
-        updateAimingGuides(getCurrentShotAngle(), getGameState(), getPowerPercent());
+        // --- MODIFICACIÓN: Pasar isPointerDown() para controlar la visibilidad de las guías secundarias.
+        updateAimingGuides(getCurrentShotAngle(), getGameState(), getPowerPercent(), true);
     } else {
         hideAimingGuides();
         if (cueBall && cueBall.mesh && !cueBall.isPocketed) {
