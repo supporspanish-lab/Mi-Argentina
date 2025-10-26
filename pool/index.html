@@ -331,6 +331,40 @@
             right: 2vw;
         }
 
+        /* --- NUEVO: Animación de pulso para los indicadores --- */
+        @keyframes fade-pulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* --- NUEVO: Estilos para el indicador de mover sobre la sombra --- */
+        #move-indicator {
+            position: absolute;
+            width: 80px; /* Un poco más grande para que se vea bien sobre la sombra */
+            height: 80px;
+            background-image: url('imajenes/mover.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: 29; /* Debajo del indicador de la mano */
+            display: none;
+            transform: translate(-50%, -50%); /* Centrar sobre la posición de la sombra */
+            opacity: 0; /* Inicia invisible */
+        }
+
+        /* --- NUEVO: Estilos para el indicador de mano para mover la bola --- */
+        #hand-indicator {
+            position: absolute;
+            width: 64px; /* Tamaño del icono de la mano */
+            height: 64px;
+            background-image: url('imajenes/mano.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none; /* Para que no interfiera con los clics */
+            z-index: 30;
+            display: none; /* Oculto por defecto */
+            transform: translate(-50%, -100%); /* Centrar horizontalmente y colocar la punta del dedo encima */
+        }
         /* --- SOLUCIÓN: Estilos para el nuevo indicador de turno --- */
         #turnIndicator {
             position: absolute;
@@ -400,8 +434,8 @@
             top: 0; /* Pegado a la parte superior */
             left: 0; /* Pegado a la izquierda */
             width: 300px; /* Ancho fijo para el panel */
-            max-width: 80vw; /* Ancho máximo en pantallas pequeñas */
-            max-height: 85vh; /* --- NUEVO: Altura máxima para evitar que se salga de la pantalla --- */
+            max-width: 90vw; /* Ancho máximo en pantallas pequeñas */
+            max-height: 80vh; /* --- CORRECCIÓN: Altura máxima para evitar que se salga de la pantalla --- */
             overflow-y: auto; /* --- NUEVO: Añadir scroll si el contenido es más alto --- */
             height: auto; /* La altura se ajusta al contenido */
             background-color: rgba(13, 32, 59, 0.95); /* Mismo color de fondo que el body */
@@ -411,8 +445,8 @@
             transform: translateY(-100%); /* Inicia oculto arriba */
             transition: transform 0.3s ease-in-out;
             z-index: 200;
-            padding: 45px 20px 20px 20px; /* Padding superior para no solaparse con el botón */
-            box-sizing: border-box;
+            padding: 50px 20px 20px 20px; /* Padding superior para no solaparse con el botón */
+            box-sizing: border-box; /* --- CORRECCIÓN: Asegurar que el padding no aumente el tamaño total --- */
             color: white;
             font-family: Arial, sans-serif;
             border-bottom-right-radius: 10px;
@@ -723,6 +757,9 @@
         <div id="miniSpinSelector" class="editable-ui">
             <div id="miniSpinSelectorDot" class="spin-selector-dot"></div>
         </div>
+
+        <!-- --- NUEVO: Indicador para mover sobre la sombra de la bola --- -->
+        <div id="move-indicator"></div>
 
         <!-- --- SOLUCIÓN: Nuevo elemento para el indicador de turno --- -->
         <div id="turnIndicator"></div>

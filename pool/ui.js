@@ -3,7 +3,7 @@ import * as THREE from 'three'; // --- SOLUCIÓN: Importar THREE.js
 import { areBallsMoving } from './fisicas.js';
 import { getGameState, setCurrentPlayer } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
-import { prepareTableTexture, TABLE_WIDTH } from './config.js';
+import { prepareTableTexture, TABLE_WIDTH, BALL_RADIUS } from './config.js';
 import { camera, zoomState, updateCameraPositionForResponsiveness } from './scene.js'; // --- NUEVO: Importar la cámara para proyecciones
 import { loadingManager } from './loadingManager.js'; // --- SOLUCIÓN: Importar el gestor de carga
 import { initializeAiming, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
@@ -25,6 +25,7 @@ let activeDrag = { // Objeto para gestionar el arrastre/redimensión activo
     element: null,
     type: null
 };
+let ballInHandAnimationPlayed = false; // --- NUEVO: Para controlar la animación de "bola en mano"
 
 // --- NUEVO: Exportar el estado del modo de edición para que otros módulos lo consulten ---
 export const isUIEditModeActive = () => isUIEditMode;
@@ -100,6 +101,16 @@ export function initializeUI() {
             optionsToggleBtn.classList.toggle('open', isOpen);
 
             updateToggleBtnPosition(); // --- MODIFICACIÓN: Usar la nueva función centralizada
+        });
+
+        // --- NUEVO: Cerrar el panel si se hace clic fuera de él ---
+        document.addEventListener('click', (e) => {
+            // Si el panel está abierto y el clic no fue dentro del panel ni en el botón de abrir/cerrar...
+            if (optionsPanel.classList.contains('open') && !optionsPanel.contains(e.target) && e.target !== optionsToggleBtn) {
+                optionsPanel.classList.remove('open');
+                optionsToggleBtn.classList.remove('open');
+                updateToggleBtnPosition(); // Reposicionar el botón
+            }
         });
 
         // --- SOLUCIÓN: Evitar que los clics dentro del panel afecten al juego ---
@@ -222,7 +233,8 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
     // Se puede disparar si las bolas no se mueven y la bola blanca no está entronerada.
     const canShoot = !ballsAreCurrentlyMoving && !cueBall.isPocketed;
     
-    // --- MODIFICACIÓN: Las guías solo se muestran si se puede disparar Y no se está moviendo la bola blanca.
+    // --- MODIFICACIÓN: Las guías solo se muestran si se puede disparar Y NO se está en modo "bola en mano".
+    // --- CORRECCIÓN: Las guías deben mostrarse si se puede disparar, excepto cuando se está arrastrando activamente la bola.
     const shouldShowGuides = (canShoot || isPullingBack()) && !isMovingCueBall();
 
     powerBarContainer.style.display = canShoot ? 'block' : 'none';
@@ -240,6 +252,37 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
         if (cueBall && cueBall.mesh && !cueBall.isPocketed) {
             cueBall.mesh.visible = true;
             if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true; // También su sombra
+        }
+    }
+
+    // --- Lógica para el indicador de "bola en mano" ---
+    const moveIndicator = document.getElementById('move-indicator');
+    if (moveIndicator) {
+        if (isPlacing) {
+            if (!ballInHandAnimationPlayed) {
+                // Iniciar la animación solo una vez
+                moveIndicator.style.display = 'block';
+                moveIndicator.style.animation = 'fade-pulse 1s ease-in-out 3';
+                ballInHandAnimationPlayed = true;
+
+                // Después de que la animación termine (3 segundos), ocultar el elemento.
+                setTimeout(() => {
+                    moveIndicator.style.display = 'none';
+                    moveIndicator.style.animation = ''; // Limpiar la animación
+                }, 3000);
+            }
+
+            // Actualizar la posición del indicador en cada frame mientras está visible
+            if (moveIndicator.style.display === 'block') {
+                const screenPos = toScreenPosition(cueBall.mesh, camera);
+                moveIndicator.style.left = `${screenPos.x}px`;
+                moveIndicator.style.top = `${screenPos.y}px`;
+            }
+        } else {
+            // Si ya no es "bola en mano", resetear la bandera de animación para la próxima vez.
+            if (ballInHandAnimationPlayed) {
+                ballInHandAnimationPlayed = false;
+            }
         }
     }
 }
@@ -286,6 +329,25 @@ export function updateTurnTimerUI(player, percent) {
             timerLine.style.strokeDashoffset = 100 - (percent * 100);
         }
     }
+}
+
+/**
+ * --- NUEVO: Convierte una posición del mundo 3D a coordenadas de pantalla 2D.
+ * @param {THREE.Object3D} object - El objeto 3D cuya posición se convertirá.
+ * @param {THREE.Camera} camera - La cámara de la escena.
+ * @returns {{x: number, y: number}} - Las coordenadas X e Y en la pantalla.
+ */
+function toScreenPosition(object, camera) {
+    const vector = new THREE.Vector3();
+    // Obtener la posición mundial del objeto
+    object.getWorldPosition(vector);
+    // Proyectar la posición 3D en el espacio 2D de la cámara
+    vector.project(camera);
+
+    // Convertir de coordenadas de dispositivo normalizadas (-1 a 1) a coordenadas de píxeles
+    const x = (vector.x + 1) * window.innerWidth / 2;
+    const y = -(vector.y - 1) * window.innerHeight / 2;
+    return { x, y };
 }
 
 /**
@@ -465,6 +527,10 @@ function setupUIEditListeners() {
                 const el = activeDrag.element;
                 el.style.width = `${Math.max(30, activeDrag.initialWidth * resizeRatio)}px`;
                 el.style.height = `${Math.max(30, activeDrag.initialHeight * resizeRatio)}px`;
+            }
+            // --- CORRECCIÓN: Si el elemento es el selector de efecto, también guardamos el layout.
+            if (activeDrag.element && activeDrag.element.id === 'miniSpinSelector') {
+                saveUILayout();
             }
             return;
         }
