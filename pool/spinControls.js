@@ -20,12 +20,13 @@ export function initializeSpinControls() {
     // --- Eventos para la miniatura ---
     const handleMiniSelectorInteraction = (e) => {
         if (isUIEditModeActive()) return; // No hacer nada si se está editando la UI
+        // Si no estamos en modo edición, evitamos que el clic afecte al juego y mostramos el modal.
         e.preventDefault();
         e.stopPropagation();
         showSpinModal();
     };
     miniSpinSelector.addEventListener('mousedown', handleMiniSelectorInteraction);
-    miniSpinSelector.addEventListener('touchstart', handleMiniSelectorInteraction, { passive: false });
+    miniSpinSelector.addEventListener('touchstart', handleMiniSelectorInteraction, { passive: true });
 
     // --- CORRECCIÓN: Cerrar el modal si se hace clic fuera de él ---
     spinModalOverlay.addEventListener('mousedown', (e) => {

@@ -442,6 +442,7 @@ function setupUIEditListeners() {
         if (target.classList.contains('resize-handle')) {
             activeDrag.type = target.classList.contains('br') ? 'resize-br' : 'resize-tl';
         }
+
     };
 
     // --- MODIFICACIÓN: Unificar la lógica de movimiento para ratón y táctil ---
@@ -497,12 +498,15 @@ function setupUIEditListeners() {
             // --- SOLUCIÓN: Lógica de arrastre mejorada para elementos centrados con transform ---
             // Si el elemento está centrado (como la barra de potencia), ajustamos el 'left'
             // pero mantenemos la transformación para que siga centrado respecto a su nueva posición.
+            // --- CORRECCIÓN: La miniatura del selector de efecto necesita un tratamiento especial.
             if (el.id === 'powerBarContainer') {
                 el.style.left = `${activeDrag.initialLeft + dx + (activeDrag.initialWidth / 2)}px`;
             } else if (el.style.left !== 'auto') {
                 el.style.left = `${activeDrag.initialLeft + dx}px`;
                 el.style.right = 'auto';
             } else {
+                // --- CORRECCIÓN: Asegurarse de que el 'left' se ponga en 'auto' si se está moviendo desde la derecha.
+                // Esto es importante para el miniSpinSelector.
                 el.style.right = `${activeDrag.initialRight - dx}px`;
                 el.style.left = 'auto';
             }
@@ -510,7 +514,6 @@ function setupUIEditListeners() {
             // La lógica para la posición vertical no cambia
             if (el.style.top !== 'auto' && el.style.bottom === 'auto') {
                 el.style.top = `${activeDrag.initialTop + dy}px`;
-                // el.style.bottom = 'auto'; // No es necesario si ya es auto
             } else {
                 el.style.bottom = `${activeDrag.initialBottom - dy}px`;
                 el.style.top = 'auto';
@@ -542,11 +545,11 @@ function setupUIEditListeners() {
 
     // Asignar los nuevos manejadores a los eventos de ratón y táctiles
     document.addEventListener('mousedown', onEditStart);
-    document.addEventListener('touchstart', onEditStart, { passive: false });
+    document.addEventListener('touchstart', onEditStart, { passive: true });
     document.addEventListener('mousemove', onEditMove);
     document.addEventListener('touchmove', onEditMove, { passive: false });
     document.addEventListener('mouseup', onEditEnd);
-    document.addEventListener('touchend', onEditEnd);
+    document.addEventListener('touchend', onEditEnd); 
 
     // --- NUEVO: Listener para el zoom de la mesa ---
     document.addEventListener('wheel', (e) => {

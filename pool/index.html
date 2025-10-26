@@ -302,24 +302,22 @@
         }
         /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
         #player1PocketedContainer.editable-ui {
-            position: absolute; /* --- SOLUCIÓN: Posicionamiento absoluto para los laterales --- */
+            position: absolute;
+            bottom: 2vh;
             left: 2vw;
-            bottom: 2vh; /* --- SOLUCIÓN: Posicionar en la parte inferior --- */
-            max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
         }
         #player2PocketedContainer.editable-ui {
-            position: absolute; /* --- SOLUCIÓN: Posicionamiento absoluto para los laterales --- */
+            position: absolute;
+            bottom: 2vh;
             right: 2vw;
-            bottom: 2vh; /* --- SOLUCIÓN: Posicionar en la parte inferior --- */
-            max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
         }
         /* --- NUEVO: Estilos para la miniatura del selector de efecto --- */
         #miniSpinSelector {
             width: 7vh; /* Tamaño relativo a la altura de la pantalla */
             height: 7vh; 
-            position: relative; /* Para posicionar el punto rojo dentro */
+            position: absolute; /* --- CORRECCIÓN: Posicionamiento absoluto para ser editable --- */
             cursor: pointer;
             /* --- MODIFICACIÓN: Usar una imagen para la miniatura del efecto --- */
             background-image: url('imajenes/BolasMetidas/efecto.png');
@@ -328,6 +326,9 @@
             background-repeat: no-repeat;
             border-radius: 50%;
             pointer-events: auto; /* Permitir clics en este elemento */
+            /* --- NUEVO: Posición por defecto --- */
+            top: 2vh;
+            right: 2vw;
         }
 
         /* --- SOLUCIÓN: Estilos para el nuevo indicador de turno --- */
@@ -400,6 +401,8 @@
             left: 0; /* Pegado a la izquierda */
             width: 300px; /* Ancho fijo para el panel */
             max-width: 80vw; /* Ancho máximo en pantallas pequeñas */
+            max-height: 85vh; /* --- NUEVO: Altura máxima para evitar que se salga de la pantalla --- */
+            overflow-y: auto; /* --- NUEVO: Añadir scroll si el contenido es más alto --- */
             height: auto; /* La altura se ajusta al contenido */
             background-color: rgba(13, 32, 59, 0.95); /* Mismo color de fondo que el body */
             border-bottom: 2px solid #3498db;
@@ -716,13 +719,9 @@
             <button id="playAgainBtn">Jugar de Nuevo</button>
         </div>
 
-        <!-- --- NUEVO: Contenedor para la UI superior que incluye el nuevo selector de efecto --- */ -->
-        <div id="top-ui-container">
-            <!-- --- SOLUCIÓN: Añadir un div vacío para empujar el selector a la derecha --- -->
-            <div></div>
-            <div id="miniSpinSelector" class="editable-ui">
-                <div id="miniSpinSelectorDot" class="spin-selector-dot"></div>
-            </div>
+        <!-- --- CORRECCIÓN: Mover el selector de efecto fuera del contenedor flexbox --- -->
+        <div id="miniSpinSelector" class="editable-ui">
+            <div id="miniSpinSelectorDot" class="spin-selector-dot"></div>
         </div>
 
         <!-- --- SOLUCIÓN: Nuevo elemento para el indicador de turno --- -->
