@@ -91,9 +91,16 @@ export function updateCameraPositionForResponsiveness() {
     // Añadir un pequeño margen para que la mesa no toque los bordes
     cameraZ *= 1.1;
 
+    // --- SOLUCIÓN: Desplazar la cámara y el punto de mira para mover la mesa hacia abajo ---
+    // 1. Calculamos la altura visible en el plano de la mesa.
+    const visibleHeight = 2 * cameraZ * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    // 2. Calculamos el desplazamiento necesario para que el borde inferior de la mesa (Y=0)
+    //    se alinee con la parte inferior de la pantalla.
+    const yOffset = visibleHeight * -0.049; // Desplazamos la vista un 25% de la altura visible hacia abajo.
+
     // 2. Establecer la posición y el punto de mira finales de la cámara.
-    camera.position.set(zoomState.centerX, zoomState.centerY, cameraZ);
-    camera.lookAt(zoomState.centerX, zoomState.centerY, 0);
+    camera.position.set(zoomState.centerX, zoomState.centerY - yOffset, cameraZ);
+    camera.lookAt(zoomState.centerX, zoomState.centerY - yOffset, 0);
 
     // --- NUEVO: Ajustar los límites de la sombra dinámicamente con el zoom ---
     directionalLight.shadow.camera.left = zoomState.centerX - (effectiveWidth / 2) * 1.20;
