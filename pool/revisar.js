@@ -84,11 +84,12 @@ export function revisarEstado() {
         }
     }
 
-    // --- NUEVO: Falta 4: No meter ninguna bola tras un golpe legal ---
-    // Si se ha golpeado una bola legalmente pero no se ha metido ninguna, es falta.
+    // --- MODIFICACIÓN: Regla 4: No meter ninguna bola tras un golpe legal ---
+    // Si se ha golpeado una bola legalmente pero no se ha metido ninguna, no es una falta
+    // que dé "bola en mano", pero sí provoca un cambio de turno.
     // Esto se comprueba solo si no se ha cometido otra falta antes.
     if (!foulCommitted && !ballInHandFoul && firstBallHitThisTurn && pocketedThisTurn.length === 0) {
-        foulCommitted = true;
+        foulCommitted = true; // Se marca como "falta" para forzar el cambio de turno, pero no dará bola en mano.
         foulReason = "No has metido ninguna de tus bolas";
         // playSound('foul', 0.6);
     }

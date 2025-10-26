@@ -8,7 +8,6 @@ const ASSETS_TO_CACHE = [
     'ui.js',
     'fisicas.js',
     'inputManager.js',
-    'powerControls.js',
     'shooting.js',
     'cuePlacement.js',
     'spinControls.js',
@@ -16,6 +15,9 @@ const ASSETS_TO_CACHE = [
     'ballManager.js',
     'config.js',
     'scene.js',
+    'revisar.js', // --- SOLUCIÓN: Añadir el archivo de revisión que faltaba
+    'powerControls.js',
+    'cueBallEffects.js', // --- SOLUCIÓN: Añadir el archivo de efectos que faltaba
     'aiming.js',
     'audioManager.js',
     'fallPhysics.js',

@@ -51,7 +51,7 @@ export function shoot(powerPercent) {
 
     isShooting = true;
 
-    animateCueShot(currentShotAngle, shotPower, (powerForCallback) => {
+    animateCueShot(currentShotAngle, shotPower, (powerForCallback = 0) => { // --- SOLUCIÓN: Añadir valor por defecto
         if (areBallsMoving(getSceneBalls())) return;
 
         cueBall.vx = impulseDirection.x * (power / 1000) * velocityFactor;
