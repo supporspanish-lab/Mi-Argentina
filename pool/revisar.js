@@ -1,160 +1,215 @@
 // --- Módulo de Revisión ---
-import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls, clearFirstHitBall, handleTurnEnd } from './gameState.js';
+import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
+import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
 
 /**
  * Función de prueba para revisar el estado antes de mostrar la UI.
  */
-export function revisarEstado() {
-    const gameState = getGameState();
-    // --- CORRECCIÓN: Obtener el estado 'isLoading' ---
-    const { currentPlayer, pocketedThisTurn, playerAssignments, firstBallHitThisTurn, ballsAssigned, isLoading } = gameState;
-
-    // --- CORRECCIÓN: No revisar el estado si el juego todavía está en la fase de carga/calentamiento ---
-    if (isLoading) return;
+export function revisarEstado(faltaPorTiempo = false) {
+    // --- SOLUCIÓN: Obtener el estado inicial y mantenerlo separado.
+    const estadoInicialJuego = getGameState();
+    const { 
+        currentPlayer: jugadorActual, 
+        pocketedThisTurn: bolasEntroneradasEsteTurno, 
+        firstBallHitThisTurn: primeraBolaGolpeadaEsteTurno, 
+        ballsAssigned: bolasAsignadasAlInicioTurno, 
+        isLoading: estaCargando, 
+        gameOver: juegoTerminado,
+        isFirstTurn: esPrimerTurno // --- NUEVO: Obtener la bandera del primer turno.
+    } = estadoInicialJuego;
+   
+    // Muestra si el turno terminó porque el contador llegó a cero.
+    console.log("Variable 'faltaPorTiempo':", faltaPorTiempo);
+    // --- SOLUCIÓN: Procesar la asignación de bolas ANTES de comprobar las faltas.
+    // Si la mesa está abierta y se ha metido una bola de color, se asignan los grupos inmediatamente.
+    if (!bolasAsignadasAlInicioTurno && bolasEntroneradasEsteTurno.length > 0) {
+        const primeraBolaObjetivoEntronerada = bolasEntroneradasEsteTurno.find(b => b.number !== null && b.number !== 8);
+        if (primeraBolaObjetivoEntronerada) {
+            const tipo = (primeraBolaObjetivoEntronerada.number >= 1 && primeraBolaObjetivoEntronerada.number <= 7) ? 'solids' : 'stripes';
+            assignPlayerTypes(jugadorActual, tipo);
+        }
+    }
 
     // --- NUEVO: Detección de Faltas ---
-    let foulCommitted = false; // Falta que solo cambia el turno
-    let ballInHandFoul = false; // Falta que da "bola en mano" al oponente
-    let foulReason = ""; // --- NUEVO: Variable para almacenar la razón de la falta
+    let faltaCometida = false; // Falta que solo cambia el turno
+    let faltaConBolaEnMano = false; // Falta que da "bola en mano" al oponente
+    let motivoFalta = ""; // --- NUEVO: Variable para almacenar la razón de la falta
 
-    // --- NUEVO: Falta 2: Meter la bola blanca ---
-    const cueBallPocketed = pocketedThisTurn.some(ball => ball.number === null);
-    if (cueBallPocketed) {
-        foulCommitted = true; // Es una falta
-        ballInHandFoul = true; // Y da bola en mano
-        foulReason = "Has metido la bola blanca";
-        // playSound('foul', 0.6);
+    // --- FALTA AÑADIDA: Tiempo agotado ---
+    if (faltaPorTiempo) {
+        faltaCometida = true;
+        faltaConBolaEnMano = true; // Quedarse sin tiempo da bola en mano.
+        motivoFalta = "Se agotó el tiempo";
+    }
 
-        // Lógica para "bola en mano"
+    // --- FALTA AÑADIDA: No golpear ninguna bola ---
+    // Se comprueba solo si no se ha cometido otra falta antes.
+    if (!primeraBolaGolpeadaEsteTurno && !faltaConBolaEnMano) {
+        faltaCometida = true;
+        faltaConBolaEnMano = true; // No golpear ninguna bola da "bola en mano".
+        motivoFalta = "No se golpeó ninguna bola";
+    }
+
+    // --- FALTA AÑADIDA: Meter la bola blanca ---
+    const bolaBlancaEntronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === null);
+    if (bolaBlancaEntronerada) {
+        faltaCometida = true;
+        faltaConBolaEnMano = true;
+        motivoFalta = "Metiste la bola blanca";
+
+        // Lógica para "bola en mano": reposicionar la bola blanca.
         setPlacingCueBall(true);
         if (cueBall) {
             cueBall.isPocketed = false;
             cueBall.pocketedState = null;
-            cueBall.isActive = true; // Se activa para poder colocarla
-            cueBall.mesh.visible = true;
+            cueBall.isActive = true; // Se activa para poder colocarla.
+            cueBall.mesh.visible = true; // Asegurar que vuelva a ser blanca
+            // --- CORRECCIÓN: Frenar la bola blanca completamente al reposicionarla.
+            cueBall.vx = 0;
+            cueBall.vy = 0;
             if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
+            // La bola aparece en la zona de saque inicial.
             cueBall.mesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, BALL_RADIUS);
+            if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
         }
     }
 
-    // Falta 1: No se golpeó ninguna bola.
-    if (!firstBallHitThisTurn && !ballInHandFoul) { // Evitar mostrar dos mensajes de falta
-        foulCommitted = true;
-        ballInHandFoul = true;
-        foulReason = "La bola blanca no golpeó ninguna bola";
-        // playSound('foul', 0.6); // --- NUEVO: Reproducir sonido de falta
-    }
+    // --- CORRECCIÓN: Volver a obtener el estado actualizado DESPUÉS de la posible asignación de bolas.
+    const estadoActualJuego = getGameState();
 
-    // --- NUEVO: Falta 3: Golpear primero una bola del oponente ---
-    // Esta regla solo se aplica si las bolas ya han sido asignadas.
-    if (ballsAssigned && firstBallHitThisTurn && firstBallHitThisTurn.number !== 8 && !ballInHandFoul) {
+    // --- FALTA AÑADIDA: Golpear primero una bola del oponente ---
+    // Esta regla solo se aplica si las bolas ya han sido asignadas y no se ha cometido otra falta con bola en mano.
+    // --- CORRECCIÓN: La falta solo aplica si las bolas ya estaban asignadas ANTES del turno actual.
+    const bolasYaEstabanAsignadas = bolasAsignadasAlInicioTurno === true;
+    if (bolasYaEstabanAsignadas && primeraBolaGolpeadaEsteTurno && primeraBolaGolpeadaEsteTurno.number !== 8 && !faltaConBolaEnMano) {
         // Determinar el tipo de la primera bola golpeada
-        const hitBallType = (firstBallHitThisTurn.number >= 1 && firstBallHitThisTurn.number <= 7) ? 'solids' : 'stripes';
+        const tipoBolaGolpeada = (primeraBolaGolpeadaEsteTurno.number >= 1 && primeraBolaGolpeadaEsteTurno.number <= 7) ? 'solids' : 'stripes';
+        
         // Comprobar si no coincide con el tipo asignado al jugador actual
-        if (hitBallType !== playerAssignments[currentPlayer]) {
-            foulCommitted = true;
-            ballInHandFoul = true;
-            foulReason = "Golpeaste una bola del oponente primero";
-            // playSound('foul', 0.6);
+        if (tipoBolaGolpeada !== estadoActualJuego.playerAssignments[jugadorActual]) {
+            faltaCometida = true;
+            faltaConBolaEnMano = true;
+            motivoFalta = "Golpeaste una bola del oponente primero";
         }
     }
 
-    // --- NUEVO: Falta 5: Golpear la bola 8 primero (si no es la última) ---
-    if (firstBallHitThisTurn && firstBallHitThisTurn.number === 8 && !ballInHandFoul) {
+    // --- NUEVA FALTA: Golpear la bola 8 primero (si no es la última) ---
+    if (primeraBolaGolpeadaEsteTurno && primeraBolaGolpeadaEsteTurno.number === 8 && !faltaConBolaEnMano) {
         // Comprobar si al jugador todavía le quedan bolas en la mesa.
-        const playerBallType = playerAssignments[currentPlayer];
-        let playerHasBallsLeft = false;
+        const tipoBolaJugador = estadoActualJuego.playerAssignments[jugadorActual];
+        let jugadorTieneBolasRestantes = false;
 
-        if (ballsAssigned && playerBallType) {
-            playerHasBallsLeft = balls.some(ball => {
+        if (estadoActualJuego.ballsAssigned && tipoBolaJugador) {
+            jugadorTieneBolasRestantes = balls.some(ball => {
                 if (!ball.isActive || ball.number === null || ball.number === 8) return false;
-                const ballType = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-                return ballType === playerBallType;
+                const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                return tipoBola === tipoBolaJugador;
             });
         }
 
         // Es falta golpear la bola 8 si la mesa está abierta o si al jugador aún le quedan bolas.
-        if (!ballsAssigned || playerHasBallsLeft) {
-            foulCommitted = true;
-            ballInHandFoul = true;
-            foulReason = "Golpeaste la bola 8 antes de tiempo";
+        if (!estadoActualJuego.ballsAssigned || jugadorTieneBolasRestantes) {
+            faltaCometida = true;
+            faltaConBolaEnMano = true;
+            motivoFalta = "Golpeaste la bola 8 antes de tiempo";
         }
     }
 
-    // --- MODIFICACIÓN: Regla 4: No meter ninguna bola tras un golpe legal ---
-    // Si se ha golpeado una bola legalmente pero no se ha metido ninguna, no es una falta
-    // que dé "bola en mano", pero sí provoca un cambio de turno.
-    // Esto se comprueba solo si no se ha cometido otra falta antes.
-    if (!foulCommitted && !ballInHandFoul && firstBallHitThisTurn && pocketedThisTurn.length === 0) {
-        foulCommitted = true; // Se marca como "falta" para forzar el cambio de turno, pero no dará bola en mano.
-        foulReason = "No has metido ninguna de tus bolas";
-        // playSound('foul', 0.6);
+   
+    // --- SOLUCIÓN: Lógica de Victoria/Derrota al meter la bola 8 ---
+    const bola8Entronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === 8);
+    if (bola8Entronerada) {
+        if (faltaCometida) {
+            // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
+            setGameOver(true);
+            showFoulMessage(`¡Has perdido! Metiste la bola 8 y cometiste una falta.`);
+        } else {
+            // No hay falta. Comprobar si el jugador tenía derecho a meter la 8.
+            const tipoBolaJugador = estadoActualJuego.playerAssignments[jugadorActual];
+            let jugadorTieneBolasRestantes = false;
+            if (estadoActualJuego.ballsAssigned && tipoBolaJugador) {
+                jugadorTieneBolasRestantes = balls.some(ball => {
+                    if (!ball.isActive || ball.number === null || ball.number === 8) return false;
+                    const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                    return tipoBola === tipoBolaJugador;
+                });
+            }
+
+            if (jugadorTieneBolasRestantes || !estadoActualJuego.ballsAssigned) {
+                // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
+                setGameOver(true);
+                showFoulMessage(`¡Has perdido! Metiste la bola 8 antes de tiempo.`);
+            } else {
+                // ¡El jugador ha ganado!
+                setGameOver(true);
+                showFoulMessage(`¡Felicidades, has ganado la partida!`);
+            }
+        }
     }
 
     // --- Lógica de cambio de turno ---
-    const playerPocketedOwnBall = pocketedThisTurn.some(ball => {
+    const jugadorEntroneroSuBola = bolasEntroneradasEsteTurno.some(ball => {
         // Ignorar la bola blanca y la bola 8 para esta comprobación
         if (ball.number === null || ball.number === 8) return false;
 
         // --- CORRECCIÓN: Lógica para mesa abierta ---
         // Si las bolas aún no están asignadas, cualquier bola de color que se meta
         // permite al jugador continuar su turno.
-        if (!ballsAssigned) {
+        if (!bolasAsignadasAlInicioTurno) {
             return true;
         }
 
         // Si las bolas ya están asignadas, comprobar que la bola metida es del tipo del jugador
-        const ballType = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-        return ballType === playerAssignments[currentPlayer];
+        const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+        return tipoBola === estadoActualJuego.playerAssignments[jugadorActual];
     });
 
-    let switchTurn = false;
-    if (foulCommitted || !playerPocketedOwnBall) {
-        switchTurn = true;
-    }
+    // --- LÓGICA DE CAMBIO DE TURNO ---
 
-    const nextPlayer = switchTurn ? (currentPlayer === 1 ? 2 : 1) : currentPlayer;
-
-    if (switchTurn) {
-        setCurrentPlayer(nextPlayer);
-    }
-
-    // --- NUEVO: Mostrar el mensaje de falta al final, si se cometió una ---
-    if (foulCommitted && foulReason) {
-        showFoulMessage(`Falta: ${foulReason}`);
-    }
-
-    // const turnIndicatorEl = document.getElementById('turnIndicator');
-    // if (turnIndicatorEl) {
-    //     turnIndicatorEl.textContent = `Turno del Jugador ${nextPlayer}`;
-    //     turnIndicatorEl.style.borderColor = foulCommitted ? '#e74c3c' : '#3498db'; // Borde rojo si hay falta
-    //     turnIndicatorEl.style.opacity = '1';
-    //     turnIndicatorEl.style.transform = 'translate(-50%, -50%) scale(1)';
-
-    //     setTimeout(() => {
-    //         turnIndicatorEl.style.opacity = '0'; // Ocultar el indicador
-    //         turnIndicatorEl.style.transform = 'translate(-50%, -50%) scale(0.8)';
-    //     }, 2000);
-    // }
-
-    if (foulCommitted) {
-        console.log(`%c[Revisar.js]%c ¡FALTA! ${foulReason}. Turno para Jugador ${nextPlayer}.`, 'background-color: #e74c3c; color: white; font-weight: bold; padding: 2px 6px; border-radius: 3px;', 'background-color: transparent; color: inherit;');
+    // --- NUEVO: Si es el inicio de la partida, elegir un jugador al azar.
+    // Se detecta el inicio si no se ha golpeado ninguna bola y no se ha entronerado ninguna.
+    // --- CORRECCIÓN: Usar la nueva bandera 'esPrimerTurno' para asegurar que solo se ejecute una vez.
+    if (esPrimerTurno) {
+        const jugadorInicial = Math.random() < 0.5 ? 1 : 2;
+        setCurrentPlayer(jugadorInicial);
+        updateActivePlayerUI(jugadorInicial);
+        completeFirstTurn(); // Marcar que el primer turno ya ha sido asignado.
     } else {
-        console.log(`%c[Revisar.js]%c ¡Revisando estado! Bolas quietas. Turno para Jugador ${nextPlayer}.`, 'background-color: #9b59b6; color: white; font-weight: bold; padding: 2px 6px; border-radius: 3px;', 'background-color: transparent; color: inherit;');
+        // Lógica normal de cambio de turno para el resto de la partida.
+        let cambiarTurno = false;
+        // El turno cambia si se cometió una falta O si no se metió una bola propia.
+        if (faltaCometida || !jugadorEntroneroSuBola) {
+            cambiarTurno = true;
+        }
+
+        if (cambiarTurno) {
+            const siguienteJugador = jugadorActual === 1 ? 2 : 1;
+            setCurrentPlayer(siguienteJugador);
+            updateActivePlayerUI(siguienteJugador);
+        } else {
+            // Si el jugador no cambia, simplemente se reinicia su temporizador.
+            startTurnTimer();
+        }
+    }
+
+    // --- CORRECCIÓN: Mostrar el mensaje de falta DESPUÉS de haber procesado el cambio de turno.
+    if (faltaCometida && motivoFalta) {
+        showFoulMessage(`Falta: ${motivoFalta}`);
     }
 
     // --- CORRECCIÓN: La bola en mano solo se activa si la falta lo requiere ---
-    if (ballInHandFoul && !cueBallPocketed) { // Si no se metió la blanca, pero es falta con bola en mano
+    if (faltaConBolaEnMano && !bolaBlancaEntronerada) { // Si no se metió la blanca, pero es falta con bola en mano
         setPlacingCueBall(true);
     }
+
+    // --- CORRECCIÓN: Limpiar el estado del tiro DESPUÉS de haberlo revisado todo.
+    // Esto asegura que la información del turno (como la primera bola golpeada) esté disponible durante toda la función.
+    handleTurnEnd();
 
     // --- SOLUCIÓN: Limpiar el array de bolas entroneradas para el siguiente turno ---
     clearPocketedBalls();
     clearFirstHitBall();
-
-    // --- SOLUCIÓN DEFINITIVA: Marcar el tiro como finalizado para desbloquear el siguiente turno ---
-    handleTurnEnd();
 }

@@ -1,26 +1,22 @@
 // --- Módulo de Interfaz de Usuario y Eventos ---
 import * as THREE from 'three'; // --- SOLUCIÓN: Importar THREE.js
-import { areBallsMoving } from './fisicas.js'; // --- SOLUCIÓN: Importar la nueva función de revisión
-import { revisarEstado } from './revisar.js'; // --- SOLUCIÓN: Importar la nueva función de revisión
-import { getGameState } from './gameState.js';
+import { areBallsMoving } from './fisicas.js';
+import { getGameState, setCurrentPlayer } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { prepareTableTexture, TABLE_WIDTH } from './config.js';
 import { camera, zoomState, updateCameraPositionForResponsiveness } from './scene.js'; // --- NUEVO: Importar la cámara para proyecciones
 import { loadingManager } from './loadingManager.js'; // --- SOLUCIÓN: Importar el gestor de carga
 import { initializeAiming, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
-import { initializeInputManager, isPointerDown, isPullingBack, isMovingCueBall, getPullBackDistance, getCurrentShotAngle } from './inputManager.js';
+import { initializeInputManager, isPointerDown, isPullingBack, isMovingCueBall, getCurrentShotAngle } from './inputManager.js';
+import { initializeSpinControls, wasDraggingSpin } from './spinControls.js'; // --- NUEVO: Importar el inicializador de los controles de efecto
 import { getPowerPercent } from './powerControls.js';
 
 // --- Referencias a elementos del DOM ---
-const spinSelectorContainer = document.getElementById('spinSelectorContainer');
 const powerBarContainer = document.getElementById('powerBarContainer');
-
-// --- SOLUCIÓN: Crear una única instancia del TextureLoader con el loadingManager ---
-const textureLoader = new THREE.TextureLoader(loadingManager);
 
 // --- Estado de la UI ---
 // --- NUEVO: Variable para rastrear si las bolas se estaban moviendo en el frame anterior ---
-let ballsWereMoving = true; // Inicia en true para mostrar el mensaje al empezar la partida.
+window.ballsWereMoving = false; // --- CORRECCIÓN: Hacerla global para que pool.js pueda acceder a ella.
 // El estado ahora se gestiona en módulos dedicados (inputManager, powerControls, etc.)
 
 // --- NUEVO: Estado para el modo de edición de la UI ---
@@ -29,9 +25,6 @@ let activeDrag = { // Objeto para gestionar el arrastre/redimensión activo
     element: null,
     type: null
 };
-
-// `window.currentShotAngle` se usa como variable global temporal para el ángulo.
-window.currentShotAngle = 0;
 
 // --- NUEVO: Exportar el estado del modo de edición para que otros módulos lo consulten ---
 export const isUIEditModeActive = () => isUIEditMode;
@@ -57,6 +50,44 @@ function updateToggleBtnPosition() {
 export function initializeUI() {
     initializeAiming();
     initializeInputManager();
+    initializeSpinControls(); // --- NUEVO: Inicializar los eventos para el control de efecto
+
+    // --- SOLUCIÓN: Reintroducir los listeners para la barra de potencia deslizable ---
+    if (powerBarContainer) {
+        const onPowerBarStart = (e) => {
+            if (isUIEditModeActive() || wasDraggingSpin()) return;
+            e.stopPropagation();
+            import('./powerControls.js').then(({ startPowerDrag, dragPower }) => {
+                startPowerDrag();
+                dragPower(e.touches ? e.touches[0] : e); // Aplicar potencia inicial
+            });
+        };
+
+        const onPowerBarMove = (e) => {
+            if (isUIEditModeActive()) return;
+            import('./powerControls.js').then(({ isDraggingPower, dragPower }) => {
+                if (isDraggingPower()) {
+                    e.stopPropagation();
+                    dragPower(e.touches ? e.touches[0] : e);
+                }
+            });
+        };
+
+        const onPowerBarEnd = (e) => {
+            if (isUIEditModeActive()) return;
+            import('./powerControls.js').then(({ isDraggingPower, stopPowerDrag }) => {
+                if (isDraggingPower()) {
+                    e.stopPropagation();
+                    const power = stopPowerDrag();
+                    import('./shooting.js').then(({ shoot }) => shoot(power));
+                }
+            });
+        };
+
+        powerBarContainer.addEventListener('pointerdown', onPowerBarStart);
+        document.addEventListener('pointermove', onPowerBarMove);
+        document.addEventListener('pointerup', onPowerBarEnd);
+    }
 
     // --- NUEVO: Lógica para el panel de opciones deslizable ---
     const optionsPanel = document.getElementById('options-panel');
@@ -74,16 +105,18 @@ export function initializeUI() {
         // --- SOLUCIÓN: Evitar que los clics dentro del panel afecten al juego ---
         // Detiene la propagación de eventos de clic o toque para que no lleguen al canvas.
         optionsPanel.addEventListener('mousedown', (e) => e.stopPropagation());
-        optionsPanel.addEventListener('touchstart', (e) => e.stopPropagation());
+        optionsPanel.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
 
         // --- MODIFICACIÓN: Lógica para cambiar entre vistas del panel de opciones ---
         const mainOptionsView = document.getElementById('main-options-view');
+        // --- SOLUCIÓN: No activar ningún jugador al inicio. La activación se hará después de la carga.
+        // updateActivePlayerUI(getGameState().currentPlayer);
+
         const editUiOptionsView = document.getElementById('edit-ui-options-view');
         const modifyUiBtn = document.getElementById('modify-ui-btn');
         const exitEditModeBtn = document.getElementById('exit-edit-mode-btn');
         const resetUiBtn = document.getElementById('reset-ui-btn');
         const pocketsSizeSlider = document.getElementById('player-pockets-size');
-        const spinSelectorSizeSlider = document.getElementById('spin-selector-size');
         const powerBarSizeSlider = document.getElementById('power-bar-size');
         const powerBarHeightSlider = document.getElementById('power-bar-height');
         // --- NUEVO: Referencias al modal de confirmación ---
@@ -100,7 +133,6 @@ export function initializeUI() {
             // --- SOLUCIÓN: Actualizar el valor de los sliders al entrar en modo edición ---
             const pocketContainer = document.querySelector('.pocketed-balls-container');
             if (pocketContainer) pocketsSizeSlider.value = pocketContainer.offsetWidth;
-            if (spinSelectorContainer) spinSelectorSizeSlider.value = spinSelectorContainer.offsetWidth;
             if (powerBarContainer) powerBarSizeSlider.value = powerBarContainer.offsetWidth;
             if (powerBarContainer) powerBarHeightSlider.value = powerBarContainer.offsetHeight;
 
@@ -126,8 +158,8 @@ export function initializeUI() {
         });
 
         // --- SOLUCIÓN: Evitar que los clics dentro del modal afecten al juego ---
-        confirmResetModal.addEventListener('mousedown', (e) => e.stopPropagation());
-        confirmResetModal.addEventListener('touchstart', (e) => e.stopPropagation());
+        confirmResetModal.addEventListener('mousedown', (e) => e.stopPropagation()); // No necesita cambio
+        confirmResetModal.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
 
         // --- NUEVO: Lógica para los botones del modal de confirmación ---
         confirmResetNoBtn.addEventListener('click', (e) => {
@@ -151,12 +183,6 @@ export function initializeUI() {
             // No guardamos en cada cambio para mejor rendimiento, solo al salir.
         });
 
-        spinSelectorSizeSlider.addEventListener('input', (e) => {
-            const newSize = e.target.value;
-            spinSelectorContainer.style.width = `${newSize}px`;
-            spinSelectorContainer.style.height = `${newSize}px`;
-        });
-
         powerBarSizeSlider.addEventListener('input', (e) => {
             const newSize = e.target.value;
             powerBarContainer.style.width = `${newSize}px`;
@@ -175,18 +201,9 @@ export function initializeUI() {
 
 export function prepareUIResources() {
     prepareTableTexture();
-    // --- SOLUCIÓN: Precargar la imagen del selector de efecto ---
-    // Cargamos la imagen de la bola blanca y, cuando esté lista, la aplicamos como fondo
-    // a los elementos de la UI. Esto asegura que la imagen se cargue una sola vez y
-    // esté lista antes de que termine la pantalla de carga.
-    textureLoader.load('imajenes/bolasMetidas/blanca.png', (texture) => {
-        const imageUrl = `url('${texture.image.src}')`;
-        document.getElementById('spinSelectorCueBall').style.backgroundImage = imageUrl;
-        document.getElementById('largeSpinSelector').style.backgroundImage = imageUrl;
-    });
 }
 
-export function handleInput() {
+export async function handleInput() { // --- SOLUCIÓN: Marcar la función como asíncrona
     // --- CORRECCIÓN: Asegurarse de que la bola blanca exista antes de continuar ---
     if (!cueBall) return;
     if (isUIEditMode) return; // --- NUEVO: No procesar input del juego si estamos editando la UI
@@ -196,52 +213,19 @@ export function handleInput() {
     if (isLoading) return;
 
     const ballsAreCurrentlyMoving = areBallsMoving(balls);
-    
-    if (ballsWereMoving && !ballsAreCurrentlyMoving && !isLoading) {
-        revisarEstado();
-    }
-    ballsWereMoving = ballsAreCurrentlyMoving; // Actualizar el estado para el siguiente frame
 
-    const isPlacingWithoutDragging = isPlacing && !isMovingCueBall();
-    // --- CORRECCIÓN: La condición para poder disparar ahora incluye el estado de "bola en mano" (cuando no se está arrastrando). ---
-    const canShoot = (!ballsAreCurrentlyMoving && !cueBall.isPocketed) && (!isPlacing || isPlacingWithoutDragging);
-    
-    // --- MODIFICACIÓN: Las guías siempre deben intentar mostrarse si se puede disparar.
-    // La lógica interna de updateAimingGuides decidirá qué partes mostrar.
-    const shouldShowGuides = canShoot || isPullingBack();
+    // --- CORRECCIÓN: La revisión del estado ahora se gestiona centralmente en pool.js ---
+    // Se elimina la llamada a revisarEstado desde aquí para evitar duplicados y conflictos.
+    window.ballsWereMoving = ballsAreCurrentlyMoving; // Actualizar el estado para el siguiente frame
 
-    // --- CORRECCIÓN: Usar la nueva lógica de 'canShoot' para mostrar los controles. ---
-    spinSelectorContainer.style.display = (canShoot && !isPullingBack() && !isMovingCueBall()) ? 'block' : 'none';
+    // --- MODIFICACIÓN: Simplificar la condición para poder disparar y apuntar.
+    // Se puede disparar si las bolas no se mueven y la bola blanca no está entronerada.
+    const canShoot = !ballsAreCurrentlyMoving && !cueBall.isPocketed;
+    
+    // --- MODIFICACIÓN: Las guías solo se muestran si se puede disparar Y no se está moviendo la bola blanca.
+    const shouldShowGuides = (canShoot || isPullingBack()) && !isMovingCueBall();
+
     powerBarContainer.style.display = canShoot ? 'block' : 'none';
-    // --- NUEVO: Lógica para redimensionar dinámicamente el selector de efecto ---
-    if (spinSelectorContainer.style.display === 'block' && !isUIEditMode) {
-        // 1. Proyectar el borde derecho de la mesa a coordenadas de pantalla.
-        const tableRightEdgeWorld = new THREE.Vector3(TABLE_WIDTH, 0, 0);
-        tableRightEdgeWorld.project(camera); // Convierte a Coordenadas de Dispositivo Normalizadas (-1 a 1)
-
-        // 2. Convertir la coordenada X de NDC a píxeles de pantalla.
-        const tableRightEdgeScreenX = (tableRightEdgeWorld.x + 1) / 2 * window.innerWidth;
-
-        // 3. Obtener la posición del selector de efecto.
-        const selectorRect = spinSelectorContainer.getBoundingClientRect();
-
-        // 4. Comprobar si hay superposición.
-        if (selectorRect.left < tableRightEdgeScreenX) {
-            // Hay superposición. Calcular el espacio disponible.
-            const availableSpace = window.innerWidth - tableRightEdgeScreenX;
-            // --- CORRECCIÓN: Usar todo el espacio disponible sin márgenes.
-            const newSize = Math.max(20, availableSpace); // Tamaño mínimo de 20px
-
-            // Aplicar el nuevo tamaño.
-            spinSelectorContainer.style.width = `${newSize}px`;
-            spinSelectorContainer.style.height = `${newSize}px`;
-        } else {
-            // No hay superposición, restaurar el tamaño por defecto (8vw).
-            // Esto es importante para cuando se redimensiona la ventana y vuelve a haber espacio.
-            spinSelectorContainer.style.width = '8vw';
-            spinSelectorContainer.style.height = '8vw';
-        }
-    }
 
 
     if (shouldShowGuides) {
@@ -256,6 +240,50 @@ export function handleInput() {
         if (cueBall && cueBall.mesh && !cueBall.isPocketed) {
             cueBall.mesh.visible = true;
             if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true; // También su sombra
+        }
+    }
+}
+
+/**
+ * --- SOLUCIÓN: Actualiza la UI para resaltar al jugador activo.
+ * @param {number} activePlayer - El número del jugador actual (1 o 2).
+ */
+export function updateActivePlayerUI(activePlayer) {
+    const player1Container = document.getElementById('player1PocketedContainer');
+    const player2Container = document.getElementById('player2PocketedContainer');
+
+    if (!player1Container || !player2Container) return;
+
+    const avatar1 = player1Container.querySelector('.player-avatar');
+    const avatar2 = player2Container.querySelector('.player-avatar');
+
+    avatar1.classList.toggle('active', activePlayer === 1);
+    avatar2.classList.toggle('active', activePlayer === 2);
+
+    // --- SOLUCIÓN: Reiniciar el temporizador circular del jugador inactivo ---
+    const timerLine1 = avatar1 ? avatar1.querySelector('.timer-line') : null;
+    const timerLine2 = avatar2 ? avatar2.querySelector('.timer-line') : null;
+
+    if (activePlayer === 1) {
+        // Reiniciar el temporizador del jugador 2 (inactivo)
+        if (timerLine2) timerLine2.style.strokeDashoffset = 100;
+    } else {
+        if (timerLine1) timerLine1.style.strokeDashoffset = 100;
+    }
+}
+
+/**
+ * --- SOLUCIÓN (MODIFICADA): Actualiza el borde-temporizador del jugador actual.
+ * @param {number} player - El jugador cuya barra de tiempo se actualizará.
+ * @param {number} percent - El porcentaje restante (0 a 1).
+ */
+export function updateTurnTimerUI(player, percent) {
+    const container = document.getElementById(`player${player}PocketedContainer`);
+    if (container) {
+        const timerLine = container.querySelector('.timer-line');
+        if (timerLine) {
+            // El offset va de 100 (vacío) a 0 (lleno). `percent` va de 1 (lleno) a 0 (vacío).
+            timerLine.style.strokeDashoffset = 100 - (percent * 100);
         }
     }
 }

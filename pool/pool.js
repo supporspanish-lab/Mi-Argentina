@@ -3,15 +3,16 @@ import { updateBallPositions, areBallsMoving } from './fisicas.js';
 import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
 import { scene, camera, renderer, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders } from './ballManager.js'; // --- SOLUCIÓN: Quitar updateSafeArea
-import { handleInput, initializeUI, updateUI, prepareUIResources } from './ui.js'; // --- SOLUCIÓN: Quitar updateSafeArea
+import { handleInput, initializeUI, updateUI, prepareUIResources, updateTurnTimerUI } from './ui.js'; // --- SOLUCIÓN: Importar updateTurnTimerUI
 import { initAudio, loadSound, prepareAudio } from './audioManager.js';
 import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
+import { initCueBallEffects, updateCueBallEffects, showShotEffect } from './cueBallEffects.js'; // --- SOLUCIÓN: Importar el módulo de efectos
 import { prepareAimingResources } from './aiming.js';
-import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage } from './gameState.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer } from './gameState.js';
+import { revisarEstado } from './revisar.js'; // --- SOLUCIÓN: Importar revisarEstado aquí
 
 let lastTime;
-window.currentShotAngle = 0; // Ángulo de tiro global, gestionado por inputManager
 
 // --- NUEVO: Variables para el efecto de vibración de la cámara ---
 let shakeIntensity = 0;
@@ -63,12 +64,19 @@ function gameLoop(time) {
         }
 
         // --- MODIFICACIÓN: El turno solo termina si no hay bolas moviéndose NI animándose ---
-        if (getGameState().shotInProgress && !areBallsMoving(balls) && !areBallsAnimating(balls)) {
+        // --- SOLUCIÓN: Usar una variable de estado para asegurar que la revisión se haga una sola vez ---
+        const ballsHaveStopped = !areBallsMoving(balls) && !areBallsAnimating(balls);
+        // --- CORRECCIÓN: La revisión del estado debe ocurrir si las bolas se acaban de detener.
+        // Se usa una variable externa (importada de ui.js) para saber si en el frame anterior se estaban moviendo.
+        // Esta es la forma más fiable de detectar el fin de un tiro.
+        if (window.ballsWereMoving && ballsHaveStopped) {
             // --- LOG: Indica que se cumplen las condiciones para finalizar el turno.
             // --- MODIFICACIÓN: El log ahora se muestra dentro de handleTurnEnd para ser más preciso.
             
-            // handleTurnEnd ahora se encarga de toda la lógica, incluida la notificación de "listo para jugar".
-            handleTurnEnd();
+            // --- SOLUCIÓN: La revisión del estado ahora se hace aquí, después de que las bolas se detienen.
+            handleTurnEnd(); // Marcar el tiro como finalizado (resetea shotInProgress)
+            revisarEstado(false); // Revisar el resultado del tiro (sin falta por tiempo)
+
             // --- MEJORA: Restablecer la rotación visual de la bola blanca para el siguiente tiro ---
             if (cueBall && cueBall.mesh) {
                 cueBall.mesh.quaternion.set(0, 0, 0, 1); // Resetea a la rotación identidad
@@ -133,6 +141,12 @@ function gameLoop(time) {
                     // Efecto vertical (spin.y) alrededor del eje X local de la bola
                     const verticalSpinAxis = new THREE.Vector3(1, 0, 0); 
                     const verticalSpinAngle = ball.spin.y * 0.05 * timeStep; // Reducimos un poco la velocidad del efecto visual
+
+                    // --- SOLUCIÓN: Mostrar el efecto de estela si es la bola blanca y se mueve rápido ---
+                    if (ball === cueBall) {
+                        showShotEffect();
+                    }
+
                     ball.mesh.children[0].rotateOnWorldAxis(verticalSpinAxis, verticalSpinAngle);
                 }
             }
@@ -140,7 +154,22 @@ function gameLoop(time) {
     }
 
     handleInput();
+    updateCueBallEffects(dt);
     updateUI(); // --- NUEVO: Actualizar la UI (incluyendo el taco)
+
+    // --- SOLUCIÓN: Actualizar el temporizador de turno ---
+    if (isTurnTimerActive()) {
+        const elapsedTime = performance.now() - turnStartTime;
+        const timeRemainingPercent = Math.max(0, 1 - (elapsedTime / TURN_TIME_LIMIT));
+        updateTurnTimerUI(getGameState().currentPlayer, timeRemainingPercent);
+        if (checkTurnTimer()) {
+            // --- CORRECCIÓN: Forzar fin de turno y revisar el estado inmediatamente.
+            // Detener el temporizador para que no se siga ejecutando.
+            stopTurnTimer();
+            // Se llama a revisarEstado con la bandera de tiempo agotado para procesar la falta.
+            revisarEstado(true);
+        }
+    }
     renderer.render(scene, camera);
 }
 
@@ -165,10 +194,10 @@ function initGame() {
     // initFallPhysics(); // Ya no es necesario
 
     // --- MODIFICACIÓN: La inicialización de audio y UI se hace aquí, pero la carga se dispara después ---
-    initAudio(camera); 
+    initAudio(camera);
+    initCueBallEffects(); // --- SOLUCIÓN: Inicializar el sistema de efectos de la bola blanca
 
     // --- CORRECCIÓN: setupBalls() ya no se llama aquí. Se pasa como callback a loadBallModels.
-    initializeUI(); // Inicializamos los listeners y elementos de la UI
     gameLoop(); // Iniciar el bucle del juego
 }
 
@@ -180,6 +209,11 @@ setOnLoadingComplete((step, onStepComplete) => {
         case 'init_game':
             initGame();
             // El bucle del juego ya está corriendo, pero la pantalla de carga sigue encima.
+            break;
+
+        case 'init_ui':
+            // --- SOLUCIÓN: Inicializar la UI como un paso separado después de initGame ---
+            initializeUI();
             break;
 
         case 'setup_balls':
@@ -232,7 +266,7 @@ setOnLoadingComplete((step, onStepComplete) => {
 // --- MODIFICACIÓN: Centralizar el inicio de todas las cargas ---
 
 // 0. Definimos los pasos de procesamiento que ocurrirán después de la descarga de archivos.
-setProcessingSteps(['init_game', 'setup_balls', 'warmup_physics', 'super_warmup']);
+setProcessingSteps(['init_game', 'init_ui', 'setup_balls', 'warmup_physics', 'super_warmup']);
 
 // 1. Preparamos todos los cargadores
 prepareAudio();

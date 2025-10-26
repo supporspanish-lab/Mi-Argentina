@@ -5,7 +5,7 @@ import { getGameState, startShot, setPlacingCueBall } from './gameState.js';
 import { playSound } from './audioManager.js';
 import { cueBall, getSceneBalls } from './ballManager.js';
 import { animateCueShot } from './aiming.js';
-import { getSpinOffset } from './spinControls.js';
+import { getCurrentShotAngle } from './inputManager.js';
 
 let isShooting = false;
 
@@ -36,7 +36,7 @@ export function shoot(powerPercent) {
     }
 
     // Amortiguar la potencia en tiros extremos para evitar inestabilidad.
-    const maxPower = 300 * 40;
+    const maxPower = 300 * 25; // --- AJUSTE: Reducido de 40 a 32 para bajar la fuerza máxima.
     const SAFE_POWER_THRESHOLD = maxPower * 0.9;
     let power = shotPower * maxPower;
 
@@ -45,7 +45,7 @@ export function shoot(powerPercent) {
         power = SAFE_POWER_THRESHOLD + Math.log1p(excessPower) * (maxPower / 50);
     }
 
-    const currentShotAngle = window.currentShotAngle || 0;
+    const currentShotAngle = getCurrentShotAngle();
     const impulseDirection = new THREE.Vector2(Math.cos(currentShotAngle), Math.sin(currentShotAngle));
     const velocityFactor = 2.5;
 
@@ -58,7 +58,9 @@ export function shoot(powerPercent) {
         cueBall.vy = impulseDirection.y * (power / 1000) * velocityFactor;
         cueBall.initialVx = cueBall.vx;
         cueBall.initialVy = cueBall.vy;
-        cueBall.spin = { ...getSpinOffset() };
+        import('./spinControls.js').then(({ getSpinOffset }) => {
+            cueBall.spin = { ...getSpinOffset() };
+        });
 
         const shakeIntensity = Math.pow(powerForCallback, 2) * 2.5;
         const shakeDuration = 0.15;

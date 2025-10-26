@@ -24,15 +24,25 @@ export function prepareTableTexture() {
 
 export const pockets = [
     { points: [ { x: 51.49, y: 22.55 }, { x: 86.90, y: 57.13 }, { x: 83.40, y: 65.78 }, { x: 76.40, y: 73.81 }, { x: 61.58, y: 79.98 }, { x: 24.12, y: 48.90 } ] },
-    { points: [ { x: 949.54, y: 21.94 }, { x: 909.41, y: 56.52 }, { x: 913.52, y: 65.16 }, { x: 921.34, y: 75.04 }, { x: 938.22, y: 81.01 }, { x: 975.00, y: 50.00 } ] },
+    { points: [ { x: 949.54, y: 21.94 }, { x: 909.41, y: 56.52 }, { x: 913.52, y: 65.16 }, { x: 921.34, y: 75.04 }, { x: 938.22, y: 81.01 }, { x: 975.00, y: 49.00 } ] },
     { points: [ { x: 69.81, y: 469.73 }, { x: 32.35, y: 470.24 }, { x: 21.03, y: 449.86 }, { x: 64.67, y: 415.18 }, { x: 80.10, y: 420.33 }, { x: 98.63, y: 436.79 } ] },
     { points: [ { x: 949.54, y: 479.09 }, { x: 973.62, y: 459.54 }, { x: 936.58, y: 419.81 }, { x: 923.61, y: 424.34 }, { x: 914.35, y: 432.78 }, { x: 911.26, y: 442.25 } ] },
     { points: [ { x: 474.89, y: 57.34 }, { x: 479.21, y: 23.38 }, { x: 514.41, y: 22.55 }, { x: 525.73, y: 56.10 }, { x: 503.50, y: 63.51 }, { x: 487.86, y: 62.07 } ] },
     { points: [ { x: 478.19, y: 474.56 }, { x: 520.38, y: 475.39 }, { x: 527.17, y: 443.89 }, { x: 507.21, y: 436.89 }, { x: 483.54, y: 437.92 }, { x: 471.80, y: 444.72 } ] }
 ].map(p => ({
     // Asegurarse de que cada array de puntos sea una copia para evitar referencias compartidas
-    points: p.points.map(pt => ({...pt}))
-}));
+    points: p.points.map(pt => ({...pt})),
+    // --- NUEVO: Pre-calcular el centro y el radio de cada tronera para una detección más fácil.
+    center: p.points.reduce((acc, pt) => ({ x: acc.x + pt.x, y: acc.y + pt.y }), { x: 0, y: 0 }),
+    radius: 0 // Se calculará a continuación
+})).map(p => {
+    // Calcular el centro real
+    p.center.x /= p.points.length;
+    p.center.y /= p.points.length;
+    // Calcular el radio como la distancia máxima desde el centro a cualquiera de sus puntos.
+    p.radius = Math.max(...p.points.map(pt => Math.hypot(pt.x - p.center.x, pt.y - p.center.y)));
+    return p;
+});
 
 export function initializeHandles() {
     handles.length = 0; // Limpiar handles existentes

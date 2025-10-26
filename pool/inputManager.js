@@ -1,254 +1,180 @@
-// --- Módulo de Gestión de Entradas ---
+// --- Módulo de Gestión de Entradas (Ratón y Táctil) ---
 import * as THREE from 'three';
-import { camera, canvas, renderer } from './scene.js';
-import { getGameState, setPlacingCueBall } from './gameState.js';
-import { cueBall, balls, cueBallRedDot } from './ballManager.js'; 
-import { cueMesh } from './aiming.js';
-import { BALL_RADIUS } from './config.js'; // --- SOLUCIÓN: Importar BALL_RADIUS desde su fuente original
-import * as spinControls from './spinControls.js';
-import * as powerControls from './powerControls.js'; // --- SOLUCIÓN: Volver a importar powerControls
-import * as cuePlacement from './cuePlacement.js';
-import { shoot } from './shooting.js';
-import { isUIEditModeActive } from './ui.js'; // --- NUEVO: Importar estado del modo de edición
+import { cueBall, getSceneBalls } from './ballManager.js';
+import { getGameState, setPlacingCueBall, startShot } from './gameState.js';
+import { camera, zoomState } from './scene.js';
+import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
+import { animateCueShot, hideAimingGuides, isAimingAtBall } from './aiming.js';
+import { playSound } from './audioManager.js';
+import { areBallsMoving } from './fisicas.js';
+import { updatePowerUI } from './ui.js';
+import { getSpinOffset, wasDraggingSpin } from './spinControls.js';
+import { isValidPlacement } from './cuePlacement.js'; // --- NUEVO: Importar la función de validación
+import { startPowerCharge, stopPowerCharge, getPowerPercent } from './powerControls.js';
 
-// --- Estado Interno ---
-let isMouseDown = false;
-let audioContextResumed = false; // --- NUEVO: Bandera para reanudar el audio solo una vez
+// --- Constantes ---
+const MAX_SHOT_POWER = 80; // --- AJUSTE: Reducido de 100 a 80 para disminuir aún más la fuerza del tiro.
 
-// --- NUEVO: Estado para el nuevo sistema de apuntado por arrastre ---
-let isAimingDrag = false;
-let initialAimAngle = 0;
-let initialPointerPosForAim = { x: 0, y: 0 };
-let lastPointerPosForAim = { x: 0, y: 0 }; // --- SOLUCIÓN: Guardar la posición del frame anterior
+// --- Estado del Input ---
+let pointerDown = false;
+let pullingBack = false;
+let movingCueBall = false;
+let pointerStartPos = { x: 0, y: 0 };
+let currentShotAngle = 0;
+// --- NUEVO: Variables para un arrastre de ángulo relativo ---
+let dragStartAngle = 0; // Ángulo del puntero al iniciar el arrastre
+let angleOnDragStart = 0; // Ángulo de la línea guía al iniciar el arrastre
+let lastPointerAngle = 0; // --- NUEVO: Ángulo del puntero en el frame anterior
 
 /**
- * Calcula la posición del puntero en el mundo 3D.
- * @param {MouseEvent|TouchEvent} e - El evento del puntero.
- * @returns {{x: number, y: number}} - Las coordenadas en el mundo 3D.
+ * Inicializa todos los listeners de eventos para el input.
  */
-function getPointerPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const mouseVector = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+export function initializeInputManager() {
+    const canvas = document.getElementById('poolCanvas');
 
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp); // Tratar cancel como up
+}
+
+function onPointerDown(e) {
+    // Si la última acción fue arrastrar el punto de efecto, no iniciar un tiro.
+    if (wasDraggingSpin()) {
+        return;
+    }
+
+    const { isPlacingCueBall } = getGameState();
+    const worldPos = getMouseWorldPosition(e.clientX, e.clientY);
+
+    let startAiming = false;
+
+    if (isPlacingCueBall) {
+        // Comprobar si el clic está sobre la bola blanca para empezar a moverla
+        const dist = Math.hypot(worldPos.x - cueBall.mesh.position.x, worldPos.y - cueBall.mesh.position.y);
+        if (dist < BALL_RADIUS * 2) { // Un área de toque un poco más grande que la bola
+            movingCueBall = true;
+        } else {
+            movingCueBall = false;
+            startAiming = true; // --- SOLUCIÓN: Marcar para iniciar el apuntado
+        }
+        pointerDown = true; // El puntero está presionado en cualquier caso
+    } else if (!getGameState().shotInProgress && !areBallsMoving(getSceneBalls())) {
+        pointerDown = true;
+        movingCueBall = false; // Asegurarse de que no estamos moviendo la bola
+        startAiming = true; // --- SOLUCIÓN: Marcar para iniciar el apuntado
+    }
+
+    // --- SOLUCIÓN: Lógica de inicialización de apuntado unificada ---
+    if (startAiming) {
+        angleOnDragStart = currentShotAngle; // Guardar el ángulo actual de la línea guía
+        const dx = worldPos.x - cueBall.mesh.position.x;
+        const dy = worldPos.y - cueBall.mesh.position.y;
+        dragStartAngle = Math.atan2(dy, dx);
+        lastPointerAngle = dragStartAngle; // --- NUEVO: Inicializar el ángulo anterior
+    }
+}
+
+function onPointerMove(e) {
+    const { isPlacingCueBall } = getGameState();
+    const worldPos = getMouseWorldPosition(e.clientX, e.clientY);
+
+    // --- MODIFICACIÓN: Permitir apuntar siempre que el puntero esté presionado y no se esté moviendo la bola ---
+    if (pointerDown && !movingCueBall) {
+        // --- CORRECCIÓN: Calcular el ángulo incrementalmente para evitar saltos con sensibilidad variable ---
+
+        // 1. Determinar la sensibilidad actual.
+        const sensitivity = isAimingAtBall() ? 0.4 : 1.0; // 40% de sensibilidad al apuntar a una bola
+
+        // 2. Calcular el ángulo actual del puntero.
+        const dx = worldPos.x - cueBall.mesh.position.x;
+        const dy = worldPos.y - cueBall.mesh.position.y;
+        const currentPointerAngle = Math.atan2(dy, dx);
+
+        // 3. Calcular la diferencia de ángulo solo desde el último frame.
+        let angleDelta = currentPointerAngle - lastPointerAngle;
+
+        // --- SOLUCIÓN: Normalizar el delta para evitar saltos al cruzar el límite de -180/180 grados ---
+        // Si el cambio es mayor a 180 grados, tomamos el camino más corto en la otra dirección.
+        if (angleDelta > Math.PI) {
+            angleDelta -= 2 * Math.PI;
+        } else if (angleDelta < -Math.PI) {
+            angleDelta += 2 * Math.PI;
+        }
+
+        // 4. Aplicar esta pequeña diferencia (afectada por la sensibilidad) al ángulo de tiro actual.
+        currentShotAngle += angleDelta * sensitivity;
+
+        // 5. Guardar el ángulo actual del puntero para el siguiente frame.
+        lastPointerAngle = currentPointerAngle;
+    } else if (movingCueBall && isPlacingCueBall) {
+        // --- MEJORA: La bola se queda trabada en el límite si se intenta mover a una posición inválida ---
+        const newX = Math.max(BALL_RADIUS, Math.min(worldPos.x, TABLE_WIDTH - BALL_RADIUS));
+        const newY = Math.max(BALL_RADIUS, Math.min(worldPos.y, TABLE_HEIGHT - BALL_RADIUS));
+        const newPosition = { x: newX, y: newY };
+        
+        const placementIsValid = isValidPlacement(newPosition);
+        const cueBallMaterial = cueBall.mesh.children[0].material;
+
+        if (placementIsValid) {
+            // Si la nueva posición es válida, mover la bola y ponerla blanca.
+            cueBall.mesh.position.x = newX;
+            cueBall.mesh.position.y = newY;
+            if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(newX, newY, 0.1);
+            cueBallMaterial.color.set(0xffffff);
+        } else {
+            // Si es inválido, no mover la bola y mantenerla blanca.
+            cueBallMaterial.color.set(0xffffff);
+        }
+    }
+}
+
+function onPointerUp(e) {
+    if (!pointerDown) return;
+
+    const { isPlacingCueBall } = getGameState();
+
+    if (movingCueBall && isPlacingCueBall) {
+        // Se ha terminado de colocar la bola blanca
+        movingCueBall = false;
+        // --- MODIFICACIÓN: Ya no se cambia el estado aquí. El modo "bola en mano" persiste hasta el disparo.
+    }
+
+    // Resetear estados de input
+    // --- SOLUCIÓN: Al soltar el clic, simplemente se resetea el estado 'pointerDown'.
+    pointerDown = false;
+    pullingBack = false;
+    movingCueBall = false;
+}
+
+/**
+ * Convierte las coordenadas del puntero en la pantalla a coordenadas del mundo del juego.
+ * @param {number} clientX - Coordenada X del puntero.
+ * @param {number} clientY - Coordenada Y del puntero.
+ * @returns {THREE.Vector3} - La posición en el mundo 3D.
+ */
+function getMouseWorldPosition(clientX, clientY) {
+    // --- SOLUCIÓN DEFINITIVA: Corregir el cálculo de la posición del ratón teniendo en cuenta el zoom y el paneo.
+    // 1. Normalizar las coordenadas del ratón a un rango de -1 a 1.
+    const mouse = new THREE.Vector2(
+        (clientX / window.innerWidth) * 2 - 1,
+        - (clientY / window.innerHeight) * 2 + 1
+    );
+
+    // 2. Crear un rayo desde la cámara a través de la posición del ratón.
     const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouseVector, camera);
+    raycaster.setFromCamera(mouse, camera);
 
+    // 3. Calcular la intersección de ese rayo con el plano de la mesa (z=0).
     const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
     const intersectionPoint = new THREE.Vector3();
     raycaster.ray.intersectPlane(plane, intersectionPoint);
-    return { x: intersectionPoint.x, y: intersectionPoint.y };
+
+    return intersectionPoint;
 }
 
-/**
- * Inicializa todos los listeners de eventos para el juego.
- */
-export function initializeInputManager() {
-    // --- LOG: Indica que se están inicializando los manejadores de eventos.
-    // --- Eventos de Inicio (mousedown, touchstart) ---
-    const onPointerDown = (e) => {
-        if (e.type === 'touchstart') e.preventDefault();
-
-        // --- SOLUCIÓN: Reanudar el AudioContext en la primera interacción del usuario ---
-        if (!audioContextResumed) {
-            const context = THREE.AudioContext.getContext();
-            if (context.state === 'suspended') {
-                context.resume();
-            }
-            audioContextResumed = true;
-        }
-
-        const pointerPos = getPointerPos(e);
-        isMouseDown = true;
-
-        // --- SOLUCIÓN: Separar la lógica de colocación y apuntado para que no sean excluyentes ---
-
-        // 1. Comprobar si se debe iniciar el movimiento de la bola blanca.
-        if (getGameState().isPlacingCueBall) {
-            const cueBallPos = cueBall.mesh.position;
-            const distSq = (pointerPos.x - cueBallPos.x)**2 + (pointerPos.y - cueBallPos.y)**2;
-            
-            if (distSq < (BALL_RADIUS * 1.5)**2) { 
-                if (cueBall && cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
-                cuePlacement.startCueBallMove();
-            }
-        }
-
-        // 2. Comprobar si se debe iniciar el apuntado por arrastre.
-        // Esto puede ocurrir incluso con "bola en mano", siempre que no estemos ya moviendo la bola.
-        if (!powerControls.isPullingBack() && !cuePlacement.isMovingCueBall()) {
-            isAimingDrag = true;
-            initialAimAngle = window.currentShotAngle || 0;
-            initialPointerPosForAim = { ...pointerPos };
-            lastPointerPosForAim = { ...pointerPos };
-        }
-    };
-
-    canvas.addEventListener('mousedown', onPointerDown);
-    canvas.addEventListener('touchstart', onPointerDown, { passive: false });
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // Listeners para UI (Spin y Power)
-    const spinSelectorContainer = document.getElementById('spinSelectorContainer');
-    // --- MODIFICACIÓN: El clic en el selector pequeño ahora abre el modal ---
-    spinSelectorContainer.addEventListener('click', (e) => {
-        e.stopPropagation();
-        spinControls.showSpinModal();
-    });
-
-    const powerBarHandle = document.getElementById('powerBarHandle');
-    const onPowerDragStart = (e) => {
-        // --- SOLUCIÓN: No iniciar el arrastre de potencia si estamos en modo edición ---
-        if (isUIEditModeActive()) return;
-        e.stopPropagation();
-        powerControls.startPowerDrag();
-    };
-    powerBarHandle.addEventListener('mousedown', onPowerDragStart);
-    powerBarHandle.addEventListener('touchstart', onPowerDragStart, { passive: false });
-
-    // --- NUEVO: Listeners para el nuevo modal de efecto ---
-    const largeSpinSelector = document.getElementById('largeSpinSelector');
-    largeSpinSelector.addEventListener('mousedown', (e) => { e.stopPropagation(); spinControls.startSpinDrag(); });
-    largeSpinSelector.addEventListener('touchstart', (e) => { e.stopPropagation(); spinControls.startSpinDrag(); });
-    // --- NUEVO: Cerrar el modal si se hace clic en el fondo oscuro ---
-    document.getElementById('spinModalOverlay').addEventListener('click', spinControls.hideSpinModal);
-
-
-    // --- Eventos de Movimiento (mousemove, touchmove) ---
-    const onPointerMove = (e) => {
-        if (e.type === 'touchmove') e.preventDefault();
-
-        // --- LOG: Indica que el puntero se está moviendo. Es muy frecuente.
-        // console.log('[Input] Evento onPointerMove detectado.');
-        const pointerPos = getPointerPos(e);
-
-        if (isAimingDrag) {
-            // --- NUEVO: Lógica de apuntado por arrastre ---
-            // --- SOLUCIÓN: Lógica de apuntado incremental para evitar saltos ---
-            // 1. Vector perpendicular a la dirección de apuntado ACTUAL.
-            const currentAngle = window.currentShotAngle || 0;
-            const perpVector = { x: -Math.sin(currentAngle), y: Math.cos(currentAngle) };
-
-            // 2. Vector del arrastre del ratón/dedo desde el ÚLTIMO frame.
-            const dragVector = { x: pointerPos.x - lastPointerPosForAim.x, y: pointerPos.y - lastPointerPosForAim.y };
-
-            // 3. Proyectar el arrastre incremental sobre el vector perpendicular.
-            const incrementalProjectedDistance = dragVector.x * perpVector.x + dragVector.y * perpVector.y;
-
-            // 4. Detección de colisión para ajustar la sensibilidad
-            const rayOrigin = new THREE.Vector2(cueBall.mesh.position.x, cueBall.mesh.position.y);
-            const rayDirection = new THREE.Vector2(Math.cos(currentAngle), Math.sin(currentAngle));
-            
-            let isHittingBall = false;
-            let closestIntersection = Infinity;
-
-            for (const ball of balls) {
-                if (ball === cueBall || !ball.isActive) continue;
-                const ballCenter = new THREE.Vector2(ball.mesh.position.x, ball.mesh.position.y);
-                const oc = ballCenter.clone().sub(rayOrigin);
-                const tca = oc.dot(rayDirection);
-                if (tca < 0) continue;
-                const d2 = oc.lengthSq() - tca * tca;
-                const radius2 = (BALL_RADIUS * 2) ** 2;
-                if (d2 > radius2) continue;
-                const t0 = tca - Math.sqrt(radius2 - d2);
-                if (t0 < closestIntersection) {
-                    closestIntersection = t0;
-                    isHittingBall = true;
-                }
-            }
-
-            // 5. Aplicar la sensibilidad correcta al movimiento incremental
-            const currentSensitivity = isHittingBall ? 0.0005 : 0.005;
-            const angleChange = incrementalProjectedDistance * currentSensitivity;
-            window.currentShotAngle += angleChange;
-
-            // 6. Actualizar la última posición para el siguiente frame
-            lastPointerPosForAim = { ...pointerPos };
-        }
-
-        // Arrastrar bola blanca
-        if (cuePlacement.isMovingCueBall()) {
-            cuePlacement.moveCueBall(pointerPos);
-            const isValid = cuePlacement.isValidPlacement(pointerPos);
-            cueBallRedDot.material.color.set(isValid ? 0xe74c3c : 0x888888);
-        }
-
-        // Arrastrar selector de efecto
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        spinControls.dragSpin({ clientX, clientY });
-
-        // --- SOLUCIÓN: Añadir la llamada que faltaba para arrastrar la barra de potencia ---
-        powerControls.dragPower({ clientX });
-
-    };
-
-    window.addEventListener('mousemove', onPointerMove);
-    window.addEventListener('touchmove', onPointerMove, { passive: false });
-    // --- LOG: Indica el final del manejador de evento (se registraría constantemente).
-    // console.log('%c[Input]%c onPointerMove() finalizado.', 'color: #e67e22; font-weight: bold;', 'color: inherit;');
-
-
-    // --- Eventos de Finalización (mouseup, touchend) ---
-    const onPointerUp = (e) => {
-        let power = 0;
-        let shotTaken = false;
-
-        // Comprobar si se estaba disparando con la barra de potencia.
-        if (powerControls.isDraggingPower()) {
-            power = powerControls.stopPowerDrag();
-            shotTaken = true;
-        }
-
-        if (shotTaken && power > 0) {
-            shoot(power);
-        }
-
-        // Finalizar arrastre de efecto
-        spinControls.stopSpinDrag();
-
-        // --- SOLUCIÓN: Finalizar el movimiento de la bola blanca al soltarla ---
-        if (cuePlacement.isMovingCueBall()) {
-            // Simplemente dejamos de mover la bola. La validación final y el cambio de estado
-            // se harán cuando el jugador intente disparar.
-            cuePlacement.stopCueBallMove();
-        }
-        // --- NUEVO: Finalizar el arrastre de apuntado ---
-        isAimingDrag = false;
-
-        isMouseDown = false;
-    };
-
-    window.addEventListener('mouseup', onPointerUp);
-    window.addEventListener('touchend', onPointerUp);
-}
-
-// --- Funciones de estado exportadas para que otros módulos las consulten ---
-
-export function isPointerDown() {
-    return isMouseDown;
-}
-
-export function isPullingBack() {
-    return powerControls.isPullingBack();
-}
-
-export function isMovingCueBall() {
-    return cuePlacement.isMovingCueBall();
-}
-
-export function isDraggingPower() {
-    return powerControls.isDraggingPower();
-}
-
-export function getPullBackDistance() {
-    return powerControls.getPullBackDistance();
-}
-
-export function getCurrentShotAngle() {
-    // El ángulo se almacena globalmente para simplicidad en este refactor.
-    // En un futuro, podría ser parte de un módulo de estado de apuntado.
-    return window.currentShotAngle || 0;
-}
+// --- Getters para que otros módulos consulten el estado ---
+export const isPointerDown = () => pointerDown;
+export const isPullingBack = () => pullingBack;
+export const isMovingCueBall = () => movingCueBall;
+export const getCurrentShotAngle = () => currentShotAngle;

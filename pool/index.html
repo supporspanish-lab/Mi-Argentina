@@ -112,25 +112,6 @@
             width: 60px;
         }
 
-        /* --- NUEVO: Estilos para el selector de efecto --- */
-        #spinSelectorContainer.editable-ui { /* --- MODIFICACIÓN: Aplicar a la nueva clase --- */
-            position: absolute;
-            right: 2vw;
-            top: 10vh;
-            width: 8vw;
-            height: 8vw;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            z-index: 10;
-            cursor: pointer;
-            background-color: #e8e8e8; /* --- SOLUCIÓN: Color de fondo para placeholder --- */
-            display: none; /* Oculto por defecto */
-        }
-        #spinSelectorCueBall {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
         /* --- MODIFICACIÓN: Usar una clase para que ambos puntos compartan estilo --- */
         .spin-selector-dot {
             position: absolute;
@@ -170,7 +151,12 @@
             cursor: pointer;
             transform: scale(0.8);
             border-radius: 50%;
-            background-color: #e8e8e8; /* --- SOLUCIÓN: Color de fondo para placeholder --- */
+            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
+            background-image: url('imajenes/BolasMetidas/efecto.png');
+            background-size: contain; /* Asegura que toda la bola sea visible */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent; /* Evita que se vea un color de fondo */
             transition: transform 0.2s ease-in-out;
         }
         #spinModalOverlay.visible {
@@ -267,6 +253,41 @@
             background-repeat: no-repeat;
         }
         /* --- NUEVO: Contenedor flexible para la UI superior --- */
+        /* --- SOLUCIÓN: Estilo para el avatar del jugador --- */
+        .player-avatar {
+            /* --- SOLUCIÓN: El contenedor ahora es solo un SVG --- */
+            width: 100%; /* Ocupa todo el ancho del contenedor */
+            aspect-ratio: 1 / 1; /* Mantiene la proporción cuadrada */
+            margin-bottom: 10px; /* Espacio entre el avatar y las bolas */
+            flex-shrink: 0; /* Evita que se encoja */
+            transition: filter 0.3s ease; /* Transición para el efecto de brillo */
+        }
+
+        /* --- SOLUCIÓN: Estilos para los círculos dentro del SVG --- */
+        .player-avatar .timer-track { /* La pista gris de fondo */
+            stroke: rgba(255, 255, 255, 0.1);
+        }
+        .player-avatar .timer-line { /* La línea verde que se anima */
+            stroke: rgba(46, 204, 113, 0.4); /* Color tenue por defecto */
+            transform: rotate(-90deg); /* Empezar desde arriba */
+            transform-origin: center;
+            transition: stroke 0.3s ease, stroke-dashoffset 0.1s linear;
+        }
+        .player-avatar .avatar-icon-bg { /* Círculo de fondo para el icono */
+            fill: rgba(255, 255, 255, 0.1);
+        }
+        .player-avatar .avatar-icon { /* El icono del jugador */
+            fill: rgba(255, 255, 255, 0.7);
+        }
+
+        /* --- SOLUCIÓN: Estilo para el avatar del jugador activo --- */
+        .player-avatar.active {
+            filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.7)); /* Efecto de brillo con filtro */
+        }
+        .player-avatar.active .timer-line {
+            stroke: #2ecc71; /* Color verde brillante para el jugador activo */
+        }
+
         #top-ui-container {
             position: absolute;
             top: 0;
@@ -293,6 +314,20 @@
             bottom: 2vh; /* --- SOLUCIÓN: Posicionar en la parte inferior --- */
             max-width: 45%; /* Evita que se superpongan en pantallas estrechas */
             pointer-events: auto; /* Reactivar eventos para este elemento */
+        }
+        /* --- NUEVO: Estilos para la miniatura del selector de efecto --- */
+        #miniSpinSelector {
+            width: 7vh; /* Tamaño relativo a la altura de la pantalla */
+            height: 7vh; 
+            position: relative; /* Para posicionar el punto rojo dentro */
+            cursor: pointer;
+            /* --- MODIFICACIÓN: Usar una imagen para la miniatura del efecto --- */
+            background-image: url('imajenes/BolasMetidas/efecto.png');
+            background-size: contain; /* Asegura que toda la bola sea visible */
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            pointer-events: auto; /* Permitir clics en este elemento */
         }
 
         /* --- SOLUCIÓN: Estilos para el nuevo indicador de turno --- */
@@ -423,6 +458,12 @@
             opacity: 0;
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             pointer-events: none;
+        }
+        /* --- SOLUCIÓN: Botón dentro del mensaje de falta/victoria --- */
+        #foulMessage button {
+            display: none; /* Oculto por defecto */
+            margin-top: 15px;
+            pointer-events: auto; /* Reactivar puntero para el botón */
         }
 
         /* --- NUEVO: Estilos para la barra de potencia horizontal --- */
@@ -591,8 +632,6 @@
                 <h3>Ajustar Interfaz</h3>
                 <label for="player-pockets-size">Tamaño Marcadores</label>
                 <input type="range" id="player-pockets-size" min="30" max="100" value="48">
-                <label for="spin-selector-size">Tamaño Selector Efecto</label>
-                <input type="range" id="spin-selector-size" min="30" max="200" value="80">
                 <label for="power-bar-size">Ancho Medidor Potencia</label>
                 <input type="range" id="power-bar-size" min="100" max="600" value="400">
                 <label for="power-bar-height">Grosor Medidor Potencia</label>
@@ -604,15 +643,6 @@
         <button id="options-toggle-btn"><span>&#9881;</span></button>
 
         <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->
-        <!-- --- NUEVO: Contenedor para el selector de efecto --- -->
-        <div id="spinSelectorContainer" class="editable-ui">
-            <div id="spinSelectorCueBall">
-                <!-- SOLUCIÓN: Añadir el punto rojo también a la miniatura -->
-                <div id="smallSpinSelectorDot" class="spin-selector-dot"></div>
-                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
-                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
-            </div>
-        </div>
 
         <!-- --- NUEVO: Modal para el selector de efecto en grande --- -->
         <div id="spinModalOverlay">
@@ -638,6 +668,15 @@
         <!-- --- SOLUCIÓN: Mover los contenedores de bolas fuera del contenedor superior --- -->
         <!-- Contenedor para las bolas del jugador 1 -->
         <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
+            <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
+            <svg class="player-avatar" viewBox="0 0 36 36">
+                <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
+                <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+                <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                    <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                </g>
+            </svg>
             <div class="pocketed-ball-placeholder"></div>
             <div class="pocketed-ball-placeholder"></div>
             <div class="pocketed-ball-placeholder"></div>
@@ -650,6 +689,15 @@
         </div>
         <!-- Contenedor para las bolas del jugador 2 -->
         <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
+            <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
+            <svg class="player-avatar" viewBox="0 0 36 36">
+                <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
+                <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+                <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                    <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                </g>
+            </svg>
             <div class="pocketed-ball-placeholder"></div>
             <div class="pocketed-ball-placeholder"></div>
             <div class="pocketed-ball-placeholder"></div>
@@ -663,7 +711,19 @@
 
         <!-- --- CORRECCIÓN: Mover los elementos de la UI aquí para que estén dentro del gameContainer --- -->
         <div id="pocketedInfo"></div>
-        <div id="foulMessage"></div> <!-- CORRECCIÓN: El ID ya estaba, pero lo confirmo. El problema estaba en otro lado. -->
+        <div id="foulMessage">
+            <span id="foulMessageText"></span>
+            <button id="playAgainBtn">Jugar de Nuevo</button>
+        </div>
+
+        <!-- --- NUEVO: Contenedor para la UI superior que incluye el nuevo selector de efecto --- */ -->
+        <div id="top-ui-container">
+            <!-- --- SOLUCIÓN: Añadir un div vacío para empujar el selector a la derecha --- -->
+            <div></div>
+            <div id="miniSpinSelector" class="editable-ui">
+                <div id="miniSpinSelectorDot" class="spin-selector-dot"></div>
+            </div>
+        </div>
 
         <!-- --- SOLUCIÓN: Nuevo elemento para el indicador de turno --- -->
         <div id="turnIndicator"></div>

@@ -221,7 +221,8 @@ export function loadBallModels() {
     const loader = new GLTFLoader(loadingManager);
     const ballModelPath = 'modelos/billiard_balls.glb';
 
-    addPendingResource(); // 1. Notificar que empezamos a cargar los modelos de las bolas.
+    // --- SOLUCIÓN: No es necesario gestionar este recurso manualmente.
+    // El GLTFLoader ya está asociado con el loadingManager, que se encargará de la espera.
     loader.load(ballModelPath, (gltf) => {
         const modelScene = gltf.scene; 
 
@@ -234,8 +235,6 @@ export function loadBallModels() {
 
         loadedGltfScene = modelScene;
         scene.add(loadedGltfScene);
-
-        resolvePendingResource(); // 2. Notificar que los modelos están procesados.
     }, undefined, (error) => {
         console.error(`Error al cargar el modelo de la bola desde '${ballModelPath}'. Detalles:`, error);
     });

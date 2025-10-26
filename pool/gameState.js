@@ -1,4 +1,7 @@
 // --- Módulo de Estado del Juego ---
+import { playSound } from './audioManager.js';
+import { updateActivePlayerUI } from './ui.js';
+import { resetSpin } from './spinControls.js'; // --- SOLUCIÓN: Importar la función para resetear el efecto
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
 import { cueBall, balls } from './ballManager.js';
 import { scene } from './scene.js';
@@ -14,21 +17,38 @@ export let shotStartTime = 0; // --- NUEVO: Timestamp del inicio del tiro
 export let isPlacingCueBall = false; // --- NUEVO: Estado para cuando el jugador está colocando la bola blanca
 export let isDampingEnabled = true; // --- NUEVO: Controla si el frenado en la tronera está activo
 export let gamePaused = false;
+export let gameOver = false; // --- SOLUCIÓN: Nuevo estado para el fin de la partida
+let isFirstTurn = true; // --- NUEVO: Bandera para controlar el primer turno de la partida.
+
+// --- SOLUCIÓN: Estado del temporizador de turno ---
+export const TURN_TIME_LIMIT = 30000; // 30 segundos en milisegundos
+export let turnStartTime = 0;
+let isTurnTimerActiveState = false; // --- SOLUCIÓN: Renombrar la variable de estado interna
+let tickSoundPlayed = false; // Para asegurar que el sonido de alerta suene solo una vez
 
 export let isLoading = true; // --- NUEVO: Estado para saber si el juego está cargando/calentando
+
+export function setLoadingState(loading) {
+    isLoading = loading;
+}
+
 export function startShot() {
     // --- LOG: Indica que se ha iniciado un tiro.
+    if (gameOver) return; // No permitir tiros si el juego ha terminado
     shotInProgress = true;
     shotStartTime = performance.now(); // --- NUEVO: Registrar el tiempo de inicio
     firstBallHitThisTurn = null; // --- NUEVO: Reiniciar en cada tiro
+    isTurnTimerActiveState = false; // --- SOLUCIÓN: Detener el temporizador cuando se realiza un tiro
 }
 
 /**
- * --- NUEVO: Selecciona aleatoriamente al jugador que comenzará la partida.
+ * --- MODIFICADO: Asigna el primer turno al Jugador 1.
  */
-export function randomizeStartingPlayer() {
+export function startFirstTurn() {
     isLoading = false; // --- NUEVO: La carga termina cuando se asigna el primer jugador
-    currentPlayer = Math.random() < 0.5 ? 1 : 2;
+    currentPlayer = 1; // El jugador 1 siempre empieza.
+    updateActivePlayerUI(currentPlayer);
+    startTurnTimer();
 }
 
 export function setPlacingCueBall(isPlacing) { // --- NUEVO: Función para controlar el estado de colocación
@@ -46,12 +66,52 @@ export function setGamePaused(isPaused) {
     gamePaused = isPaused;
 }
 
+export function setGameOver(isOver) {
+    gameOver = isOver;
+    if (isOver) {
+        isTurnTimerActiveState = false; // Detener el temporizador si el juego termina
+    }
+}
 /**
  * --- SOLUCIÓN: Añade la función que faltaba para establecer el jugador actual.
  * @param {number} player - El número del jugador (1 o 2).
  */
 export function setCurrentPlayer(player) {
     currentPlayer = player;
+    startTurnTimer(); // --- SOLUCIÓN: Reiniciar el temporizador cada vez que cambia el jugador
+}
+
+// --- SOLUCIÓN: Funciones para controlar el temporizador de turno ---
+export function startTurnTimer() {
+    turnStartTime = performance.now();
+    isTurnTimerActiveState = true;
+    tickSoundPlayed = false; // Reiniciar la bandera del sonido de alerta
+    resetSpin(); // --- SOLUCIÓN: Resetear el efecto de la bola blanca al centro
+}
+
+// --- SOLUCIÓN: Exportar una función "getter" para consultar el estado del temporizador ---
+export const isTurnTimerActive = () => isTurnTimerActiveState;
+
+/**
+ * --- NUEVO: Detiene el temporizador de turno manualmente.
+ */
+export function stopTurnTimer() {
+    isTurnTimerActiveState = false;
+}
+
+export function checkTurnTimer() {
+    if (!isTurnTimerActiveState || shotInProgress) return false;
+
+    const elapsedTime = performance.now() - turnStartTime;
+    const timeRemaining = TURN_TIME_LIMIT - elapsedTime;
+
+    // --- SOLUCIÓN: Se ha eliminado el sonido de alerta 'tick' ---
+    // if (timeRemaining <= 5000 && !tickSoundPlayed) {
+    //     playSound('tick', 0.8);
+    //     tickSoundPlayed = true;
+    // }
+
+    return elapsedTime >= TURN_TIME_LIMIT;
 }
 
 /**
@@ -59,12 +119,23 @@ export function setCurrentPlayer(player) {
  * @param {string} reason - El texto que se mostrará como motivo de la falta.
  */
 export function showFoulMessage(reason) {
-    const foulMessageEl = document.getElementById('foulMessage');
-    if (foulMessageEl) {
-        foulMessageEl.textContent = reason;
-        foulMessageEl.style.opacity = '1';
-        foulMessageEl.style.transform = 'translate(-50%, -50%) scale(1)';
-        setTimeout(() => { foulMessageEl.style.opacity = '0'; foulMessageEl.style.transform = 'translate(-50%, -50%) scale(0.8)'; }, 2500);
+    const foulMessageContainer = document.getElementById('foulMessage');
+    const foulMessageText = document.getElementById('foulMessageText');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+
+    if (foulMessageContainer && foulMessageText && playAgainBtn) {
+        foulMessageText.textContent = reason;
+        foulMessageContainer.style.opacity = '1';
+        foulMessageContainer.style.transform = 'translate(-50%, -50%) scale(1)';
+
+        if (gameOver) {
+            playAgainBtn.style.display = 'block';
+            playAgainBtn.onclick = () => window.location.reload();
+        } else {
+            playAgainBtn.style.display = 'none';
+            // Ocultar el mensaje de falta después de un tiempo si no es fin de partida
+            setTimeout(() => { foulMessageContainer.style.opacity = '0'; foulMessageContainer.style.transform = 'translate(-50%, -50%) scale(0.8)'; }, 2500);
+        }
     }
 }
 
@@ -81,15 +152,30 @@ export function addPocketedBall(ball) {
     pocketedThisTurn.push(ball);
 
     // --- CORRECCIÓN: Asignar bolas en tiempo real en lugar de al final del turno ---
-    if (!ballsAssigned && ball.number !== null && ball.number !== 8) {
-        const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-        playerAssignments[currentPlayer] = type;
-        playerAssignments[currentPlayer === 1 ? 2 : 1] = (type === 'solids' ? 'stripes' : 'solids');
-        ballsAssigned = true;
-        const typeToSpanish = (t) => t === 'solids' ? 'Lisas (1-7)' : 'Rayadas (9-15)';
-    }
+    // --- CORRECCIÓN: La asignación de bolas ahora se gestiona centralmente en revisar.js
+    // para evitar que se asigne un grupo antes de comprobar las faltas del turno.
 
     addPocketedBallToUI(ball);
+}
+
+export function setBallsAssigned(areAssigned) {
+    ballsAssigned = areAssigned;
+    if (!areAssigned) {
+        playerAssignments[1] = null;
+        playerAssignments[2] = null;
+    }
+}
+
+/**
+ * --- NUEVO: Asigna los tipos de bola (lisas/rayadas) a los jugadores.
+ * @param {number} player - El jugador que metió la primera bola.
+ * @param {string} type - El tipo de bola ('solids' o 'stripes').
+ */
+export function assignPlayerTypes(player, type) {
+    if (ballsAssigned) return; // No hacer nada si ya están asignadas
+    playerAssignments[player] = type;
+    playerAssignments[player === 1 ? 2 : 1] = (type === 'solids' ? 'stripes' : 'solids');
+    ballsAssigned = true;
 }
 
 // --- Lógica de UI de Estado ---
@@ -190,6 +276,10 @@ export function clearFirstHitBall() {
     firstBallHitThisTurn = null;
 }
 
+export function completeFirstTurn() {
+    isFirstTurn = false;
+}
+
 export function getGameState() {
     return {
         currentPlayer,
@@ -198,8 +288,11 @@ export function getGameState() {
         isPlacingCueBall, // --- NUEVO: Exponer el estado
         isDampingEnabled, // --- NUEVO: Exponer el estado del frenado
         gamePaused, // --- CORRECCIÓN: Exponer el estado de pausa
+        gameOver, // --- SOLUCIÓN: Exponer el estado de fin de partida
         firstBallHitThisTurn, // --- SOLUCIÓN: Exponer la primera bola golpeada para que revisar.js pueda consultarla
-        pocketedThisTurn // --- SOLUCIÓN: Exponer las bolas entroneradas para que revisar.js pueda consultarlas
+        pocketedThisTurn, // --- SOLUCIÓN: Exponer las bolas entroneradas para que revisar.js pueda consultarlas
+        isFirstTurn // --- NUEVO: Exponer la bandera del primer turno.
+        
     };
 }
 

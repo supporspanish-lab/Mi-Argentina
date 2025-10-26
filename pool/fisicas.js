@@ -24,8 +24,8 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
     }
 
     // --- MEJORADO: Modelo de fricción más realista y coeficiente de restitución ---
-    const SLIDING_FRICTION = 0.01;  // Fricción cuando la bola desliza (más alta)
-    const ROLLING_FRICTION = 0.008; // Fricción cuando la bola ya está rodando (más baja)
+    const SLIDING_FRICTION = 0.010;  // --- CORRECCIÓN: Reducida para que las bolas deslicen más
+    const ROLLING_FRICTION = 0.010; // --- CORRECCIÓN: Reducida para que las bolas rueden más
     const SPIN_FRICTION_THRESHOLD = 0.1; // Velocidad por debajo de la cual el deslizamiento se convierte en rodadura
     const CUSHION_RESTITUTION = 0.80; // Coeficiente de restitución para los bordes (80% de la energía se conserva).
     const BALL_RESTITUTION = 0.95;    // Coeficiente de restitución para colisiones entre bolas. 0.98 es casi perfectamente elástico. Un valor más bajo como 0.95 disipará más energía.
@@ -124,14 +124,14 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                         const v_normal = ball.vx * collisionNormal.x + ball.vy * collisionNormal.y;
                         const v_tangent = ball.vx * collisionNormal.y - ball.vy * collisionNormal.x;
 
-                        // --- CORRECCIÓN: El efecto vertical (arriba/abajo) también afecta el rebote en la banda ---
+                        // --- SOLUCIÓN: Aplicar efecto vertical y lateral en el rebote con la banda ---
                         let spinFactor = 0;
                         if (ball === balls[0] && ball.spin) {
                             // --- CORRECCIÓN: El efecto lateral estaba invertido. Se corrige invirtiendo el signo. ---
                             // El efecto lateral (side spin) depende de la velocidad normal al impacto con la banda.
                             const sideSpin = -ball.spin.x * v_normal * 0.5;
-                            // El efecto vertical (follow/draw) depende de la velocidad tangencial.
-                            const verticalSpin = -ball.spin.y * Math.abs(v_tangent) * 0.2;
+                            // El efecto vertical (follow/draw) se aplica a la velocidad normal para que "muerda" la banda.
+                            const verticalSpin = -ball.spin.y * Math.abs(v_normal) * 0.6; // --- SOLUCIÓN: Invertir el signo del efecto vertical
                             // --- NUEVO: Consumir parte del efecto lateral utilizado ---
                             ball.spin.x *= 0.85; // Se consume un 15% del efecto lateral en el impacto
                             spinFactor = sideSpin;
@@ -139,7 +139,7 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                             ball.vy += collisionNormal.y * verticalSpin;
                         }
 
-                        const new_v_normal = -v_normal * CUSHION_RESTITUTION;
+                        const new_v_normal = -v_normal * CUSHION_RESTITUTION - (ball.spin.y * Math.abs(v_normal) * 0.6); // --- SOLUCIÓN: Invertir el signo aquí también
                         const new_v_tangent = v_tangent - spinFactor;
 
                         const impactSpeed = Math.abs(v_normal);
@@ -246,21 +246,34 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                     // --- NUEVO: Aplicar efecto de corrido (follow) y retroceso (draw) ---
                     // Esta lógica solo se aplica si una de las bolas es la bola blanca.
                     if (cueBall && cueBall.spin && cueBall.spin.y !== 0) {
-                        // El spinOffset.y va de -1 (abajo) a 1 (arriba).
-                        // Lo convertimos en una fuerza que se aplica a la bola blanca después del impacto.
-                        // --- CORRECCIÓN: La fuerza del efecto ahora depende de la potencia del impacto (`impactForce`).
-                        // Un spinOffset.y negativo (abajo) debe restar velocidad (retroceso).
-                        const spinForce = cueBall.spin.y * impactForce * 0.25; // El 0.25 es un factor de escala para que el efecto sea controlable.
-                        cueBall.spin.y *= 0.7; // --- NUEVO: Consumir el 30% del efecto vertical en el impacto
-
-                        // Asegurarnos de que no hay valores NaN y hay velocidad suficiente para aplicar efecto.
                         const speedAfterCollision = Math.sqrt(cueBall.vx ** 2 + cueBall.vy ** 2);
+                        // --- SOLUCIÓN: El efecto ahora depende de la potencia inicial del tiro ---
+                        // Calculamos la potencia inicial del tiro (0 a 1) basándonos en la velocidad inicial guardada.
+                        const initialSpeed = Math.sqrt(cueBall.initialVx ** 2 + cueBall.initialVy ** 2);
+                        const maxInitialSpeed = 120; // Un valor de referencia para la velocidad máxima de un tiro potente.
+                        const shotPowerFactor = Math.min(initialSpeed / maxInitialSpeed, 1.0);
+
                         if (speedAfterCollision > 0.01) {
-                            // La dirección de la fuerza de spin es la dirección del movimiento después de la colisión.
-                            const dirX = cueBall.vx / speedAfterCollision;
-                            const dirY = cueBall.vy / speedAfterCollision;
-                            cueBall.vx += dirX * spinForce;
-                            cueBall.vy += dirY * spinForce;
+                            // --- SOLUCIÓN: Aplicar efecto vertical (corrido/retroceso) ---
+                            if (cueBall.spin.y !== 0) {
+                                const verticalSpinForce = cueBall.spin.y * impactForce * 0.8 * shotPowerFactor;
+                                const dirX = cueBall.vx / speedAfterCollision;
+                                const dirY = cueBall.vy / speedAfterCollision;
+                                cueBall.vx += dirX * verticalSpinForce;
+                                cueBall.vy += dirY * verticalSpinForce;
+                                cueBall.spin.y *= 0.7; // Consumir efecto vertical
+                            }
+
+                            // --- SOLUCIÓN: Aplicar efecto lateral, también dependiente de la potencia ---
+                            if (cueBall.spin.x !== 0) {
+                                const sideSpinForce = cueBall.spin.x * impactForce * 0.4 * shotPowerFactor;
+                                // La fuerza se aplica de forma perpendicular a la dirección del movimiento
+                                const perpDirX = -cueBall.vy / speedAfterCollision;
+                                const perpDirY = cueBall.vx / speedAfterCollision;
+                                cueBall.vx += perpDirX * sideSpinForce;
+                                cueBall.vy += perpDirY * sideSpinForce;
+                                cueBall.spin.x *= 0.7; // Consumir efecto lateral
+                            }
                         }
                     }
                 }

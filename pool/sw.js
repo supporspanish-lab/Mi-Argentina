@@ -26,12 +26,10 @@ const ASSETS_TO_CACHE = [
     'imajenes/mesa.png',
     'imajenes/taco.png',
     'imajenes/zombra.png',
-    // 'imajenes/brillo.png' ya no es necesario, el efecto se genera con canvas.
-    'imajenes/bolasMetidas/blanca.png', // --- NUEVO: Añadir la imagen de la bola blanca al caché
+    'imajenes/BolasMetidas/efecto.png', // --- SOLUCIÓN: Añadir la nueva imagen del selector de efecto
     'audio/ballHit2.wav',
     'audio/cushionHit.wav',
     'audio/EntrarPelotaTronera.mp3',
-    // 'audio/error.mp3', // --- NUEVO: Añadir el sonido de falta al caché
     'audio/cueHit.wav',
     'modelos/billiard_balls.glb',
     // External dependencies from unpkg
@@ -43,7 +41,7 @@ const ASSETS_TO_CACHE = [
 // Add pocketed ball images to the cache list
 for (let i = 1; i <= 15; i++) {
     if (i !== 8) { // The 8-ball is not shown in the player pockets UI
-        ASSETS_TO_CACHE.push(`imajenes/bolasMetidas/${i}.png`);
+        ASSETS_TO_CACHE.push(`imajenes/BolasMetidas/${i}.png`); // --- CORRECCIÓN: Usar la ruta con mayúscula
     }
 }
 

@@ -33,7 +33,10 @@ export function isValidPlacement(point) {
 
     // 2. Comprobar si está dentro de alguna tronera (pockets)
     for (const pocket of pockets) {
-        if (isPointInPolygon(point, pocket.points)) return false;
+        // --- CORRECCIÓN: Usar una comprobación de distancia al centro de la tronera.
+        // Es más simple y fiable que la comprobación de polígono para este caso.
+        const distSq = (point.x - pocket.center.x) ** 2 + (point.y - pocket.center.y) ** 2;
+        if (distSq < (pocket.radius * pocket.radius)) return false;
     }
 
     // 3. Comprobar si colisiona con otra bola

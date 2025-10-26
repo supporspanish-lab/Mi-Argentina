@@ -27,7 +27,6 @@ export function prepareAudio() {
     loadSound('cushionHit', 'audio/cushionHit.wav');
     loadSound('pocket', 'audio/EntrarPelotaTronera.mp3');
     loadSound('cueHit', 'audio/cueHit.wav');
-    // loadSound('foul', 'audio/error.mp3'); // --- NUEVO: Sonido para las faltas
 }
 
 /**
