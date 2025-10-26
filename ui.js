@@ -1,6 +1,6 @@
 // --- Módulo de Interfaz de Usuario y Eventos ---
 import * as THREE from 'three'; // --- SOLUCIÓN: Importar THREE.js
-import { areBallsMoving } from './fisicas.js';
+import { areBallsMoving } from './fisicas.js'; // --- SOLUCIÓN: Importar la nueva función de revisión
 import { revisarEstado } from './revisar.js'; // --- SOLUCIÓN: Importar la nueva función de revisión
 import { getGameState } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
@@ -14,6 +14,9 @@ import { getPowerPercent } from './powerControls.js';
 // --- Referencias a elementos del DOM ---
 const spinSelectorContainer = document.getElementById('spinSelectorContainer');
 const powerBarContainer = document.getElementById('powerBarContainer');
+
+// --- SOLUCIÓN: Crear una única instancia del TextureLoader con el loadingManager ---
+const textureLoader = new THREE.TextureLoader(loadingManager);
 
 // --- Estado de la UI ---
 // --- NUEVO: Variable para rastrear si las bolas se estaban moviendo en el frame anterior ---
@@ -29,6 +32,9 @@ let activeDrag = { // Objeto para gestionar el arrastre/redimensión activo
 
 // `window.currentShotAngle` se usa como variable global temporal para el ángulo.
 window.currentShotAngle = 0;
+
+// --- NUEVO: Exportar el estado del modo de edición para que otros módulos lo consulten ---
+export const isUIEditModeActive = () => isUIEditMode;
 
 
 /**
@@ -78,6 +84,8 @@ export function initializeUI() {
         const resetUiBtn = document.getElementById('reset-ui-btn');
         const pocketsSizeSlider = document.getElementById('player-pockets-size');
         const spinSelectorSizeSlider = document.getElementById('spin-selector-size');
+        const powerBarSizeSlider = document.getElementById('power-bar-size');
+        const powerBarHeightSlider = document.getElementById('power-bar-height');
         // --- NUEVO: Referencias al modal de confirmación ---
         const confirmResetModal = document.getElementById('confirm-reset-modal');
         const confirmResetYesBtn = document.getElementById('confirm-reset-yes');
@@ -93,6 +101,8 @@ export function initializeUI() {
             const pocketContainer = document.querySelector('.pocketed-balls-container');
             if (pocketContainer) pocketsSizeSlider.value = pocketContainer.offsetWidth;
             if (spinSelectorContainer) spinSelectorSizeSlider.value = spinSelectorContainer.offsetWidth;
+            if (powerBarContainer) powerBarSizeSlider.value = powerBarContainer.offsetWidth;
+            if (powerBarContainer) powerBarHeightSlider.value = powerBarContainer.offsetHeight;
 
             updateToggleBtnPosition(); // --- SOLUCIÓN: Actualizar la posición del botón
         };
@@ -146,6 +156,16 @@ export function initializeUI() {
             spinSelectorContainer.style.width = `${newSize}px`;
             spinSelectorContainer.style.height = `${newSize}px`;
         });
+
+        powerBarSizeSlider.addEventListener('input', (e) => {
+            const newSize = e.target.value;
+            powerBarContainer.style.width = `${newSize}px`;
+        });
+
+        powerBarHeightSlider.addEventListener('input', (e) => {
+            const newSize = e.target.value;
+            powerBarContainer.style.height = `${newSize}px`;
+        });
     }
 
     // --- NUEVO: Cargar la disposición de la UI guardada al iniciar ---
@@ -156,9 +176,14 @@ export function initializeUI() {
 export function prepareUIResources() {
     prepareTableTexture();
     // --- SOLUCIÓN: Precargar la imagen del selector de efecto ---
-    // Aunque la imagen se usa en CSS, la cargamos aquí para que el loadingManager
-    // la rastree y se asegure de que esté lista antes de iniciar el juego.
-    new THREE.TextureLoader(loadingManager).load('imajenes/bolasMetidas/blanca.png');
+    // Cargamos la imagen de la bola blanca y, cuando esté lista, la aplicamos como fondo
+    // a los elementos de la UI. Esto asegura que la imagen se cargue una sola vez y
+    // esté lista antes de que termine la pantalla de carga.
+    textureLoader.load('imajenes/bolasMetidas/blanca.png', (texture) => {
+        const imageUrl = `url('${texture.image.src}')`;
+        document.getElementById('spinSelectorCueBall').style.backgroundImage = imageUrl;
+        document.getElementById('largeSpinSelector').style.backgroundImage = imageUrl;
+    });
 }
 
 export function handleInput() {
@@ -441,16 +466,23 @@ function setupUIEditListeners() {
 
         const el = activeDrag.element;
         if (activeDrag.type === 'move') {
-            if (el.style.left !== 'auto') {
+            // --- SOLUCIÓN: Lógica de arrastre mejorada para elementos centrados con transform ---
+            // Si el elemento está centrado (como la barra de potencia), ajustamos el 'left'
+            // pero mantenemos la transformación para que siga centrado respecto a su nueva posición.
+            if (el.id === 'powerBarContainer') {
+                el.style.left = `${activeDrag.initialLeft + dx + (activeDrag.initialWidth / 2)}px`;
+            } else if (el.style.left !== 'auto') {
                 el.style.left = `${activeDrag.initialLeft + dx}px`;
                 el.style.right = 'auto';
             } else {
                 el.style.right = `${activeDrag.initialRight - dx}px`;
                 el.style.left = 'auto';
             }
-            if (el.style.top !== 'auto') {
+
+            // La lógica para la posición vertical no cambia
+            if (el.style.top !== 'auto' && el.style.bottom === 'auto') {
                 el.style.top = `${activeDrag.initialTop + dy}px`;
-                el.style.bottom = 'auto';
+                // el.style.bottom = 'auto'; // No es necesario si ya es auto
             } else {
                 el.style.bottom = `${activeDrag.initialBottom - dy}px`;
                 el.style.top = 'auto';
