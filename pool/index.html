@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- --- MODIFICADO: Añadir user-scalable=no para una mejor experiencia en móviles --- -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">    <title>Juego de Pool con Canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">    <title>Juego de BlackBall con Canvas</title>
     <!-- NUEVO: Evita el error 404 de favicon.ico en la consola -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <style>
@@ -263,6 +263,14 @@
             transition: filter 0.3s ease; /* Transición para el efecto de brillo */
         }
 
+        .player-name {
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
         /* --- SOLUCIÓN: Estilos para los círculos dentro del SVG --- */
         .player-avatar .timer-track { /* La pista gris de fondo */
             stroke: rgba(255, 255, 255, 0.1);
@@ -384,6 +392,11 @@
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             pointer-events: none; /* Para que no interfiera con el ratón */
         }
+        #turnIndicator.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            animation: pulse-border 1.5s 2;
+        }
 
         /* --- NUEVO: Estilos para los sliders en el panel de opciones --- */
         #options-panel label {
@@ -427,6 +440,13 @@
         #options-panel button:hover {
             background-color: #4aa3df;
         }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+        }
+
 
         /* --- NUEVO: Estilos para el panel de opciones deslizable --- */
         #options-panel {
@@ -706,6 +726,7 @@
         <!-- Contenedor para las bolas del jugador 1 -->
         <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
             <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
+            <div id="player1-name" class="player-name">Jugador 1</div>
             <svg class="player-avatar" viewBox="0 0 36 36">
                 <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
                 <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
@@ -727,6 +748,7 @@
         <!-- Contenedor para las bolas del jugador 2 -->
         <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
             <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
+            <div id="player2-name" class="player-name">Jugador 2</div>
             <svg class="player-avatar" viewBox="0 0 36 36">
                 <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
                 <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>

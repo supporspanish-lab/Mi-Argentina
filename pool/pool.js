@@ -1,15 +1,19 @@
 import * as THREE from 'three';
 import { updateBallPositions, areBallsMoving } from './fisicas.js';
+import TWEEN from 'https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js';
+// --- NUEVO: Importar Firebase para el modo online ---
+import { db, auth } from './login/auth.js';
+import { doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
 import { scene, camera, renderer, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
-import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders } from './ballManager.js'; // --- SOLUCIÓN: Quitar updateSafeArea
+import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders, getSceneBalls } from './ballManager.js'; // --- SOLUCIÓN: Quitar updateSafeArea
 import { handleInput, initializeUI, updateUI, prepareUIResources, updateTurnTimerUI } from './ui.js'; // --- SOLUCIÓN: Importar updateTurnTimerUI
 import { initAudio, loadSound, prepareAudio } from './audioManager.js';
 import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
 import { initCueBallEffects, updateCueBallEffects, showShotEffect } from './cueBallEffects.js'; // --- SOLUCIÓN: Importar el módulo de efectos
-import { prepareAimingResources } from './aiming.js';
-import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer } from './gameState.js';
+import { prepareAimingResources, updateAimingGuides } from './aiming.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setOnlineGameData, setShotInProgress } from './gameState.js';
 import { revisarEstado } from './revisar.js'; // --- SOLUCIÓN: Importar revisarEstado aquí
 
 let lastTime;
@@ -19,10 +23,18 @@ let shakeIntensity = 0;
 let shakeDuration = 0;
 let originalCameraPosition = new THREE.Vector3();
 
+// --- NUEVO: Para evitar procesar el mismo tiro dos veces ---
+let lastProcessedShotTimestamp = 0;
+// --- NUEVO: Para controlar el mensaje "Es tu turno" ---
+let lastNotifiedTurnPlayerUid = null;
+const turnIndicator = document.getElementById('turnIndicator');
+
+
 function gameLoop(time) {
     // --- LOG: Indica el inicio de un nuevo fotograma en el bucle del juego.
     // console.log('[GameLoop] Iniciando nuevo fotograma...');
 
+    TWEEN.update(time); // --- NUEVO: Actualizar el motor de animaciones TWEEN
     // Vuelve a llamar a gameLoop para el siguiente fotograma
     requestAnimationFrame(gameLoop);
 
@@ -167,7 +179,7 @@ function gameLoop(time) {
             // Detener el temporizador para que no se siga ejecutando.
             stopTurnTimer();
             // Se llama a revisarEstado con la bandera de tiempo agotado para procesar la falta.
-            revisarEstado(true);
+            revisarEstado(true, doc(db, "games", new URLSearchParams(window.location.search).get('gameId')), null);
         }
     }
     renderer.render(scene, camera);
@@ -186,22 +198,183 @@ window.triggerScreenShake = (intensity, duration) => {
     originalCameraPosition.copy(camera.position);
 };
 
-
 // --- 4. Iniciar el juego --- (Lógica de inicialización refactorizada)
-
 function initGame() {
     initializeHandles(); // Inicializamos los puntos de los bordes
-    // initFallPhysics(); // Ya no es necesario
 
     // --- MODIFICACIÓN: La inicialización de audio y UI se hace aquí, pero la carga se dispara después ---
     initAudio(camera);
     initCueBallEffects(); // --- SOLUCIÓN: Inicializar el sistema de efectos de la bola blanca
 
-    // --- CORRECCIÓN: setupBalls() ya no se llama aquí. Se pasa como callback a loadBallModels.
-    gameLoop(); // Iniciar el bucle del juego
+    // --- NUEVO: Lógica para modo online vs offline ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameId = urlParams.get('gameId');
+
+    if (gameId) {
+        // --- MODO ONLINE ---
+        connectToGame(gameId);
+    } else {
+        // --- MODO OFFLINE (como estaba antes) ---
+        // El setup de las bolas se hará a través del loadingManager
+    }
+
+    gameLoop(); // Iniciar el bucle del juego en ambos modos
 }
 
-// --- MODIFICACIÓN: El juego se inicializa por pasos controlados por el loadingManager ---
+// --- NUEVO: Función para conectar y sincronizar con una partida de Firestore ---
+function connectToGame(gameId) {
+    const gameRef = doc(db, "games", gameId);
+
+    onSnapshot(gameRef, (docSnap) => {
+        if (!docSnap.exists()) {
+            console.error("La partida no existe!");
+            alert("La partida ha sido cerrada o el oponente se ha desconectado.");
+            window.location.href = './login/home.html';
+            return;
+        }
+
+        const gameData = docSnap.data();
+
+        // --- NUEVO: Lógica para mostrar el indicador de turno ---
+        const currentUser = auth.currentUser;
+        if (currentUser && gameData.currentPlayerUid === currentUser.uid && lastNotifiedTurnPlayerUid !== currentUser.uid) {
+            if (turnIndicator) {
+                turnIndicator.textContent = "¡Es tu turno!";
+                turnIndicator.classList.add('visible');
+                // Ocultar el mensaje después de unos segundos
+                setTimeout(() => {
+                    turnIndicator.classList.remove('visible');
+                }, 2500);
+            }
+            lastNotifiedTurnPlayerUid = currentUser.uid;
+        } else if (currentUser && gameData.currentPlayerUid !== currentUser.uid) {
+            lastNotifiedTurnPlayerUid = null; // Resetear cuando ya no es mi turno
+        }
+
+        // --- NUEVO: Sincronizar el estado de "bola en mano" ---
+        if (gameData.ballInHand && currentUser && gameData.currentPlayerUid === currentUser.uid) {
+            // Si el servidor dice que tengo bola en mano, la activo localmente.
+            setPlacingCueBall(true);
+        }
+
+        // --- NUEVO: Sincronización de la mira en tiempo real ---
+        // Si hay datos de apuntado y NO soy yo quien apunta...
+        if (gameData.aimingState && currentUser && gameData.currentPlayerUid !== currentUser.uid) { // Reutilizamos la variable currentUser ya declarada arriba
+            // ...dibuja las guías del oponente.
+            updateAimingGuides(gameData.aimingState.angle, getGameState(), 0, false);
+        }
+
+        // --- ¡LÓGICA DE SINCRONIZACIÓN CLAVE! ---
+        // Si hay un nuevo tiro y no lo hemos procesado ya...
+        if (gameData.lastShot && gameData.lastShot.timestamp > lastProcessedShotTimestamp) {
+            lastProcessedShotTimestamp = gameData.lastShot.timestamp;
+
+            // Marcar que un tiro está en progreso para bloquear inputs
+            setShotInProgress(true);
+
+            // Aplicar el tiro a la bola blanca local
+            if (cueBall) {
+                const { angle, power, spin } = gameData.lastShot;
+                cueBall.vx = Math.cos(angle) * power;
+                cueBall.vy = Math.sin(angle) * power;
+                cueBall.spin = spin;
+                cueBall.initialVx = cueBall.vx;
+                cueBall.initialVy = cueBall.vy;
+            }
+
+            // Esperar a que la simulación de física termine
+            const waitForShotToEnd = setInterval(() => {
+                if (!areBallsMoving(getSceneBalls()) && !areBallsAnimating(getSceneBalls())) {
+                    clearInterval(waitForShotToEnd);
+
+                    // Solo el jugador que hizo el tiro actualiza el estado final
+                    if (gameData.lastShot.playerId === auth.currentUser.uid) {
+                        // Preparar el nuevo estado de las bolas para subirlo a Firestore
+                        const finalBallStates = getSceneBalls().map(b => ({
+                            number: b.number,
+                            x: b.mesh.position.x,
+                            y: b.mesh.position.y,
+                            isActive: b.isActive
+                        }));
+                        
+                        // --- CORRECCIÓN: La revisión del estado ahora la hace el jugador que disparó ---
+                        revisarEstado(false, gameRef, finalBallStates);
+                    } else {
+                        // --- CORRECCIÓN: El jugador que NO hizo el tiro, anima las bolas a su nueva posición ---
+                        // El otro jugador recibe las posiciones finales y anima las bolas
+                        if (gameData.balls) {
+                            gameData.balls.forEach(serverBall => {
+                                const localBall = getSceneBalls().find(b => b.number === serverBall.number);
+                                if (localBall && localBall.isActive) {
+                                    new TWEEN.Tween(localBall.mesh.position)
+                                        .to({ x: serverBall.x, y: serverBall.y }, 400) // Animación de 400ms
+                                        .easing(TWEEN.Easing.Cubic.Out)
+                                        .start();
+                                }
+                            });
+                        }
+                    }
+                }
+            }, 100); // Comprobar cada 100ms
+        }
+
+        // --- NUEVO: Sincronización de estado general (bolas que desaparecen, etc.) ---
+        if (gameData.balls) {
+            gameData.balls.forEach(serverBall => {
+                const localBall = getSceneBalls().find(b => b.number === serverBall.number);
+                if (localBall) {
+                    // Sincronizar visibilidad
+                    if (localBall.isActive !== serverBall.isActive) {
+                        localBall.isActive = serverBall.isActive;
+                        localBall.mesh.visible = serverBall.isActive;
+                        if (localBall.shadowMesh) localBall.shadowMesh.visible = serverBall.isActive;
+                    }
+                    // Sincronizar posición (si no hay un tiro en curso)
+                    if (!gameData.lastShot || gameData.lastShot.timestamp <= lastProcessedShotTimestamp) {
+                         if (localBall.mesh.position.x !== serverBall.x || localBall.mesh.position.y !== serverBall.y) {
+                            new TWEEN.Tween(localBall.mesh.position)
+                                .to({ x: serverBall.x, y: serverBall.y }, 200)
+                                .easing(TWEEN.Easing.Quadratic.Out)
+                                .start();
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- NUEVO: Guardar el estado del juego online para que otros módulos lo usen ---
+        setOnlineGameData(gameData);
+
+        // Actualizar la UI con los nombres de los jugadores
+        const player1NameEl = document.getElementById('player1-name');
+        const player2NameEl = document.getElementById('player2-name');
+
+        if (player1NameEl) player1NameEl.textContent = gameData.player1.username;
+        if (player2NameEl && gameData.player2) player2NameEl.textContent = gameData.player2.username;
+
+        // --- NUEVO: Sincronizar las bolas con los datos de Firestore ---
+        if (gameData.balls && balls.length === 0) { // Solo configurar las bolas una vez
+            console.log("Configurando bolas desde Firestore...");
+            gameData.balls.forEach(ballData => {
+                // La función setupBalls ahora puede crear bolas individuales si se le pasa data
+                setupBalls(false, ballData); 
+            });
+        } else if (gameData.balls) {
+            // Si las bolas ya existen, solo actualizamos sus posiciones
+            gameData.balls.forEach(ballData => {
+                const ball = balls.find(b => b.number === ballData.number);
+                if (ball) {
+                    // No teletransportar, la animación se encarga de esto
+                    // ball.mesh.position.set(ballData.x, ballData.y, BALL_RADIUS);
+                    ball.isActive = ballData.isActive;
+                    ball.mesh.visible = ballData.isActive;
+                    if (ball.shadowMesh) ball.shadowMesh.visible = ballData.isActive;
+                }
+            });
+        }
+    });
+}
+
 setOnLoadingComplete((step, onStepComplete) => {
     // El loadingManager nos dice qué paso ejecutar.
     // --- LOG: Indica qué paso de procesamiento posterior a la carga se está ejecutando.
@@ -217,8 +390,12 @@ setOnLoadingComplete((step, onStepComplete) => {
             break;
 
         case 'setup_balls':
-            // Los modelos ya están cargados, ahora creamos las bolas en la escena.
-            setupBalls(true); // El 'true' indica que es la configuración inicial.
+            // --- MODIFICADO: Solo colocar las bolas si no es una partida online ---
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.has('gameId')) {
+                // Los modelos ya están cargados, ahora creamos las bolas en la escena.
+                setupBalls(true); // El 'true' indica que es la configuración inicial.
+            }
             break;
 
         case 'warmup_physics':

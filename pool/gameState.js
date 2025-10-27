@@ -20,6 +20,9 @@ export let gamePaused = false;
 export let gameOver = false; // --- SOLUCIÓN: Nuevo estado para el fin de la partida
 let isFirstTurn = true; // --- NUEVO: Bandera para controlar el primer turno de la partida.
 
+// --- NUEVO: Estado para la partida online ---
+let onlineGameData = null;
+
 // --- SOLUCIÓN: Estado del temporizador de turno ---
 export const TURN_TIME_LIMIT = 30000; // 30 segundos en milisegundos
 export let turnStartTime = 0;
@@ -313,4 +316,18 @@ export function areBallsAnimating(balls) {
     // --- LOG: Indica el final de la comprobación de animación.
     // console.log('%c[GameState]%c areBallsAnimating() finalizado. Resultado: false.', 'color: #e67e22; font-weight: bold;', 'color: inherit;');
     return false;
+}
+
+// --- NUEVO: Funciones para gestionar el estado de la partida online ---
+export function setOnlineGameData(data) {
+    onlineGameData = data;
+}
+
+export function getOnlineGameData() {
+    return onlineGameData;
+}
+
+// --- NUEVO: Función para modificar el estado de tiro en progreso ---
+export function setShotInProgress(inProgress) {
+    shotInProgress = inProgress;
 }

@@ -148,14 +148,27 @@ const createBall = (props) => {
     };
 };
 
-export function setupBalls(isInitialSetup = false) {
-    // Limpiar bolas anteriores
-    balls.forEach(ball => {
-        if (ball.mesh) scene.remove(ball.mesh);
-        if (ball.shadowMesh) scene.remove(ball.shadowMesh); // Limpiar sombra
-        if (ball.mesh && ball.mesh.children.length > 0) scene.remove(ball.mesh.children[0]); // Limpiar punto rojo si existe
-    });
-    balls.length = 0;
+export function setupBalls(isInitialSetup = false, singleBallData = null) {
+    
+    if (singleBallData) {
+        // --- NUEVO: Crear una sola bola a partir de los datos ---
+        const newBall = createBall(singleBallData);
+        balls.push(newBall);
+        if (newBall.number === null) {
+            cueBall = newBall;
+        }
+        return;
+    }
+
+    if (isInitialSetup) {
+        // Limpiar bolas anteriores solo si es un setup completo
+        balls.forEach(ball => {
+            if (ball.mesh) scene.remove(ball.mesh);
+            if (ball.shadowMesh) scene.remove(ball.shadowMesh);
+            if (ball.mesh && ball.mesh.children.length > 0) scene.remove(ball.mesh.children[0]);
+        });
+        balls.length = 0;
+    }
 
     // Bola Blanca
     const cueBallData = {

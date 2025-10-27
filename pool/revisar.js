@@ -4,11 +4,12 @@ import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
+import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 /**
  * Función de prueba para revisar el estado antes de mostrar la UI.
  */
-export function revisarEstado(faltaPorTiempo = false) {
+export async function revisarEstado(faltaPorTiempo = false, gameRef = null, finalBallStates = null) {
     // --- SOLUCIÓN: Obtener el estado inicial y mantenerlo separado.
     const estadoInicialJuego = getGameState();
     const { 
@@ -18,6 +19,7 @@ export function revisarEstado(faltaPorTiempo = false) {
         ballsAssigned: bolasAsignadasAlInicioTurno, 
         isLoading: estaCargando, 
         gameOver: juegoTerminado,
+        onlineGameData, // --- NUEVO: Obtener datos de la partida online
         isFirstTurn: esPrimerTurno // --- NUEVO: Obtener la bandera del primer turno.
     } = estadoInicialJuego;
    
@@ -41,7 +43,14 @@ export function revisarEstado(faltaPorTiempo = false) {
     // --- FALTA AÑADIDA: Tiempo agotado ---
     if (faltaPorTiempo) {
         faltaCometida = true;
-        faltaConBolaEnMano = true; // Quedarse sin tiempo da bola en mano.
+        // --- MODIFICADO: En online, solo el servidor decide si es bola en mano ---
+        if (gameRef) {
+            // En una partida online, simplemente cambiamos el turno.
+            // La lógica de "bola en mano" se podría añadir más adelante.
+        } else {
+            // En modo offline, sí da bola en mano.
+            faltaConBolaEnMano = true;
+        }
         motivoFalta = "Se agotó el tiempo";
     }
 
@@ -187,11 +196,26 @@ export function revisarEstado(faltaPorTiempo = false) {
 
         if (cambiarTurno) {
             const siguienteJugador = jugadorActual === 1 ? 2 : 1;
-            setCurrentPlayer(siguienteJugador);
-            updateActivePlayerUI(siguienteJugador);
+            // --- MODIFICADO: La lógica de cambio de turno ahora depende de si es online ---
+            if (gameRef && onlineGameData) {
+                const siguienteJugadorUid = onlineGameData.player1.uid === onlineGameData.currentPlayerUid
+                    ? onlineGameData.player2.uid
+                    : onlineGameData.player1.uid;
+                
+                await updateDoc(gameRef, {
+                    currentPlayerUid: siguienteJugadorUid,
+                    balls: finalBallStates,
+                    ballInHand: faltaConBolaEnMano // --- NUEVO: Enviar si el siguiente turno tiene bola en mano
+                });
+            } else { // Modo offline
+                setCurrentPlayer(siguienteJugador);
+                updateActivePlayerUI(siguienteJugador);
+            }
         } else {
-            // Si el jugador no cambia, simplemente se reinicia su temporizador.
-            startTurnTimer();
+            // Si el jugador no cambia, solo actualizamos las posiciones de las bolas
+            // --- CORRECCIÓN: Al continuar el turno, nos aseguramos de que no haya "bola en mano" ---
+            if (gameRef) await updateDoc(gameRef, { balls: finalBallStates, ballInHand: false });
+            else startTurnTimer(); // Reiniciar temporizador en modo offline
         }
     }
 
