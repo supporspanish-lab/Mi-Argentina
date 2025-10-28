@@ -1,7 +1,10 @@
 // Importar las funciones necesarias de los SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+// --- SOLUCIÓN: Importar las funciones de Firestore para usarlas en este archivo
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+// --- SOLUCIÓN: Re-exportar las funciones para que otros módulos (como pool.js) puedan usarlas
+export { doc, setDoc, getDoc, onSnapshot, onAuthStateChanged, updateDoc, deleteDoc };
 
 // Tu configuración de Firebase
 const firebaseConfig = {
@@ -17,15 +20,14 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app); // Ahora 'getFirestore' está definido en este ámbito
 
 // --- Funciones de Autenticación ---
 
 export async function registerWithEmail(username, email, password) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    const userDocRef = doc(db, "saldo", user.uid);
-    await setDoc(userDocRef, {
+    await setDoc(doc(db, "saldo", user.uid), {
         username: username,
         email: user.email,
         balance: 0
@@ -41,23 +43,6 @@ export async function loginWithEmail(email, password) {
 
     if (!docSnap.exists()) {
         await setDoc(userDocRef, {
-            email: user.email,
-            balance: 0
-        });
-    }
-    return user;
-}
-
-export async function loginWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-    const userDocRef = doc(db, "saldo", user.uid);
-    const docSnap = await getDoc(userDocRef);
-
-    if (!docSnap.exists()) {
-        await setDoc(userDocRef, {
-            username: user.displayName,
             email: user.email,
             balance: 0
         });
