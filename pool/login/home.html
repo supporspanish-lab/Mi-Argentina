@@ -37,15 +37,15 @@
         background-image: linear-gradient(160deg, #0a100d 0%, #1a1a1a 100%);
         color: var(--text-color);
         position: relative;
-        overflow-y: auto; /* Permitir scroll vertical */
-        padding: 20px;
+        overflow: hidden; /* --- SOLUCIÓN: Evitar cualquier tipo de scroll en el body --- */
+        /* padding: 20px; // El padding se gestiona en .app-container */
       }
 
       /* Aurora Background Effect */
       body::before,
       body::after {
           content: '';
-          position: fixed;
+          position: fixed; /* --- SOLUCIÓN: Evita que la animación afecte el tamaño de la página --- */
           z-index: -2;
           width: 80vmax;
           height: 80vmax;
@@ -96,11 +96,10 @@
         flex-direction: column;
         justify-content: space-between;
         width: 100%;
-        height: 100vh;
-        padding: 20px;
+        height: calc(100% - 40px); /* --- SOLUCIÓN: Restar el padding vertical para un ajuste perfecto --- */
+        padding: 20px; /* --- SOLUCIÓN: Mover el padding aquí --- */
         animation: fadeIn 0.8s ease-out forwards;
         will-change: transform, opacity;
-        overflow: hidden;
         position: relative;
       }
 
@@ -260,6 +259,168 @@
         position: relative;
       }
 
+      /* --- NUEVO: Estilos para el carrusel de partidas --- */
+      .game-carousel-container {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 20px 0;
+      }
+
+      .game-carousel {
+          display: flex;
+          gap: 25px;
+          padding: 10px 25px;
+          max-width: 100%;
+          overflow-x: auto;
+          /* Custom scrollbar for a better look */
+          scrollbar-width: thin;
+          scrollbar-color: var(--primary-color) var(--input-bg-color);
+      }
+
+      .game-carousel::-webkit-scrollbar {
+          height: 8px;
+      }
+
+      .game-carousel::-webkit-scrollbar-track {
+          background: var(--input-bg-color);
+          border-radius: 4px;
+      }
+
+      .game-carousel::-webkit-scrollbar-thumb {
+          background-color: var(--primary-color);
+          border-radius: 4px;
+      }
+
+      .game-card {
+          flex: 0 0 var(--option-card-size);
+          width: var(--option-card-size);
+          height: var(--option-card-size);
+          background-color: var(--container-bg-color);
+          border: 1px solid var(--border-color);
+          border-radius: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px;
+          cursor: pointer;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          position: relative;
+      }
+
+      .game-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 0 15px var(--shadow-color);
+      }
+
+      .card-player-info {
+          text-align: center;
+      }
+
+      .player-name-waiting {
+          font-weight: 700;
+          font-size: 18px;
+          color: var(--primary-color);
+          display: block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 160px;
+      }
+
+      .status-text {
+          font-size: 14px;
+          color: var(--text-secondary-color);
+      }
+
+      .card-player-count {
+          font-size: 24px;
+          font-weight: bold;
+          background-color: var(--input-bg-color);
+          padding: 5px 15px;
+          border-radius: 10px;
+      }
+
+      .create-icon {
+          font-size: 80px;
+          font-weight: 200;
+          color: var(--primary-color);
+          line-height: 1;
+      }
+
+      .create-text {
+          font-weight: 700;
+      }
+      
+      /* --- MODIFICADO: Estilos para la pantalla de espera --- */
+      #waiting-screen {
+          display: none; /* Oculto por defecto */
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 25px;
+          padding: 40px;
+          background-color: var(--container-bg-color);
+          border: 1px solid var(--border-color);
+          border-radius: 24px;
+          width: 100%;
+          max-width: 450px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          margin-bottom: 80px; /* Ajusta este valor para moverlo más arriba */
+      }
+
+      /* --- NUEVO: Estilos para el avatar dentro de la tarjeta --- */
+      .card-avatar {
+          width: 80px;
+          height: 80px;
+          margin: 10px 0;
+      }
+      .card-avatar .avatar-icon-bg {
+          fill: rgba(255, 255, 255, 0.05);
+      }
+      .card-avatar .avatar-icon {
+          fill: var(--primary-color);
+          opacity: 0.8;
+      }
+
+      /* --- NUEVO: Estilos para la tarjeta de "Esperando" del propio usuario --- */
+      .game-card.disabled {
+          cursor: not-allowed;
+          filter: grayscale(80%);
+          opacity: 0.7;
+      }
+      .game-card.disabled:hover {
+          transform: none;
+          box-shadow: none;
+      }
+
+      .waiting-text {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--text-secondary-color);
+          display: flex;
+          align-items: center;
+      }
+
+      .pulsing-dots span {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: var(--primary-color);
+          margin-left: 8px;
+          animation: pulse-dot 1.4s infinite ease-in-out both;
+      }
+      .pulsing-dots span:nth-child(1) { animation-delay: -0.32s; }
+      .pulsing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+      @keyframes pulse-dot {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+      }
+
       .cancel-button {
           padding: 15px 30px;
           border: 1px solid #e74c3c;
@@ -326,6 +487,87 @@
               box-shadow: 0 0 35px var(--primary-color), 0 0 15px var(--shadow-color);
           }
       }
+
+      /* --- NUEVO: Media Queries para Responsividad --- */
+
+      /* Para tablets y móviles en horizontal (hasta 768px) */
+      @media (max-width: 768px) {
+        :root {
+          --option-card-size: 180px; /* Reducir tamaño de tarjetas */
+        }
+
+        .app-title {
+          font-size: 24px; /* Reducir tamaño del título principal */
+        }
+
+        .user-profile {
+          padding: 4px 8px;
+          gap: 8px;
+        }
+
+        #user-display-name {
+          font-size: 13px;
+        }
+
+        .user-balance {
+          font-size: 11px;
+        }
+
+        .game-carousel {
+          gap: 15px; /* Menos espacio entre tarjetas */
+        }
+
+        .create-icon {
+          font-size: 60px;
+        }
+
+        #waiting-screen {
+          max-width: 90vw; /* Usar ancho de la ventana */
+          padding: 30px;
+          margin-bottom: 40px;
+        }
+
+        .waiting-text {
+          font-size: 20px;
+        }
+
+        .play-button {
+          font-size: 24px;
+          padding: 15px 40px;
+        }
+      }
+
+      /* Para móviles en vertical (hasta 480px) */
+      @media (max-width: 480px) {
+        :root {
+          --option-card-size: 150px; /* Tarjetas aún más pequeñas */
+        }
+
+        .app-header {
+          flex-direction: column; /* Apilar título y perfil de usuario */
+          gap: 15px;
+          padding-bottom: 15px;
+        }
+
+        .user-profile {
+          align-self: flex-end; /* Alinear el perfil a la derecha */
+        }
+
+        .game-carousel-container {
+          padding: 10px 0;
+        }
+
+        .game-card {
+          padding: 15px;
+          border-radius: 15px;
+        }
+
+        .player-name-waiting {
+          font-size: 16px;
+        }
+
+        .create-icon { font-size: 50px; }
+      }
     </style>
   </head>
   <body>
@@ -356,21 +598,50 @@
             </header>
             <main class="main-content">
                 <div class="game-carousel-container">
+                    <div id="waiting-screen">
+                        <div class="waiting-text">
+                            Esperando Oponente <span class="pulsing-dots"><span></span><span></span><span></span></span>
+                        </div>
+                        <button id="cancel-wait-btn" class="cancel-button">Cancelar</button>
+                    </div>
                     <div class="game-carousel" id="game-carousel"></div>
                 </div>
             </main>
         </div>
     </div>
+    <!-- --- NUEVO: Pantalla de carga al encontrar partida --- -->
+    <div id="match-loading-overlay" class="modal-overlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <h3 id="match-loading-text">Cargando...</h3>
+        </div>
+    </div>
+    <!-- --- NUEVO: Modal para confirmar unirse a la partida --- -->
+    <div id="join-game-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>¿Unirte a la partida de <span id="modal-opponent-name" class="opponent-name"></span>?</h3>
+            <div class="modal-buttons">
+                <button id="modal-cancel-btn" class="cancel-button" style="background-color: #555; border-color: #777;">Cancelar</button>
+                <button id="modal-join-btn" class="play-button" style="font-size: 18px; padding: 15px 30px;">Unirse</button>
+            </div>
+        </div>
+    </div>
     <script type="module">
-        import { onSessionStateChanged, onUserProfileUpdate, logout } from './auth.js';
-        // --- NUEVO: Importar Firebase para matchmaking ---
-        import { db, auth } from './auth.js';
-        import { collection, query, where, limit, getDocs, addDoc, doc, updateDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         const userDisplayName = document.getElementById('user-display-name');
         const userBalanceSpan = document.querySelector('.user-balance span'); // NUEVO
         const logoutBtn = document.getElementById('logout-btn');
+        const matchLoadingOverlay = document.getElementById('match-loading-overlay');
+        const matchLoadingText = document.getElementById('match-loading-text');
+        
+        import { onSessionStateChanged, onUserProfileUpdate, logout } from './auth.js';
+        // --- NUEVO: Importar Firebase para matchmaking ---
+        import { db, auth } from './auth.js';
+        import { collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
         const gameCarousel = document.getElementById('game-carousel');
+        const waitingScreen = document.getElementById('waiting-screen');
+        const cancelWaitBtn = document.getElementById('cancel-wait-btn');
         
         onSessionStateChanged((user) => {
             if (user) {
@@ -381,29 +652,59 @@
                     userBalanceSpan.textContent = `$${userData.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 });
 
-                logoutBtn.addEventListener('click', () => {
-                    logout().then(() => {
+                // Función de utilidad del primer script (ahora fusionado)
+                function showMatchLoading(message) {
+                    matchLoadingText.textContent = message;
+                    matchLoadingOverlay.classList.add('visible');
+                }
+
+                // Function to clean up the user's waiting game
+                const cleanupWaitingGame = async () => {
+                    if (userWaitingGameId) {
+                        console.log(`Cleaning up waiting game: ${userWaitingGameId}`);
+                        await deleteDoc(doc(db, "games", userWaitingGameId)).catch(e => console.error("Error deleting game on cleanup:", e));
+                        userWaitingGameId = null;
+                    }
+                };
+
+                logoutBtn.addEventListener('click', async () => {
+                    await cleanupWaitingGame(); // Attempt to clean up before logging out
+                    logout().then(() => { // Then proceed with logout
                         // Cierre de sesión exitoso.
                         window.location.href = 'login.html';
                     }).catch((error) => {
                         console.error('Error al cerrar sesión:', error);
                     });
                 });
-
                 // --- Lógica de Matchmaking en tiempo real para el carrusel (MEJORADA) ---
                 const gamesRef = collection(db, "games");
                 const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting")); // CORRECCIÓN: Eliminado el limit(1)
 
                 let userWaitingGameId = null;
 
+                // --- NUEVO: Lógica para detectar y purgar partidas "fantasma" ---
+                const STALE_GAME_MINUTES = 10; // Partidas con más de 10 minutos en espera se consideran abandonadas
+
                 const unsubscribe = onSnapshot(waitingGamesQuery, (querySnapshot) => {
                     gameCarousel.innerHTML = ''; // Limpiar el carrusel en cada actualización
                     let userIsWaiting = false;
+                    const now = new Date();
 
                     // 1. Iterar sobre las partidas en espera
                     querySnapshot.forEach(docSnap => {
                         const gameData = docSnap.data();
                         const gameId = docSnap.id;
+
+                        // --- DETECCIÓN DE PARTIDAS FANTASMA ---
+                        const createdAt = gameData.createdAt.toDate(); // Convertir timestamp de Firestore a objeto Date
+                        const minutesDiff = (now - createdAt) / (1000 * 60);
+
+                        if (minutesDiff > STALE_GAME_MINUTES && gameData.player1.uid !== user.uid) {
+                            console.log(`Partida fantasma detectada y omitida: ${gameId} (creada hace ${Math.round(minutesDiff)} min)`);
+                            // Opcional: Podríamos borrarla aquí, pero por ahora solo la ignoramos para otros jugadores.
+                            // deleteDoc(doc(db, "games", gameId));
+                            return; // No mostrar esta tarjeta de partida
+                        }
 
                         if (gameData.player1.uid === user.uid) {
                             // Si yo soy el que está esperando, marco la bandera
@@ -422,9 +723,16 @@
                                 <div class="card-player-count">1/2</div>
                             `;
                             card.addEventListener('click', async () => {
+                               // --- CORRECCIÓN: Asignar el turno inicial aleatoriamente al unirse ---
+                                const players = [gameData.player1.uid, user.uid];
+                                const startingPlayerUid = players[Math.floor(Math.random() * players.length)];
+
                                 await updateDoc(doc(db, "games", gameId), {
                                     player2: { uid: user.uid, username: userDisplayName.textContent },
-                                    status: "starting"
+                                    status: "starting",
+                                    // El UID del jugador que empieza se guarda en el servidor.
+                                    currentPlayerUid: startingPlayerUid,
+                                    turn: 1 // Asegurarse de que el contador de turnos esté en 1
                                 });
                                 window.location.href = `../index.html?gameId=${gameId}`;
                             });
@@ -432,39 +740,26 @@
                         }
                     });
 
-                    // 2. Añadir la tarjeta de "Crear Partida" o "Esperando"
-                    const createCard = document.createElement('div');
-                    createCard.className = 'game-card create-new';
-
                     if (userIsWaiting) {
-                        // Si el usuario ya está esperando, mostrar la tarjeta de "Esperando"
-                        createCard.classList.add('disabled');
-                        createCard.innerHTML = `
-                            <span class="player-name-waiting">Esperando...</span>
-                            <svg class="card-avatar" viewBox="0 0 36 36">
-                                <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
-                                <g class="avatar-icon" transform="translate(9, 9) scale(0.75)"><path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path></g>
-                            </svg>
-                            <button class="cancel-button" style="width:100%; font-size:16px; padding: 10px; margin-top: 10px;">Cancelar</button>
-                        `;
-                        // Lógica para el botón de cancelar
-                        createCard.querySelector('.cancel-button').addEventListener('click', async (e) => {
-                            e.stopPropagation(); // Evitar que el clic se propague a la tarjeta
-                            if (userWaitingGameId) {
-                                await deleteDoc(doc(db, "games", userWaitingGameId));
-                                userWaitingGameId = null;
-                            }
-                        });
+                        // Si el usuario está esperando, ocultar el lobby y mostrar la pantalla de espera
+                        gameCarousel.style.display = 'none';
+                        waitingScreen.style.display = 'flex';
                     } else {
-                        // Si no, mostrar la tarjeta normal para crear una partida
+                        // Si no, mostrar el lobby y ocultar la pantalla de espera
+                        gameCarousel.style.display = 'flex';
+                        waitingScreen.style.display = 'none';
+
+                        // Añadir la tarjeta para crear una nueva partida
+                        const createCard = document.createElement('div');
+                        createCard.className = 'game-card create-new';
                         createCard.innerHTML = `
-                            <div class="create-icon" style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">+</div>
-                            <button class="play-button" style="font-size: 18px; padding: 12px 25px; width: 100%;">Crear Partida</button>
+                            <div class="create-icon">+</div>
+                            <span class="create-text">Crear Partida</span>
                         `;
                         createCard.addEventListener('click', async () => {
                             createCard.style.pointerEvents = 'none';
-                            
-                            // --- CORRECCIÓN: Generar el estado inicial de las bolas ---
+
+                            // --- NUEVO: Generar el estado inicial de las bolas ---
                             const ballPositions = [];
                             const RACK_SPACING_DIAMETER = 24;
                             const TABLE_WIDTH = 1000;
@@ -493,25 +788,43 @@
                                 isActive: true
                             });
 
+                            // --- FIN NUEVO ---
+
                             const newGame = await addDoc(gamesRef, {
                                 player1: { uid: user.uid, username: userDisplayName.textContent },
                                 player2: null,
                                 status: "waiting",
                                 createdAt: new Date(),
-                                currentPlayerUid: user.uid,
-                                balls: ballPositions,
-                                aimingState: { angle: 0 }
+                                currentPlayerUid: null, // El turno se decidirá cuando el jugador 2 se una
+                                balls: ballPositions, // Guardar las posiciones iniciales
+                                turn: 1
                             });
 
                             // --- MEJORA: Escuchar activamente la partida que acabamos de crear ---
                             onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
-                                if (gameSnap.exists() && gameSnap.data().status === "starting") {
+                                if (gameSnap.data()?.status === "starting") {
                                     window.location.href = `../index.html?gameId=${newGame.id}`;
                                 }
                             });
                         });
+                        gameCarousel.appendChild(createCard);
                     }
-                    gameCarousel.appendChild(createCard);
+                });
+
+                // Lógica para el botón de cancelar
+                cancelWaitBtn.addEventListener('click', async () => {
+                    if (userWaitingGameId) {
+                        await deleteDoc(doc(db, "games", userWaitingGameId));
+                        userWaitingGameId = null;
+                        // El onSnapshot se encargará de volver a mostrar el carrusel
+                    }
+                });
+
+                // Attempt to clean up waiting game if the user navigates away or closes the tab
+                window.addEventListener('beforeunload', async (event) => {
+                    // Note: async operations in beforeunload are not guaranteed to complete.
+                    // This is a best-effort attempt.
+                    await cleanupWaitingGame();
                 });
 
             } else {

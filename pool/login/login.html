@@ -390,6 +390,37 @@
             margin-bottom: 15px;
         }
 
+        /* --- NUEVO: Media Queries para Responsividad --- */
+
+        /* Para móviles en vertical (hasta 480px) */
+        @media (max-width: 480px) {
+            .login-container {
+                width: 90vw; /* Usar el 90% del ancho de la ventana */
+                padding: 30px 20px; /* Reducir el padding */
+            }
+
+            .app-title {
+                font-size: 30px; /* Título un poco más pequeño */
+            }
+
+            .app-subtitle {
+                font-size: 14px;
+                margin-bottom: 30px;
+            }
+
+            .login-form {
+                gap: 15px; /* Menos espacio entre elementos del formulario */
+            }
+
+            .form-input, .btn-google {
+                font-size: 15px;
+            }
+
+            .btn-primary {
+                padding: 15px;
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -452,14 +483,6 @@
 
                 <button type="submit" class="btn-primary">Ingresar</button>
 
-                <div class="login-only">
-                    <div class="separator"><span>O</span></div>
-                    <button type="button" class="btn-google">
-                        <svg class="google-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.91l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.91z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.658-3.657-11.303-8.354l-6.571,4.819C9.656,39.663,16.318,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.012,36.49,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
-                        <span>Ingresar con Google</span>
-                    </button>
-                </div>
-
                 <p class="register-link login-only">
                     ¿No tienes una cuenta? <a href="javascript:void(0);" id="switchToRegister">Regístrate ahora</a>
                 </p>
@@ -474,7 +497,7 @@
     <!-- SDKs de Firebase -->
     <script type="module">
         // --- Lógica de la Interfaz de Usuario ---
-        import { registerWithEmail, loginWithEmail, loginWithGoogle, sendResetPasswordEmail } from './auth.js';
+        import { registerWithEmail, loginWithEmail, sendResetPasswordEmail, db } from './auth.js'; // Importar db para la lógica de perfil
 
         document.addEventListener('DOMContentLoaded', () => {
             const loginForm = document.getElementById('login-form');
@@ -489,7 +512,6 @@
             const submitButton = document.querySelector('.btn-primary');
             const usernameGroup = document.getElementById('username-group');
             const confirmPasswordGroup = document.getElementById('confirm-password-group');
-            const btnGoogle = document.querySelector('.btn-google');
             const passwordGroup = document.getElementById('password-group'); // MODIFICADO: Usar ID
             const emailInput = document.getElementById('email-input'); // NUEVO
             const errorMessageElement = document.getElementById('error-message'); // NUEVO
@@ -568,13 +590,12 @@
                     } else {
                         await loginWithEmail(email, password);
                     }
-                    triggerDisintegration();
+                    triggerDisintegration(); // Redirigir a home.html
                 } catch (error) {
                     console.error("Error de autenticación:", error);
                     let friendlyMessage = "Ocurrió un error. Inténtalo de nuevo.";
                     switch (error.code) {
                         case 'auth/user-not-found':
-                            friendlyMessage = "No se encontró un usuario con ese correo.";
                             break;
                         case 'auth/wrong-password':
                             friendlyMessage = "La contraseña es incorrecta.";
@@ -590,16 +611,6 @@
                             break;
                     }
                     errorMessageElement.textContent = friendlyMessage;
-                }
-            });
-
-            btnGoogle.addEventListener('click', async () => {
-                try {
-                    await loginWithGoogle();
-                    triggerDisintegration();
-                } catch (error) {
-                    console.error("Error con el login de Google:", error);
-                    errorMessageElement.textContent = "No se pudo iniciar sesión con Google.";
                 }
             });
 
