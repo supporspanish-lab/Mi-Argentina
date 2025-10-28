@@ -74,7 +74,12 @@ export function dragPower({ clientX }) {
     newPower = Math.max(0, Math.min(1, newPower));
 
     powerPercentState = newPower;
+    // --- CORRECCIÓN: Restaurar la actualización local para una respuesta instantánea. ---
     updatePowerUI(powerPercentState);
+
+    // --- NUEVO: Enviar la actualización de la potencia al servidor ---
+    // Disparamos un evento para que index.html lo capture y lo envíe a Firestore.
+    window.dispatchEvent(new CustomEvent('sendpower', { detail: { power: newPower } }));
 }
 
 export function stopPowerDrag() {

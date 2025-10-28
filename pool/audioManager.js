@@ -23,10 +23,10 @@ window.muteAllSounds = (mute) => {
 };
 
 export function prepareAudio() {
-    loadSound('ball_hit', 'audio/ballHit2.wav');
-    loadSound('cushionHit', 'audio/cushionHit.wav');
-    loadSound('pocket', 'audio/EntrarPelotaTronera.mp3');
-    loadSound('cueHit', 'audio/cueHit.wav');
+    loadSound('ball_hit', './audio/ballHit2.wav');
+    loadSound('cushionHit', './audio/cushionHit.wav');
+    loadSound('pocket', './audio/EntrarPelotaTronera.mp3');
+    loadSound('cueHit', './audio/cueHit.wav');
 }
 
 /**

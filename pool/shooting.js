@@ -1,6 +1,6 @@
 // --- Módulo de Disparo ---
 import * as THREE from 'three';
-import { areBallsMoving } from './fisicas.js';
+import { areBallsMoving, updateBallPositions } from './fisicas.js';
 import { getGameState, startShot, setPlacingCueBall } from './gameState.js';
 import { playSound } from './audioManager.js';
 import { cueBall, getSceneBalls } from './ballManager.js';
@@ -48,33 +48,26 @@ export function shoot(powerPercent) {
     const currentShotAngle = getCurrentShotAngle();
     const impulseDirection = new THREE.Vector2(Math.cos(currentShotAngle), Math.sin(currentShotAngle));
     const velocityFactor = 2.5;
-
     isShooting = true;
 
-    animateCueShot(currentShotAngle, shotPower, (powerForCallback = 0) => { // --- SOLUCIÓN: Añadir valor por defecto
-        if (areBallsMoving(getSceneBalls())) return;
+    // --- CORRECCIÓN: Enviar los datos del tiro al servidor en lugar de aplicarlos localmente ---
+    import('./spinControls.js').then(({ getSpinOffset }) => {
+        const spin = getSpinOffset();
 
-        cueBall.vx = impulseDirection.x * (power / 1000) * velocityFactor;
-        cueBall.vy = impulseDirection.y * (power / 1000) * velocityFactor;
-        cueBall.initialVx = cueBall.vx;
-        cueBall.initialVy = cueBall.vy;
-        import('./spinControls.js').then(({ getSpinOffset }) => {
-            cueBall.spin = { ...getSpinOffset() };
-        });
+        const shotData = {
+            angle: currentShotAngle,
+            power: shotPower,
+            spin: spin,
+            cueBallStartPos: { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y }
+        };
 
-        const shakeIntensity = Math.pow(powerForCallback, 2) * 2.5;
-        const shakeDuration = 0.15;
-        window.triggerScreenShake(shakeIntensity, shakeDuration);
+        // --- CORRECCIÓN: Aplicar el tiro localmente de inmediato (Client-Side Prediction) ---
+        // Esto elimina el lag para el jugador que dispara.
+        window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
 
-        if ('vibrate' in navigator) {
-            const vibrationDuration = Math.max(50, Math.floor(powerForCallback * 150));
-            navigator.vibrate(vibrationDuration);
-        }
+        // --- Enviar los datos del tiro al servidor para el oponente ---
+        window.dispatchEvent(new CustomEvent('sendsingleplayer', { detail: shotData }));
 
-        startShot();
-        playSound('cueHit', Math.pow(powerForCallback, 2) * 0.9);
-
-        // Resetear estado
-        isShooting = false;
+        isShooting = false; // Reseteamos el estado de disparo
     });
 }

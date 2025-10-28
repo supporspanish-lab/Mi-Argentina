@@ -18,7 +18,7 @@ let shadowMaterial;
 
 export function prepareBallLoaders() {
     shadowTextureLoader = new THREE.TextureLoader(loadingManager);
-    shadowTexture = shadowTextureLoader.load('imajenes/zombra.png');
+    shadowTexture = shadowTextureLoader.load('./imajenes/zombra.png');
     shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, opacity: 0.5 });
 }
 
@@ -232,7 +232,7 @@ export function setupBalls(isInitialSetup = false, singleBallData = null) {
  */
 export function loadBallModels() {
     const loader = new GLTFLoader(loadingManager);
-    const ballModelPath = 'modelos/billiard_balls.glb';
+    const ballModelPath = './modelos/billiard_balls.glb';
 
     // --- SOLUCIÓN: No es necesario gestionar este recurso manualmente.
     // El GLTFLoader ya está asociado con el loadingManager, que se encargará de la espera.

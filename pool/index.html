@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- --- MODIFICADO: Añadir user-scalable=no para una mejor experiencia en móviles --- -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">    <title>Juego de BlackBall con Canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">    <title>Juego de BlackBal con Canvas</title>
     <!-- NUEVO: Evita el error 404 de favicon.ico en la consola -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <style>
@@ -392,11 +392,6 @@
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             pointer-events: none; /* Para que no interfiera con el ratón */
         }
-        #turnIndicator.visible {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-            animation: pulse-border 1.5s 2;
-        }
 
         /* --- NUEVO: Estilos para los sliders en el panel de opciones --- */
         #options-panel label {
@@ -440,13 +435,6 @@
         #options-panel button:hover {
             background-color: #4aa3df;
         }
-
-        @keyframes pulse-border {
-            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
-        }
-
 
         /* --- NUEVO: Estilos para el panel de opciones deslizable --- */
         #options-panel {
@@ -811,14 +799,204 @@
         }
     </script>
     <!-- 2. Cargar pool.js como un módulo para permitir el uso de 'import' -->
-    <script type="module" src="pool.js"></script>
+    <!-- <script type="module" src="pool.js"></script> -->
+
+    <!-- --- MODIFICACIÓN PARA PRUEBAS ONLINE --- -->
+    <script type="module">
+        // 1. Forzar la URL para que incluya el ID de la partida de prueba.
+        // Esto simula la redirección desde la pantalla de matchmaking.
+        const gameId = 'i7IghaYILY4vhePcIJj6';
+        const url = new URL(window.location);
+        if (!url.searchParams.has('gameId')) {
+            url.searchParams.set('gameId', gameId);
+            // Reemplazamos el historial para que el usuario no pueda volver atrás a la URL sin ID.
+            window.history.replaceState({}, '', url);
+        }
+
+        // 2. Importar y ejecutar el script principal del juego.
+        // El script 'pool.js' ya contiene la lógica para leer el 'gameId' de la URL e iniciar la conexión.
+        import './pool.js';
+    </script>
+
+    <!-- --- NUEVO: Script para la sincronización en tiempo real del apuntado --- -->
+    <script type="module">
+        // 1. Importar las funciones necesarias de Firestore y la autenticación.
+        import { db, auth, onSnapshot, doc, updateDoc } from './login/auth.js';
+
+        // 2. Obtener el ID de la partida desde la URL.
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('gameId');
+
+        // --- CORRECCIÓN: Envolver la lógica en un 'if' para evitar el 'Illegal return statement' ---
+        if (!gameId) {
+            console.error("No se encontró gameId en la URL. La sincronización no funcionará.");
+        } else {
+            // 3. Función "throttle" para no sobrecargar Firestore.
+            // Limita las actualizaciones a una cada 50ms como máximo.
+            function throttle(func, limit) {
+                let inThrottle;
+                return function(...args) {
+                    if (!inThrottle) {
+                        func.apply(this, args);
+                        inThrottle = true;
+                        setTimeout(() => inThrottle = false, limit);
+                    }
+                }
+            }
+
+            // 4. Función para enviar la actualización del ángulo a Firestore.
+            const sendAimUpdate = throttle(async (angle) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        await updateDoc(gameRef, { aimingAngle: angle });
+                    } catch (error) {
+                        console.error("Error al sincronizar el apuntado:", error);
+                    }
+                }
+            }, 50); // Límite de 50ms.
+
+            // --- NUEVO: Función para enviar la actualización de la potencia a Firestore ---
+            const sendPowerUpdate = throttle(async (power) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo 'aimingPower' para la potencia
+                        await updateDoc(gameRef, { aimingPower: power });
+                    } catch (error) {
+                        console.error("Error al sincronizar la potencia:", error);
+                    }
+                }
+            }, 50); // Mismo límite para la potencia
+
+            // --- NUEVO: Función para enviar la posición de la bola blanca durante "bola en mano" ---
+            const sendCueBallPositionUpdate = throttle(async (position) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo 'cueBallPosition'
+                        await updateDoc(gameRef, { cueBallPosition: position });
+                    } catch (error) {
+                        console.error("Error al sincronizar la posición de la bola blanca:", error);
+                    }
+                }
+            }, 50); // Mismo límite
+
+            // --- NUEVO: Función para enviar la actualización del efecto (spin) ---
+            const sendSpinUpdate = throttle(async (spin) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo 'aimingSpin'
+                        await updateDoc(gameRef, { aimingSpin: spin });
+                    } catch (error) {
+                        console.error("Error al sincronizar el efecto:", error);
+                    }
+                }
+            }, 50); // Mismo límite
+
+            // --- NUEVO: Función para enviar el estado de visibilidad del modal de efecto ---
+            const sendSpinModalUpdate = async (isVisible) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo 'isSpinModalOpen'
+                        await updateDoc(gameRef, { isSpinModalOpen: isVisible });
+                    } catch (error) {
+                        console.error("Error al sincronizar el modal de efecto:", error);
+                    }
+                }
+            };
+
+
+            // 5. Crear un evento personalizado para que pool.js pueda enviar el ángulo.
+            // El script pool.js deberá disparar este evento cuando el jugador apunte.
+            // Ejemplo en pool.js: window.dispatchEvent(new CustomEvent('sendaim', { detail: { angle: currentAngle } }));
+            window.addEventListener('sendaim', (event) => {
+                if (event.detail && typeof event.detail.angle !== 'undefined') {
+                    sendAimUpdate(event.detail.angle);
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de potencia ---
+            window.addEventListener('sendpower', (event) => {
+                if (event.detail && typeof event.detail.power !== 'undefined') {
+                    sendPowerUpdate(event.detail.power);
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de efecto (spin) ---
+            window.addEventListener('sendspin', (event) => {
+                if (event.detail && event.detail.spin) {
+                    sendSpinUpdate(event.detail.spin);
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de visibilidad del modal de efecto ---
+            window.addEventListener('setspinmodal', (event) => {
+                if (event.detail && typeof event.detail.visible !== 'undefined') {
+                    sendSpinModalUpdate(event.detail.visible);
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de mover la bola blanca ---
+            window.addEventListener('sendcueballmove', (event) => {
+                if (event.detail && event.detail.position) {
+                    sendCueBallPositionUpdate(event.detail.position);
+                }
+            });
+
+            // 6. Escuchar cambios en la partida para recibir el ángulo del oponente.
+            onSnapshot(doc(db, "games", gameId), (gameSnap) => {
+                const gameData = gameSnap.data();
+                // Disparar un evento para que pool.js reciba el ángulo y lo dibuje.
+                window.dispatchEvent(new CustomEvent('receiveaim', { detail: gameData }));
+            });
+
+            // --- NUEVO: Listener para enviar los datos del tiro al servidor ---
+            window.addEventListener('sendsingleplayer', async (event) => {
+                if (gameId && event.detail) {
+                    const gameRef = doc(db, "games", gameId);
+                    try {
+                        await updateDoc(gameRef, { 
+                            lastShot: {
+                                playerUid: auth.currentUser.uid,
+                                ...event.detail,
+                                timestamp: Date.now()
+                            },
+                            ballInHandFor: null, cueBallPosition: null,
+                            aimingSpin: { x: 0, y: 0 }, isSpinModalOpen: false,
+                            aimingPower: 0
+                        });
+                    } catch (error) {
+                        console.error("Error al enviar los datos del tiro:", error);
+                    }
+                }
+            });
+
+            // --- NUEVO: Canal para sincronizar el estado de las bolas durante el tiro ---
+            const sendBallStateUpdate = throttle(async (ballStates) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo 'liveBallState'
+                        await updateDoc(gameRef, { liveBallState: ballStates });
+                    } catch (error) {
+                        // No loguear errores aquí para no llenar la consola, es una operación de alta frecuencia.
+                    }
+                }
+            }, 100); // Enviar actualizaciones 10 veces por segundo (100ms)
+
+            window.addEventListener('sendballstates', (event) => event.detail && sendBallStateUpdate(event.detail));
+        }
+    </script>
 
     <!-- --- SOLUCIÓN: Script para capturar errores globales --- -->
     <script>
         const errorOverlay = document.getElementById('error-overlay');
         const errorDetails = document.getElementById('error-details');
         const copyErrorBtn = document.getElementById('copy-error-btn');
-
+        
         function showErrorModal(errorInfo) {
             errorDetails.textContent = errorInfo;
             errorOverlay.style.display = 'flex';
@@ -859,7 +1037,7 @@
     <!-- 3. Registrar el Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
+            window.addEventListener('load', () => { // --- CORRECCIÓN: Usar 'load' para asegurar que todo el DOM esté listo
                 navigator.serviceWorker.register('sw.js')
                     .then(registration => { /* El Service Worker se registró correctamente. */ })
                     .catch(error => {

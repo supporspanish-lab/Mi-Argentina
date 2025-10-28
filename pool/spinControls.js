@@ -23,7 +23,8 @@ export function initializeSpinControls() {
         // Si no estamos en modo edición, evitamos que el clic afecte al juego y mostramos el modal.
         e.preventDefault();
         e.stopPropagation();
-        showSpinModal();
+        // --- CORRECCIÓN: No mostrar el modal directamente. Enviar la orden al servidor. ---
+        window.dispatchEvent(new CustomEvent('setspinmodal', { detail: { visible: true } }));
     };
     miniSpinSelector.addEventListener('mousedown', handleMiniSelectorInteraction);
     miniSpinSelector.addEventListener('touchstart', handleMiniSelectorInteraction, { passive: true });
@@ -33,7 +34,8 @@ export function initializeSpinControls() {
         // Si el clic es en el fondo oscuro (overlay) y no en el selector grande...
         if (e.target === spinModalOverlay) {
             e.stopPropagation();
-            hideSpinModal(); // No necesita cambio
+            // --- CORRECCIÓN: No ocultar el modal directamente. Enviar la orden al servidor. ---
+            window.dispatchEvent(new CustomEvent('setspinmodal', { detail: { visible: false } }));
         }
     });
 
@@ -74,6 +76,15 @@ export function initializeSpinControls() {
     document.addEventListener('mouseup', handleDragEnd);
     document.addEventListener('touchend', handleDragEnd);
 }
+
+// --- NUEVO: Listener para recibir la orden del servidor y actualizar la UI ---
+window.addEventListener('updatespinmodal', (event) => {
+    if (event.detail.visible) {
+        showSpinModal();
+    } else {
+        hideSpinModal();
+    }
+});
 
 // --- NUEVO: Función para mostrar el modal de efecto ---
 export function showSpinModal() {
@@ -126,18 +137,18 @@ export function dragSpin({ clientX, clientY }) {
     spinOffsetState.x = dx / selectorRadius;
     spinOffsetState.y = -dy / selectorRadius; // Invertir Y porque en la UI +Y es hacia abajo
 
-    // 1. Mover el punto del modal grande (usando transform para un movimiento suave)
+    // --- CORRECCIÓN: Restaurar la actualización local para una respuesta instantánea. ---
+    // 1. Mover el punto del modal grande
     const transformValue = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
     spinSelectorDot.style.transform = transformValue;
 
-    // --- NUEVO: 2. Mover el punto de la miniatura (usando porcentajes para que sea responsivo) ---
+    // 2. Mover el punto de la miniatura
     if (miniSpinSelectorDot) {
-        // --- SOLUCIÓN: Ajustar el rango de movimiento para compensar el área transparente de la imagen.
-        // El punto se moverá en un rango del 40% desde el centro (del 10% al 90% del contenedor),
-        // lo que lo mantiene dentro de la parte visible de la bola.
         miniSpinSelectorDot.style.left = `${50 + (spinOffsetState.x * 40)}%`;
         miniSpinSelectorDot.style.top = `${50 - (spinOffsetState.y * 40)}%`;
     }
+
+    window.dispatchEvent(new CustomEvent('sendspin', { detail: { spin: spinOffsetState } }));
 }
 
 export function stopSpinDrag() {

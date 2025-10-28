@@ -1,7 +1,9 @@
 // --- Módulo de Física ---
+import * as THREE from 'three';
 import { playSound } from './audioManager.js';
 import { shotStartTime, getGameState, setFirstHitBall } from './gameState.js'; // --- NUEVO: Importar el tiempo de inicio del tiro
 import { initSpatialManager, updateGrid, getNearbyObjects } from './spatialManager.js';
+import { BALL_RADIUS } from './config.js';
 
 let physicsInitialized = false;
 
@@ -311,6 +313,50 @@ function isSegmentNearPocket(p1, p2, pockets) {
     // --- LOG: Indica que el bucle de comprobación de troneras ha terminado.
     // console.log('%c[Fisica]%c isSegmentNearPocket() finalizado.', 'color: #e67e22; font-weight: bold;', 'color: inherit;');
     return false;
+}
+
+/**
+ * --- NUEVO: Aplica directamente el estado de las bolas recibido del servidor.
+ * Se usa en el cliente no autoritativo para sincronizar la mesa.
+ * @param {Array} serverBalls - El array con el estado de las bolas del servidor.
+ * @param {Array} localBalls - El array de las bolas locales.
+ */
+export function applyBallStatesFromServer(serverBalls, localBalls) {
+    serverBalls.forEach(serverBall => {
+        const localBall = localBalls.find(b => b.number === serverBall.number);
+        if (localBall) {
+            // Interpolar suavemente hacia la posición del servidor para evitar saltos bruscos
+            const oldX = localBall.mesh.position.x;
+            const oldY = localBall.mesh.position.y;
+            const lerpFactor = 0.5; // Un valor más alto hace que la corrección sea más rápida
+            localBall.mesh.position.x += (serverBall.x - localBall.mesh.position.x) * lerpFactor;
+            localBall.mesh.position.y += (serverBall.y - localBall.mesh.position.y) * lerpFactor;
+
+            // --- CORRECCIÓN: Calcular y aplicar la rotación visual en el cliente no autoritativo ---
+            const dx = localBall.mesh.position.x - oldX;
+            const dy = localBall.mesh.position.y - oldY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 0.01) { // Solo rotar si hay un movimiento significativo
+                const rotationAngle = distance / BALL_RADIUS;
+                const rotationAxis = new THREE.Vector3(-dy, dx, 0).normalize();
+
+                const deltaQuaternion = new THREE.Quaternion();
+                deltaQuaternion.setFromAxisAngle(rotationAxis, rotationAngle);
+
+                // Aplicar la rotación a la malla interna de la bola
+                localBall.mesh.children[0].quaternion.premultiply(deltaQuaternion);
+            }
+
+            localBall.mesh.visible = serverBall.isActive;
+            if (localBall.shadowMesh) localBall.shadowMesh.visible = serverBall.isActive;
+
+            // --- CORRECCIÓN: Actualizar también la posición de la sombra ---
+            if (localBall.shadowMesh) {
+                localBall.shadowMesh.position.set(serverBall.x, serverBall.y, 0.1);
+            }
+        }
+    });
 }
 
 /**

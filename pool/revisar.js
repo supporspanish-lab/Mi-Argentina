@@ -1,15 +1,14 @@
 // --- Módulo de Revisión ---
-import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn } from './gameState.js';
+import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 /**
  * Función de prueba para revisar el estado antes de mostrar la UI.
  */
-export async function revisarEstado(faltaPorTiempo = false, gameRef = null, finalBallStates = null) {
+export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onlineGameData = null) {
     // --- SOLUCIÓN: Obtener el estado inicial y mantenerlo separado.
     const estadoInicialJuego = getGameState();
     const { 
@@ -18,8 +17,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, fina
         firstBallHitThisTurn: primeraBolaGolpeadaEsteTurno, 
         ballsAssigned: bolasAsignadasAlInicioTurno, 
         isLoading: estaCargando, 
-        gameOver: juegoTerminado,
-        onlineGameData, // --- NUEVO: Obtener datos de la partida online
+        gameOver: juegoTerminado, // --- NUEVO: Obtener el estado de fin de partida
         isFirstTurn: esPrimerTurno // --- NUEVO: Obtener la bandera del primer turno.
     } = estadoInicialJuego;
    
@@ -43,14 +41,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, fina
     // --- FALTA AÑADIDA: Tiempo agotado ---
     if (faltaPorTiempo) {
         faltaCometida = true;
-        // --- MODIFICADO: En online, solo el servidor decide si es bola en mano ---
-        if (gameRef) {
-            // En una partida online, simplemente cambiamos el turno.
-            // La lógica de "bola en mano" se podría añadir más adelante.
-        } else {
-            // En modo offline, sí da bola en mano.
-            faltaConBolaEnMano = true;
-        }
+        // En modo offline, sí da bola en mano.
+        faltaConBolaEnMano = true;
         motivoFalta = "Se agotó el tiempo";
     }
 
@@ -146,7 +138,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, fina
                     return tipoBola === tipoBolaJugador;
                 });
             }
-
             if (jugadorTieneBolasRestantes || !estadoActualJuego.ballsAssigned) {
                 // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
                 setGameOver(true);
@@ -180,53 +171,79 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, fina
 
     // --- NUEVO: Si es el inicio de la partida, elegir un jugador al azar.
     // Se detecta el inicio si no se ha golpeado ninguna bola y no se ha entronerado ninguna.
-    // --- CORRECCIÓN: Usar la nueva bandera 'esPrimerTurno' para asegurar que solo se ejecute una vez.
+    // --- CORRECCIÓN: Declarar onlineGameData aquí para que esté disponible en toda la función.
+    // --- CORRECCIÓN: Usar el parámetro si existe, si no, obtenerlo localmente.
+    if (!onlineGameData) onlineGameData = getOnlineGameData();
+
     if (esPrimerTurno) {
         const jugadorInicial = Math.random() < 0.5 ? 1 : 2;
-        setCurrentPlayer(jugadorInicial);
-        updateActivePlayerUI(jugadorInicial);
-        completeFirstTurn(); // Marcar que el primer turno ya ha sido asignado.
-    } else {
-        // Lógica normal de cambio de turno para el resto de la partida.
-        let cambiarTurno = false;
-        // El turno cambia si se cometió una falta O si no se metió una bola propia.
-        if (faltaCometida || !jugadorEntroneroSuBola) {
-            cambiarTurno = true;
-        }
-
-        if (cambiarTurno) {
-            const siguienteJugador = jugadorActual === 1 ? 2 : 1;
-            // --- MODIFICADO: La lógica de cambio de turno ahora depende de si es online ---
-            if (gameRef && onlineGameData) {
-                const siguienteJugadorUid = onlineGameData.player1.uid === onlineGameData.currentPlayerUid
-                    ? onlineGameData.player2.uid
-                    : onlineGameData.player1.uid;
-                
-                await updateDoc(gameRef, {
-                    currentPlayerUid: siguienteJugadorUid,
-                    balls: finalBallStates,
-                    ballInHand: faltaConBolaEnMano // --- NUEVO: Enviar si el siguiente turno tiene bola en mano
-                });
-            } else { // Modo offline
-                setCurrentPlayer(siguienteJugador);
-                updateActivePlayerUI(siguienteJugador);
-            }
+        // --- MODIFICADO: En online, el creador de la partida ya decidió quién empieza.
+        if (gameRef && onlineGameData) {
+            // En online, el estado ya está en el servidor, solo lo leemos.
+            // La UI se actualizará automáticamente desde pool.js
         } else {
-            // Si el jugador no cambia, solo actualizamos las posiciones de las bolas
-            // --- CORRECCIÓN: Al continuar el turno, nos aseguramos de que no haya "bola en mano" ---
-            if (gameRef) await updateDoc(gameRef, { balls: finalBallStates, ballInHand: false });
-            else startTurnTimer(); // Reiniciar temporizador en modo offline
+            // En offline, sí asignamos el jugador inicial.
+            setCurrentPlayer(jugadorInicial);
+            updateActivePlayerUI(jugadorInicial);
         }
+        completeFirstTurn(); // Marcar que el primer turno ya ha sido asignado.
     }
 
     // --- CORRECCIÓN: Mostrar el mensaje de falta DESPUÉS de haber procesado el cambio de turno.
-    if (faltaCometida && motivoFalta) {
+    if (faltaCometida && motivoFalta) { // Solo mostrar localmente en modo offline
         showFoulMessage(`Falta: ${motivoFalta}`);
     }
 
     // --- CORRECCIÓN: La bola en mano solo se activa si la falta lo requiere ---
-    if (faltaConBolaEnMano && !bolaBlancaEntronerada) { // Si no se metió la blanca, pero es falta con bola en mano
+    if (faltaConBolaEnMano) { // Si no se metió la blanca, pero es falta con bola en mano
         setPlacingCueBall(true);
+        // --- NUEVO: Sincronizar el estado de "bola en mano" con el servidor ---
+        // Esta lógica ahora se centraliza al final.
+    }
+
+    // --- CORRECCIÓN: Lógica de Cliente Autoritativo para actualizar el servidor ---
+    if (gameRef) {
+        const { updateDoc } = await import('./login/auth.js');        
+        const finalGameState = getGameState();
+
+        // --- CORRECCIÓN: Centralizar la lógica de cambio de turno aquí ---
+        let shouldSwitchTurn = false;
+        if (faltaCometida || !jugadorEntroneroSuBola) {
+            shouldSwitchTurn = true;
+        }
+
+        const nextPlayerNumber = shouldSwitchTurn ? (jugadorActual === 1 ? 2 : 1) : jugadorActual;
+        // Actualizar el estado local para el siguiente frame
+        setCurrentPlayer(nextPlayerNumber);
+
+        // Determinar el UID del siguiente jugador
+        let nextPlayerUid = nextPlayerNumber === 1 ?
+            onlineGameData?.player1?.uid :
+            onlineGameData?.player2?.uid;
+
+        // --- SOLUCIÓN: Evitar 'undefined' si el siguiente jugador no existe ---
+        if (!nextPlayerUid) nextPlayerUid = onlineGameData.currentPlayerUid;
+
+        // Construir el paquete de actualización para Firestore
+        const updatePayload = {
+            balls: balls.map((b) => ({ // Posiciones finales de todas las bolas
+                number: b.number,
+                x: b.mesh.position.x,
+                y: b.mesh.position.y,
+                isActive: b.isActive,
+            })),
+            currentPlayerUid: nextPlayerUid,
+            playerAssignments: finalGameState.playerAssignments,
+            ballsAssigned: finalGameState.ballsAssigned,
+            foulInfo: faltaCometida ? { reason: motivoFalta, ballInHand: faltaConBolaEnMano } : null,
+            ballInHandFor: faltaConBolaEnMano ? nextPlayerUid : null,
+            liveBallState: null, // Limpiar el estado en vivo
+        };
+
+        // Enviar la actualización autoritativa al servidor
+        updateDoc(gameRef, updatePayload).catch((err) =>
+            console.error("Error al sincronizar el estado final del turno:", err),
+        );
     }
 
     // --- CORRECCIÓN: Limpiar el estado del tiro DESPUÉS de haberlo revisado todo.

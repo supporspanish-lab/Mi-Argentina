@@ -153,12 +153,6 @@ export function setFirstHitBall(ball) {
  
 export function addPocketedBall(ball) {
     pocketedThisTurn.push(ball);
-
-    // --- CORRECCIÓN: Asignar bolas en tiempo real en lugar de al final del turno ---
-    // --- CORRECCIÓN: La asignación de bolas ahora se gestiona centralmente en revisar.js
-    // para evitar que se asigne un grupo antes de comprobar las faltas del turno.
-
-    addPocketedBallToUI(ball);
 }
 
 export function setBallsAssigned(areAssigned) {
@@ -179,40 +173,6 @@ export function assignPlayerTypes(player, type) {
     playerAssignments[player] = type;
     playerAssignments[player === 1 ? 2 : 1] = (type === 'solids' ? 'stripes' : 'solids');
     ballsAssigned = true;
-}
-
-// --- Lógica de UI de Estado ---
-
-function addPocketedBallToUI(ball) {
-    if (ball.number === null || ball.number === 8) return;
-
-    const ballType = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-    let targetContainerId = null;
-
-    if (ballsAssigned) {
-        if (playerAssignments[1] === ballType) {
-            targetContainerId = 'player1PocketedContainer';
-        } else if (playerAssignments[2] === ballType) {
-            targetContainerId = 'player2PocketedContainer';
-        }
-    } else {
-        targetContainerId = (currentPlayer === 1) ? 'player1PocketedContainer' : 'player2PocketedContainer';
-    }
-
-    const container = document.getElementById(targetContainerId);
-    if (!container) return;
-
-    const ballIcon = document.createElement('div');
-    ballIcon.className = 'player-ball-icon';
-    const imageUrl = `imajenes/BolasMetidas/${ball.number}.png`;
-    ballIcon.style.backgroundImage = `url('${imageUrl}')`;
-
-    const placeholder = container.querySelector('.pocketed-ball-placeholder');
-    if (placeholder) {
-        container.replaceChild(ballIcon, placeholder);
-    } else {
-        container.appendChild(ballIcon);
-    }
 }
 
 // --- NUEVO: Función para reorganizar las bolas en la UI después de la asignación ---
@@ -297,7 +257,7 @@ export function getGameState() {
         isFirstTurn // --- NUEVO: Exponer la bandera del primer turno.
         
     };
-}
+} 
 
 /**
  * --- NUEVO: Comprueba si alguna bola está en medio de una animación de entronerado.
@@ -324,7 +284,8 @@ export function setOnlineGameData(data) {
 }
 
 export function getOnlineGameData() {
-    return onlineGameData;
+    // --- SOLUCIÓN: Devolver un objeto vacío en lugar de null para evitar errores.
+    return onlineGameData || {};
 }
 
 // --- NUEVO: Función para modificar el estado de tiro en progreso ---

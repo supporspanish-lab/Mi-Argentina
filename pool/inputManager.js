@@ -2,8 +2,6 @@
 import * as THREE from 'three';
 import { cueBall, getSceneBalls } from './ballManager.js';
 import { getGameState, setPlacingCueBall, startShot, getOnlineGameData, setShotInProgress } from './gameState.js';
-import { auth, db } from './login/auth.js'; // --- NUEVO: Importar auth y db
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { camera, zoomState } from './scene.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
 import { animateCueShot, hideAimingGuides, isAimingAtBall } from './aiming.js';
@@ -25,10 +23,7 @@ let pointerStartPos = { x: 0, y: 0 };
 
 // --- NUEVO: Variables para la sincronización del apuntado en tiempo real ---
 let lastAimingUpdateTime = 0;
-const AIMING_UPDATE_THROTTLE = 100; // ms (10 actualizaciones por segundo)
-
-// --- NUEVO: Variable para el ID de la partida actual ---
-let currentOnlineGameId = null;
+const AIMING_UPDATE_THROTTLE = 50; // ms (20 actualizaciones por segundo para mayor fluidez)
 
 let currentShotAngle = 0;
 // --- NUEVO: Variables para un arrastre de ángulo relativo ---
@@ -46,25 +41,9 @@ export function initializeInputManager() {
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp); // Tratar cancel como up
-
-    // --- NUEVO: Obtener el ID de la partida desde la URL ---
-    const urlParams = new URLSearchParams(window.location.search);
-    currentOnlineGameId = urlParams.get('gameId');
 }
 
 function onPointerDown(e) {
-    // --- ¡NUEVA PROTECCIÓN! ---
-    // Comprobar si es una partida online y si es el turno del jugador actual.
-    const onlineGameData = getOnlineGameData();
-    const currentUser = auth.currentUser;
-
-    // Si hay datos de partida online Y el UID del jugador actual NO coincide con mi UID...
-    if (onlineGameData && currentUser && onlineGameData.currentPlayerUid !== currentUser.uid) {
-        console.log("No es tu turno.");
-        return; // ...no hacer nada.
-    }
-    // --- FIN DE LA PROTECCIÓN ---
-
     // Si la última acción fue arrastrar el punto de efecto, no iniciar un tiro.
     if (wasDraggingSpin()) {
         return;
@@ -131,16 +110,12 @@ function onPointerMove(e) {
         // 4. Aplicar esta pequeña diferencia (afectada por la sensibilidad) al ángulo de tiro actual.
         currentShotAngle += angleDelta * sensitivity;
 
+        // --- CORRECCIÓN CRÍTICA: Enviar el ángulo actualizado al servidor ---
+        // Esta es la pieza que faltaba para que el apuntado se sincronice.
+        window.dispatchEvent(new CustomEvent('sendaim', { detail: { angle: currentShotAngle } }));
+
         // 5. Guardar el ángulo actual del puntero para el siguiente frame.
         lastPointerAngle = currentPointerAngle;
-
-        // --- NUEVO: Sincronizar el apuntado en tiempo real ---
-        const now = performance.now();
-        const onlineGameData = getOnlineGameData();
-        if (onlineGameData && onlineGameData.currentPlayerUid === auth.currentUser?.uid && now - lastAimingUpdateTime > AIMING_UPDATE_THROTTLE) {
-            updateOnlineAiming(currentShotAngle);
-            lastAimingUpdateTime = now;
-        }
     } else if (movingCueBall && isPlacingCueBall) {
         // --- MEJORA: La bola se queda trabada en el límite si se intenta mover a una posición inválida ---
         const newX = Math.max(BALL_RADIUS, Math.min(worldPos.x, TABLE_WIDTH - BALL_RADIUS));
@@ -152,9 +127,10 @@ function onPointerMove(e) {
 
         if (placementIsValid) {
             // Si la nueva posición es válida, mover la bola y ponerla blanca.
+            // --- CORRECCIÓN: Actualizar localmente y enviar al servidor ---
             cueBall.mesh.position.x = newX;
             cueBall.mesh.position.y = newY;
-            if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(newX, newY, 0.1);
+            window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: { x: newX, y: newY } } }));
             cueBallMaterial.color.set(0xffffff);
         } else {
             // Si es inválido, no mover la bola y mantenerla blanca.
@@ -179,41 +155,6 @@ function onPointerUp(e) {
     pointerDown = false;
     pullingBack = false;
     movingCueBall = false;
-}
-
-/**
- * --- NUEVO: Envía la información del tiro a Firestore.
- * @param {number} power - La potencia del tiro (0 a 1).
- */
-export async function shootOnline(power) {
-    if (!currentOnlineGameId || !auth.currentUser) return;
-
-    const gameRef = doc(db, "games", currentOnlineGameId);
-    const spin = getSpinOffset();
-
-    await updateDoc(gameRef, {
-        lastShot: {
-            playerId: auth.currentUser.uid,
-            angle: getCurrentShotAngle(),
-            power: power * MAX_SHOT_POWER,
-            spin: { x: spin.x, y: spin.y },
-            timestamp: Date.now(), // Para evitar procesar el mismo tiro dos veces
-            ballInHand: false // --- NUEVO: Al disparar, se consume la "bola en mano"
-        }
-    });
-}
-
-/**
- * --- NUEVO: Actualiza el estado del apuntado en Firestore.
- * @param {number} angle - El ángulo actual de la mira.
- */
-async function updateOnlineAiming(angle) {
-    if (!currentOnlineGameId) return;
-    const gameRef = doc(db, "games", currentOnlineGameId);
-    // Usamos notación de puntos para actualizar solo un campo anidado
-    await updateDoc(gameRef, {
-        "aimingState.angle": angle
-    });
 }
 
 /**

@@ -106,10 +106,26 @@ function tryStartGame() {
             setTimeout(() => { 
                 loadingScreen.style.display = 'none'; 
                 // --- SOLUCIÓN: Retrasar la selección del jugador para el efecto visual ---
-                // --- CORRECCIÓN: Llamar a revisar.js para iniciar la partida.
-                // Esto activará la lógica que elige al jugador inicial.
-                setLoadingState(false);
-                import('./revisar.js').then(({ revisarEstado }) => revisarEstado());
+                setLoadingState(false); // Indicar que la carga ha terminado
+
+                // --- CORRECCIÓN CRÍTICA: Sincronizar el estado de la partida al finalizar la carga ---
+                const gameId = new URLSearchParams(window.location.search).get('gameId');
+                const gameRef = gameId ? window.getGameRef(gameId) : null;
+
+                if (gameRef) {
+                    // Si es una partida online, obtenemos el estado una vez.
+                    import('./login/auth.js').then(({ getDoc }) => {
+                        getDoc(gameRef).then(docSnap => {
+                            const gameData = docSnap.data();
+                            if (gameData && gameData.balls) {
+                                // Si el servidor tiene un estado de bolas, lo aplicamos.
+                                import('./pool.js').then(({ syncBallPositionsFromServer }) => {
+                                    syncBallPositionsFromServer(gameData.balls);
+                                });
+                            }
+                        });
+                    });
+                }
             }, 500);
         }, 250); // Pequeña pausa en 100% para que se vea que ha terminado.
     } else if (managerLoaded && pendingResources === 0 && completedSteps < processingSteps.length) {

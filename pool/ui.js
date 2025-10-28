@@ -207,6 +207,7 @@ export function initializeUI() {
 
     // --- NUEVO: Cargar la disposición de la UI guardada al iniciar ---
     loadUILayout();
+    setupAssignmentsListener(); // --- NUEVO: Iniciar el listener para la asignación de bolas.
     setupUIEditListeners();
 }
 
@@ -242,11 +243,12 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
 
     if (shouldShowGuides) {
         // El ángulo de tiro ahora se actualiza dentro de onPointerMove en inputManager.js
-        // cuando el puntero está presionado.
 
         if (cueMesh) cueMesh.visible = true;
-        // --- MODIFICACIÓN: Pasar isPointerDown() para controlar la visibilidad de las guías secundarias.
-        updateAimingGuides(getCurrentShotAngle(), getGameState(), getPowerPercent(), true);
+        // --- CORRECCIÓN CRÍTICA: Eliminar la llamada a updateAimingGuides de aquí. ---
+        // Esta línea estaba dibujando la guía basándose en el input local, creando un conflicto
+        // con la lógica del servidor en pool.js. Al eliminarla, solo la lógica del servidor
+        // podrá dibujar la línea, asegurando la sincronización.
     } else {
         hideAimingGuides();
         if (cueBall && cueBall.mesh && !cueBall.isPocketed) {
@@ -369,6 +371,84 @@ export function updatePowerUI(newPowerPercent) {
         powerBarFill.style.width = `${newPowerPercent * 100}%`;
         powerBarHandle.style.left = `${newPowerPercent * 100}%`;
     });
+}
+
+/**
+ * --- NUEVO: Inicia el listener para actualizar la UI de asignación de bolas.
+ */
+function setupAssignmentsListener() {
+    window.addEventListener('updateassignments', (event) => {
+        const gameData = event.detail;
+        const { playerAssignments, ballsAssigned, balls: serverBalls, player1, player2 } = gameData;
+
+        if (!playerAssignments || !serverBalls) return;
+
+        const player1Container = document.getElementById('player1PocketedContainer');
+        const player2Container = document.getElementById('player2PocketedContainer');
+        
+        // Limpiar ambos contenedores (excepto el nombre y el avatar)
+        [player1Container, player2Container].forEach(container => {
+            const icons = container.querySelectorAll('.player-ball-icon, .pocketed-ball-placeholder');
+            icons.forEach(icon => icon.remove());
+        });
+
+        // Crear los 7 placeholders de nuevo
+        for (let i = 0; i < 7; i++) {
+            const p1_placeholder = document.createElement('div');
+            p1_placeholder.className = 'pocketed-ball-placeholder';
+            player1Container.appendChild(p1_placeholder);
+
+            const p2_placeholder = document.createElement('div');
+            p2_placeholder.className = 'pocketed-ball-placeholder';
+            player2Container.appendChild(p2_placeholder);
+        }
+
+        // Volver a añadir las bolas entroneradas en el contenedor correcto
+        serverBalls.forEach(serverBall => {
+            if (!serverBall.isActive && serverBall.number !== null && serverBall.number !== 8) {
+                const ballType = (serverBall.number >= 1 && serverBall.number <= 7) ? 'solids' : 'stripes';
+                let targetContainer;
+                
+                // --- CORRECCIÓN: Comprobar a qué jugador (1 o 2) pertenece la bola ---
+                if (gameData.player1 && playerAssignments[gameData.player1.uid] === ballType) {
+                    targetContainer = player1Container;
+                } else if (gameData.player2 && playerAssignments[gameData.player2.uid] === ballType) {
+                    targetContainer = player2Container;
+                }
+
+                if (targetContainer) {
+                    addPocketedBallToUI(serverBall, targetContainer);
+                }
+            }
+        });
+    });
+}
+
+/**
+ * --- NUEVO: Añade una bola entronerada a la UI del jugador correspondiente.
+ * @param {object} ball - La bola que se ha entronerado.
+ * @param {HTMLElement} targetContainer - El contenedor del jugador.
+ */
+function addPocketedBallToUI(ball, targetContainer) {
+    if (!targetContainer) return;
+
+    // Crear el icono de la bola
+    const ballIcon = document.createElement('div');
+    ballIcon.className = 'player-ball-icon';
+    const imageUrl = `imajenes/BolasMetidas/${ball.number}.png`;
+    ballIcon.style.backgroundImage = `url('${imageUrl}')`;
+
+    // Buscar el primer placeholder disponible y reemplazarlo
+    const placeholder = targetContainer.querySelector('.pocketed-ball-placeholder');
+    if (placeholder) {
+        // Usamos 'before' para insertar la bola y luego eliminamos el placeholder.
+        // Esto asegura que las bolas se añadan en orden.
+        placeholder.before(ballIcon);
+        placeholder.remove();
+    } else {
+        // Si no hay placeholders, simplemente la añadimos al final (fallback).
+        targetContainer.appendChild(ballIcon);
+    }
 }
 
 // --- NUEVO: Funciones para el modo de edición de la UI ---
