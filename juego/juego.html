@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Person 3D Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #coords { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; cursor: pointer; z-index: 1; }
+        #settings-icon { position: absolute; top: 10px; right: 10px; color: white; font-size: 24px; cursor: pointer; z-index: 100; }
+        #settings-panel { position: absolute; top: 50px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; display: none; z-index: 100; border-radius: 5px; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="coords">Posición: (-156.62, 20, 0)</div>
+    <div id="fps" style="position: absolute; top: 40px; left: 10px; color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1;">FPS: 0</div>
+    <div id="player-health" style="position: absolute; top: 70px; left: 10px; width: 200px; height: 20px; background: red; border: 1px solid black; z-index: 1;"><div id="player-health-bar" style="height: 100%; background: green; width: 100%;"></div></div>
+    <div id="settings-icon">⚙️</div>
+    <div id="settings-panel">
+        <label for="camera-distance">Distancia de cámara: <span id="camera-distance-value">50</span></label><br>
+        <input type="range" id="camera-distance" min="10" max="150" value="50" step="5">
+        <br><label for="camera-angle">Ángulo de cámara: <span id="camera-angle-value">30</span>°</label><br>
+        <input type="range" id="camera-angle" min="0" max="90" value="30" step="5">
+        <br><label for="camera-rotation">Rotación de cámara: <span id="camera-rotation-value">180</span>°</label><br>
+        <input type="range" id="camera-rotation" min="0" max="360" value="180" step="15">
+        <br><label><input type="checkbox" id="camera-mode" checked> Vista Top-Down</label>
+        <br><button id="generate-enemy">Generar Enemigo</button>
+    </div>
+    <div id="joystick-container" style="position: absolute; bottom: 50px; left: 50px; width: 150px; height: 150px; z-index: 10;"></div>
+    <div id="item-button" style="position: absolute; bottom: 40px; right: 120px; width: 60px; height: 60px; background-color: rgba(100, 150, 255, 0.5); border-radius: 50%; z-index: 10; display: none; justify-content: center; align-items: center; font-size: 30px; user-select: none; border: 2px solid white;">
+        <span id="item-icon">🍺</span>
+        <span id="item-count" style="position: absolute; bottom: -5px; right: -5px; background: red; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 24px; text-align: center; font-weight: bold;">0</span>
+    </div>
+    <div id="attack-button" style="position: absolute; bottom: 30px; right: 30px; width: 80px; height: 80px; background-color: rgba(255, 255, 255, 0.4); border-radius: 50%; z-index: 10; display: flex; justify-content: center; align-items: center; font-size: 40px; user-select: none; transform: rotate(180deg);">🗡️</div>
+    <script>
+        let camera, scene, renderer, character, skeleton, coordsDiv, world, characterBody, skeletonBody, mixer, skeletonMixer, clock;
+        let skeletonHealth = 100;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let characterState = 'idle';
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let skeletons = []; let skeletonBodies = []; let skeletonMixers = []; let skeletonHealths = [];
+        // Health bars arrays removed
+        let mugDrops = []; // Array to store dropped mugs
+        let frameCount = 0;
+        let physicsTime = 0;
+        let fps = 0;
+        let lastTime = performance.now();
+        let aiEnemies = true;
+        let playerHealth = 100;
+        let attackTimer = 0;
+        let attackCooldowns = [];
+        let collisionObjects = []; // Array para los objetos con los que se puede colisionar
+        let keysPressed = {};
+        let raycaster = new THREE.Raycaster(); // Raycaster reutilizable
+        let cameraAngle = 30; // Degrees from vertical (90 = straight down)
+        let cameraRotation = 180; // Degrees around character
+        let cameraDistance = 50; // Distancia de la cámara al personaje
+        let isTopDown = true; // Camera mode
+        let attackPressed = false;
+        let playerInventory = { mugs: [] }; // Cambiado a un array para guardar los objetos
+        // --- INICIO: Variables para el sistema de combos ---
+        let comboCounter = 0;
+        const COMBO_WINDOW = 1; // Tiempo máximo en segundos entre ataques para continuar el combo
+        let comboTimeout = 0;
+        // --- FIN: Variables para el sistema de combos ---
+        let playerSpawnPoint = null;
+        let mapAssets = []; // Para los objetos del mapa que se pueden mostrar/ocultar
+        
+        init();
+        animate();
+
+        function spawnSkeleton(position) {
+            const loader = new THREE.GLTFLoader();
+            loader.load('Skeleton_Warrior.glb', function(gltf) {
+                const newSkeleton = gltf.scene;
+                newSkeleton.position.copy(position);
+                newSkeleton.scale.set(3.4, 3.4, 3.4);
+
+                // --- INICIO: Datos de Patrulla ---
+                newSkeleton.userData.state = 'patrolling';
+                newSkeleton.userData.spawnPosition = position.clone();
+                const randomAngle = Math.random() * 2 * Math.PI; // Ángulo aleatorio en radianes
+                const patrolDistance = 15; // Distancia de patrulla
+                const patrolEndPoint = position.clone().add(new THREE.Vector3(Math.cos(randomAngle) * patrolDistance, 0, Math.sin(randomAngle) * patrolDistance));
+                newSkeleton.userData.patrolPoints = [position.clone(), patrolEndPoint];
+                newSkeleton.userData.patrolIndex = 1; // Empezar moviéndose hacia el segundo punto
+                // --- FIN: Datos de Patrulla ---
+
+            // --- INICIO: Ajuste de altura inicial del esqueleto ---
+            // Lanzar un rayo hacia abajo para encontrar el suelo y colocarlo correctamente.
+            setTimeout(() => {
+                const skeletonRayOrigin = new THREE.Vector3(newSkeleton.position.x, 50, newSkeleton.position.z);
+                raycaster.set(skeletonRayOrigin, new THREE.Vector3(0, -1, 0));
+                const intersects = raycaster.intersectObjects(collisionObjects, true);
+                if (intersects.length > 0) {
+                    newSkeleton.position.y = intersects[0].point.y;
+                } else {
+                    newSkeleton.position.y = 5.00; // Si no hay suelo, colocarlo en el límite
+                }
+            }, 100); // Pequeña espera para asegurar que el mapa esté listo
+            // --- FIN: Ajuste de altura inicial del esqueleto ---
+
+                scene.add(newSkeleton);
+
+                newSkeleton.traverse(function(child) {
+                    if (child.isMesh && child.name === 'Skeleton_Cape') {
+                        child.visible = false;
+                    }
+                    if (child.isMesh && child.name === 'Skeleton_Warrior_Helmet') {
+                        child.visible = true; // Show helmet initially
+                    }
+                });
+
+                const newSkeletonMixer = new THREE.AnimationMixer(newSkeleton);
+                const skeletonClips = gltf.animations;
+                const idleClip = THREE.AnimationClip.findByName(skeletonClips, 'Idle');
+                const runningClip = THREE.AnimationClip.findByName(skeletonClips, 'Running_A');
+                const hitBClip = THREE.AnimationClip.findByName(skeletonClips, 'Hit_B');
+                const hitAClip = THREE.AnimationClip.findByName(skeletonClips, 'Hit_A'); // Cargar Hit_A
+                const attackClip = THREE.AnimationClip.findByName(skeletonClips, '1H_Melee_Attack_Slice_Horizontal');
+
+                // Cargar animaciones de muerte y poses
+                const deathAClip = THREE.AnimationClip.findByName(skeletonClips, 'Death_A');
+                const deathBClip = THREE.AnimationClip.findByName(skeletonClips, 'Death_B');
+                const deathAPoseClip = THREE.AnimationClip.findByName(skeletonClips, 'Death_A_Pose');
+                const deathBPoseClip = THREE.AnimationClip.findByName(skeletonClips, 'Death_B_Pose');
+
+                newSkeleton.animationActions = { hits: [], deaths: [], deathPoses: {} };
+
+                if (deathAClip) {
+                    const action = newSkeletonMixer.clipAction(deathAClip);
+                    action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true;
+                    newSkeleton.animationActions.deaths.push(action);
+                    if (deathAPoseClip) newSkeleton.animationActions.deathPoses[deathAClip.name] = newSkeletonMixer.clipAction(deathAPoseClip);
+                }
+                if (deathBClip) {
+                    const action = newSkeletonMixer.clipAction(deathBClip);
+                    action.setLoop(THREE.LoopOnce); action.clampWhenFinished = true;
+                    newSkeleton.animationActions.deaths.push(action);
+                    if (deathBPoseClip) newSkeleton.animationActions.deathPoses[deathBClip.name] = newSkeletonMixer.clipAction(deathBPoseClip);
+                }
+
+                if (idleClip) {
+                    newSkeleton.animationActions.idle = newSkeletonMixer.clipAction(idleClip);
+                }
+                if (runningClip) {
+                    newSkeleton.animationActions.running = newSkeletonMixer.clipAction(runningClip);
+                }
+                if (hitBClip) {
+                    const hitBAction = newSkeletonMixer.clipAction(hitBClip);
+                    hitBAction.setLoop(THREE.LoopOnce);
+                    hitBAction.clampWhenFinished = true;
+                    newSkeleton.animationActions.hits.push(hitBAction);
+                }
+                if (hitAClip) {
+                    const hitAAction = newSkeletonMixer.clipAction(hitAClip);
+                    hitAAction.setLoop(THREE.LoopOnce);
+                    hitAAction.clampWhenFinished = true;
+                    newSkeleton.animationActions.hits.push(hitAAction);
+                }
+                if (attackClip) {
+                    newSkeleton.animationActions.attack = newSkeletonMixer.clipAction(attackClip);
+                    newSkeleton.animationActions.attack.setLoop(THREE.LoopOnce);
+                    newSkeleton.animationActions.attack.clampWhenFinished = true;
+                }
+                if (newSkeleton.animationActions.idle) {
+                    newSkeleton.activeAction = newSkeleton.animationActions.idle;
+                    newSkeleton.activeAction.play();
+                }
+
+                // const skeletonShape = new CANNON.Sphere(1);
+                // const newSkeletonBody = new CANNON.Body({ mass: 1 });
+                // newSkeletonBody.addShape(skeletonShape);
+                // newSkeletonBody.position.copy(newSkeleton.position);
+                // newSkeletonBody.position.y += 1;
+                // newSkeletonBody.linearDamping = 0.9;
+                // newSkeletonBody.angularDamping = 1.0;
+                // newSkeletonBody.allowSleep = true;
+                // newSkeletonBody.sleepSpeedLimit = 0.1;
+                // newSkeletonBody.sleepTimeLimit = 1.0;
+                // world.addBody(newSkeletonBody);
+
+                skeletons.push(newSkeleton);
+                skeletonBodies.push(null); // No physics body
+                skeletonMixers.push(newSkeletonMixer);
+                skeletonHealths.push(100);
+                attackCooldowns.push(0);
+
+                // Health bars removed
+            }, undefined, function(error) {
+                console.error(error);
+            });
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Sky blue
+            clock = new THREE.Clock();
+
+            // Physics world disabled
+            // world = new CANNON.World();
+            // world.gravity.set(0, -30, 0); // Further reduced gravity
+            // world.broadphase = new CANNON.NaiveBroadphase();
+            // world.allowSleep = true; // Allow sleep to reduce calculations
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 10); // Third person position
+            camera.lookAt(0, 0, 0); // Look at character
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(directionalLight);
+
+            // --- INICIO: Carga del mapa ---
+            loadMap('mapa.json');
+            // --- FIN: Carga del mapa ---
+
+            // Map loading disabled
+            // const loader = new THREE.GLTFLoader();
+            // loader.load('floating_town-hand_painted.glb', function(gltf) {
+            //     scene.add(gltf.scene);
+            //     gltf.scene.scale.set(20, 20, 20);
+            // }, undefined, function(error) {
+            //     console.error(error);
+            // });
+
+            // Load character
+            const loader = new THREE.GLTFLoader();
+            loader.load('Knight.glb', function(gltf) {
+                character = gltf.scene;
+                character.position.set(0, 0, 0);
+                character.scale.set(3.4, 3.4, 3.4);
+                scene.add(character);
+                
+                // --- INICIO: Ajuste de altura inicial del personaje ---
+                // Esperamos un momento para que el mapa se cargue y luego ajustamos la altura.
+                const checkSpawnPoint = setInterval(() => {
+                    // Espera hasta que playerSpawnPoint esté definido por la carga del mapa
+                    if (!playerSpawnPoint && character.position.x === 0 && character.position.z === 0) return;
+
+                    clearInterval(checkSpawnPoint); // Detiene la comprobación
+
+                    if (playerSpawnPoint) {
+                        character.position.set(playerSpawnPoint.x, playerSpawnPoint.y, playerSpawnPoint.z);
+                    }
+
+                    const spawnPosition = playerSpawnPoint ? playerSpawnPoint : new THREE.Vector3(0, 50, 0);
+                    const startRaycaster = new THREE.Raycaster(new THREE.Vector3(spawnPosition.x, 50, spawnPosition.z), new THREE.Vector3(0, -1, 0));
+                    const intersects = startRaycaster.intersectObjects(collisionObjects, true);
+                    if (intersects.length > 0) {
+                        character.position.y = intersects[0].point.y;
+                    }
+                }, 100); // Comprueba cada 100ms
+                // --- FIN: Ajuste de altura inicial del personaje ---
+
+                character.userData.holdingMug = false; // Inicializar estado de la jarra
+
+                // Hide specific meshes
+                const meshesToHide = [
+                    '1H_Sword_Offhand',
+                    '2H_Sword',
+                    'Badge_Shield',
+                    'Rectangle_Shield',
+                    'Round_Shield',
+                    'Spike_Shield',
+                    'Knight_Cape',
+                    'Knight_Helmet',
+                    'Mug' // Ocultar la jarra de la mano inicialmente
+                ];
+
+                console.log('All character meshes:');
+                character.traverse(function(child) {
+                    if (child.isMesh) {
+                        console.log(child.name, '- Visible:', !meshesToHide.includes(child.name));
+                    }
+                });
+
+                character.traverse(function(child) {
+                    if (child.isMesh && meshesToHide.includes(child.name)) {
+                        child.visible = false;
+                    }
+                });
+
+                // Animations
+                mixer = new THREE.AnimationMixer(character);
+                const clips = gltf.animations;
+                const idleAction = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Idle'));
+                const runningAction = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Running_A'));
+                const jumpStartAction = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Jump_Start'));
+                jumpStartAction.setLoop(THREE.LoopOnce);
+                jumpStartAction.clampWhenFinished = true;
+                const jumpIdleAction = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Jump_Idle'));
+                const jumpLandAction = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Jump_Land'));
+                jumpLandAction.setLoop(THREE.LoopOnce);
+                jumpLandAction.clampWhenFinished = true;
+                const hitAction = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Hit_B'));
+                hitAction.setLoop(THREE.LoopOnce);
+                hitAction.clampWhenFinished = true;
+                
+                // Load the second hit animation
+                const hitActionA = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Hit_A'));
+                if (hitActionA) {
+                    hitActionA.setLoop(THREE.LoopOnce);
+                    hitActionA.clampWhenFinished = true;
+                }
+
+                // Load death animations
+                const deathActionA = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Death_A'));
+                if (deathActionA) {
+                    deathActionA.setLoop(THREE.LoopOnce);
+                    deathActionA.clampWhenFinished = true;
+                }
+                const deathActionB = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Death_B'));
+                if (deathActionB) {
+                    deathActionB.setLoop(THREE.LoopOnce);
+                    deathActionB.clampWhenFinished = true;
+                }
+
+                // Load death pose animations
+                const deathPoseA = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Death_A_Pose'));
+                if (deathPoseA) {
+                    deathPoseA.setLoop(THREE.LoopRepeat); // Loop the pose
+                }
+                const deathPoseB = mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Death_B_Pose'));
+                if (deathPoseB) {
+                    deathPoseB.setLoop(THREE.LoopRepeat); // Loop the pose
+                }
+
+
+                let pickupClip = THREE.AnimationClip.findByName(clips, 'pickup') || THREE.AnimationClip.findByName(clips, 'Pickup') || THREE.AnimationClip.findByName(clips, 'PickUp');
+                if (!pickupClip) {
+                    console.log('Pickup animation not found, attempting to use \'Hit_B\' as a fallback.');
+                    pickupClip = THREE.AnimationClip.findByName(clips, 'Hit_B');
+                }
+
+                let pickupAction = null;
+                if (pickupClip) {
+                    pickupAction = mixer.clipAction(pickupClip);
+                    pickupAction.setLoop(THREE.LoopOnce);
+                    pickupAction.clampWhenFinished = true;
+                    console.log('Using animation as pickup:', pickupClip.name);
+                } else {
+                    console.log('No suitable pickup or fallback animation found. Available animations:', clips.map(c => c.name));
+                }
+
+                character.animationActions = {
+                    idle: idleAction,
+                    running: runningAction,
+                    jump_start: jumpStartAction,
+                    jump_idle: jumpIdleAction,
+                    jump_land: jumpLandAction,                    
+                    hits: [],
+                    deaths: [],
+                    deathPoses: {},
+                    attacks: [] // Array para las animaciones de combo
+                };
+
+                // --- INICIO: Cargar animaciones de combo ---
+                const attackNames = [
+                    '1H_Melee_Attack_Slice_Horizontal',
+                    '1H_Melee_Attack_Chop',
+                    '1H_Melee_Attack_Slice_Diagonal',
+                    '1H_Melee_Attack_Stab'
+                ];
+
+                attackNames.forEach(name => {
+                    const clip = THREE.AnimationClip.findByName(clips, name);
+                    if (clip) {
+                        const action = mixer.clipAction(clip);
+                        action.setLoop(THREE.LoopOnce);
+                        action.clampWhenFinished = true;
+                        action.timeScale = 1.5; // Aumenta la velocidad de la animación en un 50%
+                        character.animationActions.attacks.push(action);
+                    }
+                });
+                // --- FIN: Cargar animaciones de combo ---
+
+                if (hitAction) character.animationActions.hits.push(hitAction);
+                if (hitActionA) character.animationActions.hits.push(hitActionA);
+                if (deathActionA) character.animationActions.deaths.push(deathActionA);
+                if (deathActionB) character.animationActions.deaths.push(deathActionB);
+                if (deathActionA && deathPoseA) character.animationActions.deathPoses[deathActionA.getClip().name] = deathPoseA;
+                if (deathActionB && deathPoseB) character.animationActions.deathPoses[deathActionB.getClip().name] = deathPoseB;
+
+                if (pickupAction) {
+                    character.animationActions.pickup = pickupAction;
+                }
+                character.activeAction = idleAction;
+                idleAction.play();
+
+
+
+
+                // Character physics disabled
+                // const characterShape = new CANNON.Sphere(1); // Use a sphere for better stability
+                // characterBody = new CANNON.Body({ mass: 1 });
+                // characterBody.addShape(characterShape);
+                // characterBody.position.set(-1554.91, 400.87, -145.05);
+                // characterBody.linearDamping = 0.9;
+                // characterBody.angularDamping = 1.0; // Prevent sphere from rolling
+                // characterBody.allowSleep = true;
+                // characterBody.sleepSpeedLimit = 0.1;
+                // characterBody.sleepTimeLimit = 1.0;
+                // world.addBody(characterBody);
+
+                // Top-down camera: follow character from above
+                camera.position.set(character.position.x, 20, character.position.z);
+                camera.lookAt(character.position);
+
+            }, undefined, function(error) {
+                console.error(error);
+            });
+
+            // No controls, manual camera
+
+            coordsDiv = document.getElementById('coords');
+            coordsDiv.addEventListener('click', function() {
+                navigator.clipboard.writeText(coordsDiv.textContent.replace('Posición: ', ''));
+                alert('Coordenadas copiadas al portapapeles');
+            });
+
+            // Settings
+            const settingsIcon = document.getElementById('settings-icon');
+            const settingsPanel = document.getElementById('settings-panel');
+
+            settingsIcon.addEventListener('click', () => {
+                settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+            });
+
+            const cameraDistanceInput = document.getElementById('camera-distance');
+            const cameraDistanceValue = document.getElementById('camera-distance-value');
+            cameraDistanceInput.addEventListener('input', (e) => {
+                cameraDistance = parseFloat(e.target.value);
+                cameraDistanceValue.textContent = cameraDistance;
+            });
+
+            const cameraAngleInput = document.getElementById('camera-angle');
+            const cameraAngleValue = document.getElementById('camera-angle-value');
+            cameraAngleInput.addEventListener('input', (e) => {
+                cameraAngle = parseFloat(e.target.value);
+                cameraAngleValue.textContent = cameraAngle;
+            });
+
+            const cameraRotationInput = document.getElementById('camera-rotation');
+            const cameraRotationValue = document.getElementById('camera-rotation-value');
+            cameraRotationInput.addEventListener('input', (e) => {
+                cameraRotation = parseFloat(e.target.value);
+                cameraRotationValue.textContent = cameraRotation;
+            });
+
+            const cameraModeCheckbox = document.getElementById('camera-mode');
+            cameraModeCheckbox.addEventListener('change', (e) => {
+                isTopDown = e.target.checked;
+            });
+
+            const generateEnemyButton = document.getElementById('generate-enemy');
+            generateEnemyButton.addEventListener('click', () => {
+                if (character) {
+                    const randomOffset = new THREE.Vector3((Math.random() - 0.5) * 20, 0, (Math.random() - 0.5) * 20);
+                    const spawnPos = new THREE.Vector3(character.position.x + randomOffset.x, character.position.y + randomOffset.y, character.position.z + randomOffset.z);
+                    spawnSkeleton(spawnPos);
+                }
+            });
+
+            // Jump function removed
+
+            function dropHealthPickup(position) {
+                // Usar un cubo verde simple como objeto de curación
+                const mugGeometry = new THREE.BoxGeometry(1, 1, 1);
+                const mugMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Verde
+                const healthPickup = new THREE.Mesh(mugGeometry, mugMaterial);
+
+                // --- INICIO: Ajuste de altura del drop ---
+                // Lanzar un rayo para colocar el drop sobre el suelo
+                const dropRayOrigin = new THREE.Vector3(position.x, 50, position.z);
+                raycaster.set(dropRayOrigin, new THREE.Vector3(0, -1, 0));
+                const intersects = raycaster.intersectObjects(collisionObjects, true);
+
+                if (intersects.length > 0) {
+                    position.y = intersects[0].point.y;
+                } else {
+                    position.y = 5.00; // Si no hay suelo, colocarlo en el límite
+                }
+                // --- FIN: Ajuste de altura del drop ---
+
+                healthPickup.position.copy(position);
+                healthPickup.position.y += 1.5; // Aumentamos la altura para que sea más visible
+                healthPickup.scale.set(0.5, 0.5, 0.5); // Make it smaller
+                scene.add(healthPickup);
+                mugDrops.push({
+                    mesh: healthPickup,
+                    collected: false
+                });
+                console.log('Objeto de curación soltado en:', position);
+            }
+
+            const attack = function() {
+                // Si el personaje está sosteniendo una jarra, la guarda y saca la espada.
+                if (character.userData.equippedMug) {
+                    const mugToUnequip = character.userData.equippedMug;
+
+                    // Quitar la jarra de la mano
+                    const rightHand = character.getObjectByName('hand_r');
+                    if (rightHand) {
+                        rightHand.remove(mugToUnequip);
+                    }
+
+                    // Devolver la jarra al inventario
+                    playerInventory.mugs.push(mugToUnequip);
+
+                    // Mostrar la espada de nuevo
+                    character.traverse(function(child) {
+                        if (child.isMesh && child.name === '1H_Sword') child.visible = true;
+                    });
+
+                    // Actualizar el estado y la UI
+                    character.userData.equippedMug = null;
+                    document.getElementById('attack-button').style.opacity = '1';
+                    document.getElementById('item-count').textContent = playerInventory.mugs.length;
+                    document.getElementById('item-button').style.display = 'flex'; // Asegurarse de que el botón de item sea visible
+
+                    return; // No atacar en este clic, solo cambiar de equipo.
+                }
+
+                // Si no sostiene una jarra, ataca normalmente.
+                if (characterState === 'idle' || characterState === 'running') {
+                    // --- INICIO: Lógica de Combo ---
+                    if (comboTimeout <= 0) { // Si el combo ha expirado, reiniciarlo
+                        comboCounter = -1; // Reiniciar a -1 para que el primer incremento sea 0
+                    }
+                    comboCounter = (comboCounter + 1) % character.animationActions.attacks.length;
+
+                    comboTimeout = COMBO_WINDOW; // Reiniciar la ventana de tiempo del combo
+                    // --- FIN: Lógica de Combo ---
+
+                    characterState = 'attacking';
+                    // Attack all enemies within range
+                    for (let i = 0; i < skeletons.length; i++) {
+                        if (skeletonHealths[i] > 0) {
+                            const distance = character.position.distanceTo(skeletons[i].position);
+                            if (distance < 12) {
+                                skeletonHealths[i] -= 20;
+                                if (skeletons[i].animationActions.hits.length > 0 && skeletonMixers[i]) {
+                                    const randomHitAction = skeletons[i].animationActions.hits[Math.floor(Math.random() * skeletons[i].animationActions.hits.length)];
+                                    skeletons[i].activeAction.fadeOut(0.2);
+                                    randomHitAction.reset().fadeIn(0.2).play();
+                                    skeletons[i].activeAction = randomHitAction;
+                                    skeletons[i].userData.state = 'hit'; // Marcar estado para evitar que se mueva
+                                }
+                                if (skeletonHealths[i] <= 0 && skeletons[i].userData.state !== 'dead') {
+                                    skeletons[i].userData.state = 'dead';
+                                    if (skeletons[i].animationActions.deaths.length > 0 && skeletonMixers[i]) {
+                                        const randomDeathAction = skeletons[i].animationActions.deaths[Math.floor(Math.random() * skeletons[i].animationActions.deaths.length)];
+                                        skeletons[i].activeAction.fadeOut(0.2);
+                                        randomDeathAction.reset().fadeIn(0.2).play();
+                                        skeletons[i].activeAction = randomDeathAction;
+                                    }
+                                    // 100% de probabilidad de soltar un objeto de curación
+                                    dropHealthPickup(skeletons[i].position.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Joystick and jump button for mobile
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const attackButton = document.getElementById('attack-button');
+
+            if (isMobile) {
+                const joystickContainer = document.getElementById('joystick-container');
+                const jumpButton = document.getElementById('jump-button');
+
+                const joystickOptions = {
+                    zone: joystickContainer,
+                    mode: 'static',
+                    position: { left: '50%', top: '50%' },
+                    color: 'white',
+                    size: 120
+                };
+                const manager = nipplejs.create(joystickOptions);
+
+                manager.on('move', function (evt, data) {
+                    if (!data.angle) return;
+                    const angle = data.angle.degree;
+
+                    // Reset movement flags
+                    moveForward = false;
+                    moveBackward = false;
+                    moveLeft = false;
+                    moveRight = false;
+
+                    // Determine direction based on angle for tank controls
+                    if (angle > 45 && angle < 135) {
+                        moveForward = true;
+                    } else if (angle > 225 && angle < 315) {
+                        moveBackward = true;
+                    } else if (angle >= 135 && angle <= 225) {
+                        moveLeft = true; // Turn left
+                    } else if (angle <= 45 || angle >= 315) {
+                        moveRight = true; // Turn right
+                    }
+                });
+
+                manager.on('end', function () {
+                    // Stop all movement
+                    moveForward = false;
+                    moveBackward = false;
+                    moveLeft = false;
+                    moveRight = false;
+                });
+
+                // Jump button removed
+
+                // Hide keyboard instructions if on mobile, etc.
+                // For now, we just enable the joystick.
+            }
+
+            // Attack button listeners for both mobile and desktop
+            ['touchstart', 'mousedown'].forEach(evt => {
+                attackButton.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    if (!attackPressed) {
+                        attackPressed = true;
+                        attack();
+                    }
+                });
+            });
+            ['touchend', 'mouseup', 'mouseleave'].forEach(evt => {
+                attackButton.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    attackPressed = false;
+                });
+            });
+
+            // Item button listener
+            const itemButton = document.getElementById('item-button');
+            ['touchstart', 'mousedown'].forEach(evt => {
+                itemButton.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    if (playerInventory.mugs.length > 0 && !character.userData.equippedMug) {
+                        const mugToEquip = playerInventory.mugs.pop(); // Sacar la última jarra del inventario
+                        
+                        // Adjuntar la jarra a la mano derecha del personaje
+                        const rightHand = character.getObjectByName('hand_r');
+                        if (rightHand) {
+                            rightHand.add(mugToEquip);
+                            mugToEquip.position.set(0, 0, 0); // Resetear posición relativa a la mano
+                            mugToEquip.rotation.set(0, 0, 0); // Resetear rotación relativa a la mano
+                        }
+                        
+                        character.userData.equippedMug = mugToEquip; // Guardar referencia a la jarra equipada
+
+                        // Ocultar la espada
+                        character.traverse(function(child) {
+                            if (child.isMesh && child.name === '1H_Sword') child.visible = false;
+                        });
+
+                        // Opcional: Desactivar el botón de ataque
+                        document.getElementById('attack-button').style.opacity = '0.2';
+                        document.getElementById('item-count').textContent = playerInventory.mugs.length; // Actualizar el contador
+                        if (playerInventory.mugs.length < 1) { // Ocultar solo si no quedan más jarras
+                            document.getElementById('item-button').style.display = 'none';
+                        }
+                    }
+                });
+            });
+
+
+            // Event listeners for movement
+            const onKeyDown = function(event) {
+                keysPressed[event.code] = true;
+                switch(event.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    // Space key for jump removed
+                    // KeyE is now only for pickup, not attack
+                    case 'ControlLeft':
+                    case 'ControlRight':
+                        if (!attackPressed) {
+                            attackPressed = true;
+                            attack();
+                        }
+                        break;
+                }
+            };
+
+            const onKeyUp = function(event) {
+                keysPressed[event.code] = false;
+                switch(event.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyD': moveRight = false; break;
+                    case 'ControlLeft':
+                    case 'ControlRight':
+                        attackPressed = false;
+                        break;
+                }
+            };
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        async function loadMap(mapUrl) {
+            try {
+                const response = await fetch(mapUrl);
+                if (!response.ok) {
+                    throw new Error(`No se pudo cargar el mapa: ${response.statusText}`);
+                }
+                const mapData = await response.json();
+                await buildSceneFromMapData(mapData);
+            } catch (error) {
+                console.error("Error al cargar el mapa:", error);
+                // Si falla, crear un suelo por defecto para que el juego no se rompa
+                const floorGeometry = new THREE.PlaneGeometry(100, 100);
+                const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                scene.add(floor);
+                collisionObjects.push(floor);
+            }
+        }
+
+        async function buildSceneFromMapData(data) {
+            const assetsByPath = {};
+            if (data.assets) {
+                data.assets.forEach(asset => {
+                    if (!assetsByPath[asset.assetPath]) {
+                        assetsByPath[asset.assetPath] = [];
+                    }
+                    assetsByPath[asset.assetPath].push(asset);
+                });
+            }
+
+            const loader = new THREE.GLTFLoader();
+
+            for (const path in assetsByPath) {
+                try {
+                    const gltf = await loader.loadAsync(path);
+                    const assetsToPlace = assetsByPath[path];
+
+                    assetsToPlace.forEach(assetInfo => {
+                        const originalObject = gltf.scene.getObjectByName(assetInfo.assetName);
+                        if (originalObject) {
+                            const newObject = originalObject.clone();
+                            newObject.position.set(assetInfo.position.x, assetInfo.position.y, assetInfo.position.z);
+                            newObject.rotation.set(assetInfo.rotation.x, assetInfo.rotation.y, assetInfo.rotation.z);
+                            newObject.scale.set(assetInfo.scale.x, assetInfo.scale.y, assetInfo.scale.z);
+
+                            // Hacer que todos los objetos proyecten y reciban sombras
+                            newObject.traverse(child => {
+                                if (child.isMesh) {
+                                    child.castShadow = true;
+                                    child.receiveShadow = true;
+                                }
+                            });
+
+                            scene.add(newObject);
+
+                            // Añadir al array de assets del mapa para la optimización de renderizado
+                            mapAssets.push(newObject);
+
+                            // Añadir a objetos de colisión si es piso o no-piso (paredes, etc.)
+                            if (assetInfo.assetType === 'piso' || assetInfo.assetType === 'no-piso') {
+                                collisionObjects.push(newObject);
+                            }
+                            // Solo los objetos de tipo 'piso' se usan para la navegación.
+                            if (assetInfo.assetType === 'piso') newObject.userData.isFloor = true;
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Error cargando el asset pack ${path}:`, error);
+                }
+            }
+
+            // --- INICIO: Usar datos de spawn del mapa ---
+            if (data.playerSpawn) {
+                playerSpawnPoint = new THREE.Vector3(data.playerSpawn.x, data.playerSpawn.y, data.playerSpawn.z);
+            }
+
+            if (data.enemySpawns) {
+                data.enemySpawns.forEach(spawn => spawnSkeleton(new THREE.Vector3(spawn.x, spawn.y, spawn.z)));
+            }
+            // --- FIN: Usar datos de spawn del mapa ---
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- INICIO: Función para comprobar si hay suelo ---
+        function isGroundAt(position) {
+            const groundRaycaster = new THREE.Raycaster(
+                new THREE.Vector3(position.x, 50, position.z), // Origen del rayo desde arriba
+                new THREE.Vector3(0, -1, 0) // Dirección hacia abajo
+            );
+            const intersects = groundRaycaster.intersectObjects(collisionObjects, true);
+            // Devuelve true si encuentra un objeto de suelo debajo
+            return intersects.length > 0 && intersects[0].object.userData.isFloor;
+        }
+        // --- FIN: Función para comprobar si hay suelo ---
+
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+            fps = 1 / deltaTime;
+
+            // --- INICIO: Actualizar temporizador de combo ---
+            if (comboTimeout > 0) {
+                comboTimeout -= deltaTime;
+            }
+
+            // --- INICIO: Optimización de renderizado del mapa y enemigos ---
+            if (character) {
+                const distanciaDeRenderizado = 180; // Ajusta este valor según necesites
+                const renderDistanceSq = distanciaDeRenderizado * distanciaDeRenderizado;
+
+                // Ocultar/mostrar assets del mapa
+                for (const asset of mapAssets) {
+                    const distanceSq = character.position.distanceToSquared(asset.position);
+                    asset.visible = distanceSq < renderDistanceSq;
+                }
+
+                // Ocultar/mostrar enemigos
+                for (const skeleton of skeletons) {
+                    const distanceSq = character.position.distanceToSquared(skeleton.position);
+                    skeleton.visible = distanceSq < renderDistanceSq;
+                }
+            }
+            // --- FIN: Optimización de renderizado ---
+
+            // --- INICIO: Lógica de Colisión con el Suelo ---
+            if (character && characterState !== 'dead') {
+                // El rayo se origina 1 unidad por encima del personaje para evitar empezar dentro del suelo.
+                const rayOrigin = new THREE.Vector3(character.position.x, character.position.y + 5, character.position.z);
+                const groundRaycaster = new THREE.Raycaster(rayOrigin, new THREE.Vector3(0, -1, 0));
+                const intersects = groundRaycaster.intersectObjects(collisionObjects, true);
+
+                if (intersects.length > 0) {
+                    character.position.y = intersects[0].point.y; // Ajustar a la altura del suelo
+                } else {
+                    // Si no hay nada debajo, aplicar gravedad
+                    character.position.y -= 9.8 * deltaTime;
+
+                    // --- INICIO: Límite de suelo para evitar caer al vacío ---
+                    if (character.position.y < 5.00) {
+                        character.position.y = 5.00;
+                    }
+                    // --- FIN: Límite de suelo ---
+                }
+            }
+            // --- FIN: Lógica de Colisión con el Suelo ---
+
+            // Update enemy attack cooldowns
+            for (let i = 0; i < attackCooldowns.length; i++) {
+                if (attackCooldowns[i] > 0) {
+                    attackCooldowns[i] -= deltaTime;
+                }
+            }
+
+            // Check for player death
+            if (playerHealth <= 0 && characterState !== 'dead') {
+                characterState = 'dead';
+                if (character.animationActions.deaths.length > 0) {
+                    const randomDeathAction = character.animationActions.deaths[Math.floor(Math.random() * character.animationActions.deaths.length)];
+                    character.activeAction.fadeOut(0.2);
+                    randomDeathAction.reset().fadeIn(0.2).play();
+                    character.activeAction = randomDeathAction;
+                }
+            } else if (characterState === 'dead' && !character.activeAction.isRunning()) {
+                // Transition to death pose after death animation finishes
+                const currentDeathAnimName = character.activeAction.getClip().name;
+                const poseAction = character.animationActions.deathPoses[currentDeathAnimName];
+                if (poseAction && character.activeAction !== poseAction) {
+                    character.activeAction.fadeOut(0.5);
+                    poseAction.reset().fadeIn(0.5).play();
+                    character.activeAction = poseAction;
+                }
+            }
+
+            // --- INICIO: Lógica de Colisión Horizontal ---
+            function checkHorizontalCollision(currentPos, moveVector) {
+                if (moveVector.lengthSq() === 0) return moveVector; // No hay movimiento
+
+                const playerHeight = 1.6;
+                const playerRadius = 0.4;
+                const nextPos = currentPos.clone().add(moveVector);
+
+                // Crear una caja de colisión para el jugador
+                const playerBox = new THREE.Box3(
+                    new THREE.Vector3(nextPos.x - playerRadius, nextPos.y + 0.1, nextPos.z - playerRadius), // Elevamos 0.1 para no chocar con el suelo
+                    new THREE.Vector3(nextPos.x + playerRadius, nextPos.y + playerHeight, nextPos.z + playerRadius) // La parte superior se mantiene igual
+                );
+
+                for (const object of collisionObjects) {
+                    const objectBox = new THREE.Box3().setFromObject(object);
+                    if (playerBox.intersectsBox(objectBox)) {
+                        // Si hay colisión, no se permite el movimiento.
+                        // Una mejora futura podría ser deslizarse por las paredes.
+                        return new THREE.Vector3(0, 0, 0); 
+                    }
+                }
+
+                return moveVector; // Movimiento permitido
+            }
+            // --- FIN: Lógica de Colisión Horizontal ---
+
+            if (character && mixer) {
+                // No physics, simple state management
+                const isMoving = (moveForward || moveBackward || moveLeft || moveRight) && characterState !== 'dead';
+                if (characterState !== 'attacking' && characterState !== 'hit' && characterState !== 'pickup' && characterState !== 'dead') {
+                    characterState = isMoving ? 'running' : 'idle';
+                }
+
+                // Movement with character facing movement direction
+                if (characterState !== 'dead') {
+                    const moveSpeed = 20 * deltaTime; // Aumenté la velocidad de 5 a 10
+                    const cameraRotationRad = (cameraRotation * Math.PI) / 180;
+                    let moveVector = new THREE.Vector3(0, 0, 0);
+                    let targetRotation = character.rotation.y;
+
+                    let inputVector = new THREE.Vector3(0, 0, 0);
+                    if (moveForward) inputVector.z = -1;
+                    if (moveBackward) inputVector.z = 1;
+                    if (moveLeft) inputVector.x = -1;
+                    if (moveRight) inputVector.x = 1;
+
+                    if (inputVector.length() > 0) {
+                        inputVector.normalize().multiplyScalar(moveSpeed);
+                        // Rotar el vector de movimiento según la rotación de la cámara
+                        moveVector.x = inputVector.x * Math.cos(cameraRotationRad) - inputVector.z * Math.sin(cameraRotationRad);
+                        moveVector.z = inputVector.x * Math.sin(cameraRotationRad) + inputVector.z * Math.cos(cameraRotationRad);
+                        targetRotation = Math.atan2(moveVector.x, moveVector.z);
+                    }
+                    // Smooth rotation towards movement direction (shortest path)
+                    let rotationDiff = targetRotation - character.rotation.y;
+
+                    // Normalize the rotation difference to [-PI, PI] for shortest path
+                    while (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+                    while (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+                    const rotationSpeed = 0.15;
+                    character.rotation.y += rotationDiff * rotationSpeed;
+
+                    // --- INICIO: Aplicar movimiento con chequeo de colisión ---
+                    const nextPos = character.position.clone().add(moveVector);
+                    if (isGroundAt(nextPos)) {
+                        // Solo se mueve si hay suelo en la siguiente posición
+                        const allowedMoveVector = checkHorizontalCollision(character.position, moveVector);
+                        character.position.add(allowedMoveVector);
+                    }
+                    // --- FIN: Aplicar movimiento con chequeo de colisión ---
+                }
+
+                // Animation state machine (jump states removed)
+                let desiredAction;
+                switch(characterState) {
+                    case 'running': desiredAction = character.animationActions.running; break;
+                    case 'attacking': desiredAction = character.animationActions.attacks[comboCounter]; break;
+                    case 'hit': desiredAction = character.activeAction; break; // Mantener la animación de golpe actual
+                    case 'pickup': desiredAction = character.animationActions.pickup || character.animationActions.idle; break;
+                    case 'dead': desiredAction = character.activeAction; break; // Keep the death animation
+                    default: desiredAction = character.animationActions.idle; break;
+                }
+
+                if (character.activeAction !== desiredAction) {
+                    character.activeAction.fadeOut(0.2);
+                    desiredAction.reset().fadeIn(0.2).play();
+                    character.activeAction = desiredAction;
+                }
+
+                // Transition from attacking/hit/pickup to idle when animation finishes
+                if ((characterState === 'attacking' || characterState === 'hit') && !character.activeAction.isRunning() && characterState !== 'dead') {
+                    if (comboTimeout <= 0) comboCounter = 0; // Reiniciar combo si la animación terminó y el tiempo expiró
+                    characterState = 'idle';
+                }
+                if (characterState === 'pickup' && character.animationActions.pickup && !character.activeAction.isRunning()) {
+                    characterState = 'idle';
+                    console.log('Pickup animation finished, returning to idle');
+
+                    // La espada permanece oculta, la jarra permanece visible
+                }
+
+                for (let i = 0; i < skeletons.length; i++) {
+                    if (skeletons[i]) {
+                        // Dynamic helmet visibility based on health
+                        const helmet = skeletons[i].getObjectByName('Skeleton_Warrior_Helmet');
+                        if (helmet) {
+                            helmet.visible = skeletonHealths[i] > 50;
+                        }
+
+                        if (aiEnemies && skeletonHealths[i] > 0 && characterState !== 'dead') {
+                            const distance = skeletons[i].position.distanceTo(character.position);
+                            const viewDistance = 30; // Distancia a la que el enemigo te "ve"
+
+                            const playerInSight = distance < viewDistance;
+                            
+                            if (playerInSight && skeletons[i].userData.state !== 'hit' && skeletons[i].userData.state !== 'attacking') {
+                                skeletons[i].userData.state = 'chasing';
+                                if (distance > 6) { // Perseguir
+                                    const direction = new THREE.Vector3().subVectors(character.position, skeletons[i].position).normalize();
+                                    const speed = 14.0 * deltaTime;
+                                    const moveVector = direction.multiplyScalar(speed);
+                                    const nextPos = skeletons[i].position.clone().add(moveVector);
+                                    if (isGroundAt(nextPos)) {
+                                        skeletons[i].position.add(moveVector);
+                                    }
+                                    skeletons[i].lookAt(character.position);
+                                    if (skeletons[i].activeAction !== skeletons[i].animationActions.running) {
+                                        skeletons[i].activeAction.fadeOut(0.2);
+                                        skeletons[i].animationActions.running.reset().fadeIn(0.2).play();
+                                        skeletons[i].activeAction = skeletons[i].animationActions.running;
+                                    }
+                                } else { // Atacar o esperar
+                                    if (attackCooldowns[i] <= 0) {
+                                        // --- INICIO: Lógica de ataque movida aquí ---
+                                        skeletons[i].lookAt(character.position);
+                                        skeletons[i].activeAction.fadeOut(0.2);
+                                        skeletons[i].animationActions.attack.reset().fadeIn(0.2).play();
+                                        skeletons[i].activeAction = skeletons[i].animationActions.attack;
+                                        skeletons[i].userData.state = 'attacking'; // Nuevo estado para evitar movimiento
+
+                                        // Aplicar daño al jugador
+                                        playerHealth -= 10;
+                                        if (character.animationActions.hits.length > 0) {
+                                            const randomHitAction = character.animationActions.hits[Math.floor(Math.random() * character.animationActions.hits.length)];
+                                            character.activeAction.fadeOut(0.2);
+                                            randomHitAction.reset().fadeIn(0.2).play();
+                                            character.activeAction = randomHitAction;
+                                            characterState = 'hit';
+                                        }
+                                        attackCooldowns[i] = 1 + Math.random() * 2; // Reiniciar cooldown
+                                        // --- FIN: Lógica de ataque movida aquí ---
+                                    } else {
+                                        // Si está en cooldown pero cerca, se queda quieto mirando al jugador
+                                        if (skeletons[i].activeAction !== skeletons[i].animationActions.idle) {
+                                            skeletons[i].activeAction.fadeOut(0.2);
+                                            skeletons[i].animationActions.idle.reset().fadeIn(0.2).play();
+                                            skeletons[i].activeAction = skeletons[i].animationActions.idle;
+                                        }
+                                    }
+                                }
+                            } else if (skeletons[i].userData.state !== 'hit' && skeletons[i].userData.state !== 'attacking') { // Jugador no detectado, patrullar
+                                skeletons[i].userData.state = 'patrolling';
+                                const patrolState = skeletons[i].userData;
+                                const currentTarget = patrolState.patrolPoints[patrolState.patrolIndex];
+                                const distanceToTarget = skeletons[i].position.distanceTo(currentTarget);
+
+                                if (distanceToTarget < 1) { // Si llega al punto de patrulla
+                                    // Cambiar al siguiente punto de patrulla
+                                    patrolState.patrolIndex = (patrolState.patrolIndex + 1) % patrolState.patrolPoints.length; 
+                                }
+
+                                // Moverse hacia el punto de patrulla actual
+                                const direction = new THREE.Vector3().subVectors(currentTarget, skeletons[i].position).normalize();
+                                const speed = 5.0 * deltaTime; // Velocidad de patrulla
+                                const moveVector = direction.multiplyScalar(speed);
+                                skeletons[i].position.add(moveVector);
+                                skeletons[i].lookAt(currentTarget);
+                                setSkeletonAnimation(i, 'running');
+                            }
+                        }
+                    }
+                }
+
+                function setSkeletonAnimation(index, animationName) {
+                    const skeleton = skeletons[index];
+                    const newAction = skeleton.animationActions[animationName];
+                    if (skeleton.activeAction !== newAction) {
+                        skeleton.activeAction.fadeOut(0.2);
+                        newAction.reset().fadeIn(0.2).play();
+                        skeleton.activeAction = newAction;
+                    }
+                }
+
+                if (isTopDown) {
+                    // Top-down camera with rotation
+                    const angleRad = (cameraAngle * Math.PI) / 180; // Convert to radians
+                    const rotationRad = (cameraRotation * Math.PI) / 180; // Convert to radians
+                    const distance = cameraDistance;
+                    const height = distance * Math.cos(angleRad);
+                    const horizontalDistance = distance * Math.sin(angleRad);
+
+                    camera.position.set(
+                        character.position.x + horizontalDistance * Math.sin(rotationRad),
+                        height,
+                        character.position.z + horizontalDistance * Math.cos(rotationRad)
+                    );
+                    camera.lookAt(character.position);
+                } else {
+                    // Third person camera
+                    const angleRad = (cameraAngle * Math.PI) / 180;
+                    const rotationRad = (cameraRotation * Math.PI) / 180;
+                    const distance = cameraDistance;
+                    const height = distance * Math.sin(angleRad); // Altura basada en el ángulo
+                    const horizontalDistance = distance * Math.cos(angleRad); // Distancia horizontal
+
+                    camera.position.set(character.position.x + horizontalDistance * Math.sin(rotationRad), character.position.y + height, character.position.z + horizontalDistance * Math.cos(rotationRad));
+                    camera.lookAt(character.position);
+                }
+
+                // Update coords display
+                coordsDiv.textContent = `Posición: (${character.position.x.toFixed(2)}, ${character.position.y.toFixed(2)}, ${character.position.z.toFixed(2)})`;
+
+                // Update FPS display
+                document.getElementById('fps').textContent = `FPS: ${fps.toFixed(1)}`;
+
+                // Update player health
+                document.getElementById('player-health-bar').style.width = `${playerHealth}%`;
+
+                // Update mug drops with pickup prompt
+                for (let i = mugDrops.length - 1; i >= 0; i--) {
+                    const mug = mugDrops[i];
+                    if (mug.collected && characterState !== 'pickup') {
+                        // Remove mug after pickup animation finishes
+                        scene.remove(mug.mesh);
+                        mugDrops.splice(i, 1);
+                        console.log('Mug removed after pickup animation');
+                        continue;
+                    }
+                    if (!mug.collected) {
+                        const distance = character.position.distanceTo(mug.mesh.position);
+                        if (distance < 3) { // Collection range
+                            // Show pickup prompt
+                            if (!mug.pickupPrompt) {
+                                mug.pickupPrompt = document.createElement('div');
+                                mug.pickupPrompt.textContent = '🤚';
+                                mug.pickupPrompt.style.position = 'absolute';
+                                mug.pickupPrompt.style.fontSize = '24px';
+                                mug.pickupPrompt.style.pointerEvents = 'none';
+                                mug.pickupPrompt.style.zIndex = '1000';
+                                document.body.appendChild(mug.pickupPrompt);
+                            } else {
+                                mug.pickupPrompt.style.display = 'block';
+                            }
+
+                            // Update prompt position above the mug
+                            const worldPos = mug.mesh.position.clone();
+                            worldPos.y += 2; // Above the mug
+                            const screenPos = worldPos.clone();
+                            screenPos.project(camera);
+                            const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+                            const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+                            mug.pickupPrompt.style.left = `${x - 12}px`;
+                            mug.pickupPrompt.style.top = `${y - 12}px`;
+
+                            // Check for interaction key (E)
+                            if (keysPressed['KeyE']) {
+                                console.log('E pressed near mug, attempting pickup');
+                                // Play pickup animation if available
+                                if (character.animationActions.pickup) {
+                                    console.log('Playing pickup animation');
+                                    character.activeAction.fadeOut(0.2);
+                                    character.animationActions.pickup.reset().fadeIn(0.2).play();
+                                    character.activeAction = character.animationActions.pickup;
+                                    characterState = 'pickup';
+
+                                    // Collect the mug immediately but keep it visible until animation finishes
+                                    mug.collected = true;
+                                    if (mug.pickupPrompt) {
+                                        // Curar al jugador y eliminar el objeto
+                                        scene.remove(mug.mesh); // Remove from scene
+                                        playerHealth = Math.min(100, playerHealth + 25); // Curar 25 de vida, máximo 100
+                                        console.log(`Vida del jugador: ${playerHealth}`);
+                                        document.body.removeChild(mug.pickupPrompt);
+                                        mug.pickupPrompt = null;
+                                    }
+                                } else {
+                                    // If no pickup animation, just collect immediately
+                                    console.log('No pickup animation, collecting immediately');
+                                    if (mug.pickupPrompt) {
+                                        document.body.removeChild(mug.pickupPrompt); // Eliminar el prompt
+                                    }
+                                    playerHealth = Math.min(100, playerHealth + 25); // Curar 25 de vida, máximo 100
+                                    console.log(`Vida del jugador: ${playerHealth}`);
+                                    scene.remove(mug.mesh);
+                                    mugDrops.splice(i, 1);
+                                    console.log('Mug collected!');
+                                }
+                            }
+                        } else {
+                            // Hide prompt when out of range
+                            if (mug.pickupPrompt) {
+                                mug.pickupPrompt.style.display = 'none';
+                            }
+                        }
+                    } else {
+                        // Clean up collected mugs
+                        if (mug.pickupPrompt && mug.pickupPrompt.parentNode) {
+                            document.body.removeChild(mug.pickupPrompt);
+                        }
+                    }
+                }
+
+                // Health bars update removed
+            }
+
+            if (mixer) mixer.update(deltaTime);
+            for (let i = 0; i < skeletonMixers.length; i++) {
+                if (skeletonMixers[i]) {
+                    skeletonMixers[i].update(deltaTime);
+                    if (skeletons[i] && skeletons[i].userData.state === 'hit' && !skeletons[i].activeAction.isRunning()) {
+                        skeletons[i].activeAction.fadeOut(0.2);
+                        skeletons[i].animationActions.idle.reset().fadeIn(0.2).play();
+                        skeletons[i].activeAction = skeletons[i].animationActions.idle;
+                        skeletons[i].userData.state = 'idle'; // Resetear estado
+                    } else if (skeletons[i] && skeletons[i].userData.state === 'dead' && !skeletons[i].activeAction.isRunning()) {
+                        // If death animation is finished, remove the skeleton
+                        scene.remove(skeletons[i]);
+                        skeletons.splice(i, 1);
+                        skeletonBodies.splice(i, 1);
+                        skeletonMixers.splice(i, 1);
+                        skeletonHealths.splice(i, 1);
+                        attackCooldowns.splice(i, 1);
+                        i--; 
+                        continue; // Continue to the next skeleton
+                    }
+                    if (skeletons[i] && skeletons[i].userData.state === 'attacking' && !skeletons[i].activeAction.isRunning()) {
+                        skeletons[i].activeAction.fadeOut(0.2);
+                        skeletons[i].animationActions.idle.reset().fadeIn(0.2).play();
+                        skeletons[i].activeAction = skeletons[i].animationActions.idle;
+                        skeletons[i].userData.state = 'idle'; // Reiniciar estado para que pueda volver a actuar
+                    }
+                }
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
