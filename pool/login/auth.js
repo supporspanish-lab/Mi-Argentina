@@ -63,6 +63,7 @@ export function onUserProfileUpdate(userId, callback) {
     return onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
             callback(docSnap.data());
+            console.log("User profile data received:", docSnap.data());
         } else {
             // Si el perfil no existe, lo creamos.
             console.log("Perfil no encontrado en Firestore, creando uno nuevo...");

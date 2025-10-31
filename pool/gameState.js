@@ -7,9 +7,6 @@ import { cueBall, balls } from './ballManager.js';
 import { scene } from './scene.js';
 
 // --- Estado del Juego ---
-export let currentPlayer = 1;
-export let playerAssignments = { 1: null, 2: null }; // 'solids' (lisas) o 'stripes' (rayadas)
-export let ballsAssigned = false;
 export let shotInProgress = false;
 export let firstBallHitThisTurn = null; // --- NUEVO: Para registrar la primera bola golpeada
 export let pocketedThisTurn = [];
@@ -49,13 +46,13 @@ export function startShot() {
  */
 export function startFirstTurn() {
     isLoading = false; // --- NUEVO: La carga termina cuando se asigna el primer jugador
-    currentPlayer = 1; // El jugador 1 siempre empieza.
-    updateActivePlayerUI(currentPlayer);
+    // currentPlayer = 1; // El jugador 1 siempre empieza. (Ahora se deriva de onlineGameData)
+    // updateActivePlayerUI(currentPlayer); // Se actualizará desde pool.js
     startTurnTimer();
 }
 
 export function setPlacingCueBall(isPlacing) { // --- NUEVO: Función para controlar el estado de colocación
-    // --- LOG: Indica un cambio en el estado de colocación de la bola blanca.
+    
     isPlacingCueBall = isPlacing;
 }
 
@@ -77,10 +74,11 @@ export function setGameOver(isOver) {
 }
 /**
  * --- SOLUCIÓN: Añade la función que faltaba para establecer el jugador actual.
- * @param {number} player - El número del jugador (1 o 2).
+ * @param {number} playerNumber - El número del jugador (1 o 2).
  */
-export function setCurrentPlayer(player) {
-    currentPlayer = player;
+export function setCurrentPlayer(playerNumber) {
+    // Ya no necesitamos actualizar una variable local 'currentPlayer' aquí.
+    // El 'currentPlayer' se leerá directamente de onlineGameData en getGameState().
     startTurnTimer(); // --- SOLUCIÓN: Reiniciar el temporizador cada vez que cambia el jugador
 }
 
@@ -121,7 +119,15 @@ export function checkTurnTimer() {
  * --- NUEVO: Muestra un mensaje de falta en el centro de la pantalla.
  * @param {string} reason - El texto que se mostrará como motivo de la falta.
  */
-export function showFoulMessage(reason) {
+export function showFoulMessage(reason, targetPlayerUid = null) {
+    const onlineData = getOnlineGameData();
+    const myUid = onlineData.myUid; // Assuming myUid is available in onlineGameData
+
+    // Only show the message if targetPlayerUid is null (offline/global) or matches myUid
+    if (targetPlayerUid && myUid !== targetPlayerUid) {
+        return;
+    }
+
     const foulMessageContainer = document.getElementById('foulMessage');
     const foulMessageText = document.getElementById('foulMessageText');
     const playAgainBtn = document.getElementById('playAgainBtn');
@@ -153,13 +159,25 @@ export function setFirstHitBall(ball) {
  
 export function addPocketedBall(ball) {
     pocketedThisTurn.push(ball);
+    const gameState = getGameState();
+    const currentPlayerType = gameState.playerAssignments[gameState.currentPlayer];
+
 }
 
 export function setBallsAssigned(areAssigned) {
-    ballsAssigned = areAssigned;
+    // Esta función ahora solo se usa para desasignar bolas (establecer a false).
+    // La asignación inicial se maneja en revisar.js y se envía al servidor.
     if (!areAssigned) {
-        playerAssignments[1] = null;
-        playerAssignments[2] = null;
+        const onlineData = getOnlineGameData();
+        if (onlineData.gameId) {
+            import('./login/auth.js').then(({ db, doc, updateDoc }) => {
+                const gameRef = doc(db, "games", onlineData.gameId);
+                updateDoc(gameRef, {
+                    playerAssignments: { 1: null, 2: null },
+                    ballsAssigned: false
+                }).catch(err => console.error("Error al desasignar bolas en Firestore:", err));
+            });
+        }
     }
 }
 
@@ -167,12 +185,18 @@ export function setBallsAssigned(areAssigned) {
  * --- NUEVO: Asigna los tipos de bola (lisas/rayadas) a los jugadores.
  * @param {number} player - El jugador que metió la primera bola.
  * @param {string} type - El tipo de bola ('solids' o 'stripes').
+ * @param {object} currentAssignments - Las asignaciones actuales de los jugadores.
+ * @param {boolean} currentBallsAssigned - Si las bolas ya están asignadas.
+ * @returns {object} Un objeto con las nuevas asignaciones y el estado de ballsAssigned.
  */
-export function assignPlayerTypes(player, type) {
-    if (ballsAssigned) return; // No hacer nada si ya están asignadas
-    playerAssignments[player] = type;
-    playerAssignments[player === 1 ? 2 : 1] = (type === 'solids' ? 'stripes' : 'solids');
-    ballsAssigned = true;
+export function assignPlayerTypes(player, type, currentAssignments, currentBallsAssigned) {
+    if (currentBallsAssigned) return { playerAssignments: currentAssignments, ballsAssigned: currentBallsAssigned }; // No hacer nada si ya están asignadas
+
+    const newAssignments = { ...currentAssignments };
+    newAssignments[player] = type;
+    newAssignments[player === 1 ? 2 : 1] = (type === 'solids' ? 'stripes' : 'solids');
+    
+    return { playerAssignments: newAssignments, ballsAssigned: true };
 }
 
 // --- NUEVO: Función para reorganizar las bolas en la UI después de la asignación ---
@@ -244,18 +268,30 @@ export function completeFirstTurn() {
 }
 
 export function getGameState() {
+    const onlineData = getOnlineGameData();
+    const currentPlayerUid = onlineData.currentPlayerUid;
+    const player1Uid = onlineData.player1?.uid;
+    const player2Uid = onlineData.player2?.uid;
+
+    let derivedCurrentPlayer = null;
+    if (currentPlayerUid === player1Uid) {
+        derivedCurrentPlayer = 1;
+    } else if (currentPlayerUid === player2Uid) {
+        derivedCurrentPlayer = 2;
+    }
+
     return {
-        currentPlayer,
-        playerAssignments,
-        ballsAssigned, 
+        currentPlayer: derivedCurrentPlayer,
+        playerAssignments: onlineData.playerAssignments || { 1: null, 2: null },
+        ballsAssigned: onlineData.ballsAssigned || false, 
         isPlacingCueBall, // --- NUEVO: Exponer el estado
         isDampingEnabled, // --- NUEVO: Exponer el estado del frenado
         gamePaused, // --- CORRECCIÓN: Exponer el estado de pausa
         gameOver, // --- SOLUCIÓN: Exponer el estado de fin de partida
         firstBallHitThisTurn, // --- SOLUCIÓN: Exponer la primera bola golpeada para que revisar.js pueda consultarla
         pocketedThisTurn, // --- SOLUCIÓN: Exponer las bolas entroneradas para que revisar.js pueda consultarlas
-        isFirstTurn // --- NUEVO: Exponer la bandera del primer turno.
-        
+        isFirstTurn, // --- NUEVO: Exponer la bandera del primer turno.
+        ...onlineData
     };
 } 
 

@@ -68,6 +68,12 @@ self.addEventListener('install', (event) => {
  * If not, we fetch it from the network, cache it for next time, and then return it.
  */
 self.addEventListener('fetch', (event) => {
+    // --- NUEVO: Bypassar el Service Worker para las peticiones de Firebase ---
+    const requestUrl = new URL(event.request.url);
+    if (requestUrl.hostname.includes('googleapis.com') || requestUrl.hostname.includes('firebase')) {
+        return fetch(event.request); // Ir directamente a la red para Firebase
+    }
+
     // --- CORRECCIÓN: Estrategia "Network First" para desarrollo ---
     // Intenta obtener el recurso de la red primero.
     // Si falla (por ejemplo, sin conexión), recurre a la caché.

@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { cueBall, getSceneBalls } from './ballManager.js';
 import { getGameState, setPlacingCueBall, startShot, getOnlineGameData, setShotInProgress } from './gameState.js';
+import { auth } from './login/auth.js';
 import { camera, zoomState } from './scene.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
 import { animateCueShot, hideAimingGuides, isAimingAtBall } from './aiming.js';
@@ -44,6 +45,11 @@ export function initializeInputManager() {
 }
 
 function onPointerDown(e) {
+    const onlineGameData = getOnlineGameData();
+    const myUid = auth.currentUser?.uid;
+    if (onlineGameData.currentPlayerUid !== myUid) {
+        return; // No es el turno del jugador actual, ignorar input
+    }
     // Si la última acción fue arrastrar el punto de efecto, no iniciar un tiro.
     if (wasDraggingSpin()) {
         return;
@@ -59,11 +65,11 @@ function onPointerDown(e) {
         const dist = Math.hypot(worldPos.x - cueBall.mesh.position.x, worldPos.y - cueBall.mesh.position.y);
         if (dist < BALL_RADIUS * 2) { // Un área de toque un poco más grande que la bola
             movingCueBall = true;
+            pointerDown = true; // El puntero está presionado solo si se mueve la bola
         } else {
-            movingCueBall = false;
-            startAiming = true; // --- SOLUCIÓN: Marcar para iniciar el apuntado
+            // Si no se hace clic en la bola blanca, no hacer nada. No iniciar el apuntado.
+            return; // Salir de la función si no se hace clic en la bola blanca
         }
-        pointerDown = true; // El puntero está presionado en cualquier caso
     } else if (!getGameState().shotInProgress && !areBallsMoving(getSceneBalls())) {
         pointerDown = true;
         movingCueBall = false; // Asegurarse de que no estamos moviendo la bola
@@ -130,8 +136,16 @@ function onPointerMove(e) {
             // --- CORRECCIÓN: Actualizar localmente y enviar al servidor ---
             cueBall.mesh.position.x = newX;
             cueBall.mesh.position.y = newY;
-            window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: { x: newX, y: newY } } }));
+            if (cueBall.shadowMesh) {
+                cueBall.shadowMesh.position.set(newX, newY, 0.1);
+            }
             cueBallMaterial.color.set(0xffffff);
+            // --- NUEVO: Enviar la posición de la bola blanca al servidor en tiempo real ---
+            const onlineGameData = getOnlineGameData();
+            const myUid = auth.currentUser?.uid;
+            if (onlineGameData.ballInHandFor === myUid) {
+                window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: newPosition } }));
+            }
         } else {
             // Si es inválido, no mover la bola y mantenerla blanca.
             cueBallMaterial.color.set(0xffffff);
@@ -147,6 +161,13 @@ function onPointerUp(e) {
     if (movingCueBall && isPlacingCueBall) {
         // Se ha terminado de colocar la bola blanca
         movingCueBall = false;
+        const newPosition = { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y };
+        const onlineGameData = getOnlineGameData();
+        const myUid = auth.currentUser?.uid;
+        if (onlineGameData.ballInHandFor === myUid) {
+            window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: newPosition } }));
+            setPlacingCueBall(false); // --- CORRECCIÓN: Indicar que ya no estamos colocando la bola.
+        }
         // --- MODIFICACIÓN: Ya no se cambia el estado aquí. El modo "bola en mano" persiste hasta el disparo.
     }
 

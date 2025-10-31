@@ -2,9 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- --- MODIFICADO: Añadir user-scalable=no para una mejor experiencia en móviles --- -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">    <title>Juego de BlackBal con Canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Juego de BlackBal con Canvas</title>
     <!-- NUEVO: Evita el error 404 de favicon.ico en la consola -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <style>
@@ -402,6 +401,7 @@
         }
         #options-panel input[type="range"] {
             -webkit-appearance: none;
+            appearance: none;
             width: 100%;
             height: 8px;
             background: #555;
@@ -593,10 +593,6 @@
             padding: 10px 25px;
         }
 
-        /* --- SOLUCIÓN: Ajustar la UI superior al área segura --- */
-        #top-ui-container {
-            /* This container is already a flexbox, its default positioning is fine */
-        }
 
         /* --- SOLUCIÓN: Estilos para el modal de error --- */
         #error-overlay {
@@ -805,10 +801,10 @@
     <script type="module">
         // 1. Forzar la URL para que incluya el ID de la partida de prueba.
         // Esto simula la redirección desde la pantalla de matchmaking.
-        const gameId = 'i7IghaYILY4vhePcIJj6';
+        const testGameId = 'i7IghaYILY4vhePcIJj6';
         const url = new URL(window.location);
         if (!url.searchParams.has('gameId')) {
-            url.searchParams.set('gameId', gameId);
+            url.searchParams.set('gameId', testGameId);
             // Reemplazamos el historial para que el usuario no pueda volver atrás a la URL sin ID.
             window.history.replaceState({}, '', url);
         }
@@ -854,7 +850,7 @@
                         console.error("Error al sincronizar el apuntado:", error);
                     }
                 }
-            }, 50); // Límite de 50ms.
+            }, 1000); // Límite de 1000ms.
 
             // --- NUEVO: Función para enviar la actualización de la potencia a Firestore ---
             const sendPowerUpdate = throttle(async (power) => {
@@ -867,10 +863,10 @@
                         console.error("Error al sincronizar la potencia:", error);
                     }
                 }
-            }, 50); // Mismo límite para la potencia
+            }, 1000); // Mismo límite para la potencia
 
             // --- NUEVO: Función para enviar la posición de la bola blanca durante "bola en mano" ---
-            const sendCueBallPositionUpdate = throttle(async (position) => {
+            const sendCueBallPositionUpdate = async (position) => {
                 if (gameId) {
                     try {
                         const gameRef = doc(db, "games", gameId);
@@ -880,7 +876,7 @@
                         console.error("Error al sincronizar la posición de la bola blanca:", error);
                     }
                 }
-            }, 50); // Mismo límite
+            };
 
             // --- NUEVO: Función para enviar la actualización del efecto (spin) ---
             const sendSpinUpdate = throttle(async (spin) => {
@@ -893,7 +889,7 @@
                         console.error("Error al sincronizar el efecto:", error);
                     }
                 }
-            }, 50); // Mismo límite
+            }, 1000); // Mismo límite
 
             // --- NUEVO: Función para enviar el estado de visibilidad del modal de efecto ---
             const sendSpinModalUpdate = async (isVisible) => {
@@ -946,27 +942,38 @@
                 }
             });
 
-            // 6. Escuchar cambios en la partida para recibir el ángulo del oponente.
-            onSnapshot(doc(db, "games", gameId), (gameSnap) => {
-                const gameData = gameSnap.data();
-                // Disparar un evento para que pool.js reciba el ángulo y lo dibuje.
-                window.dispatchEvent(new CustomEvent('receiveaim', { detail: gameData }));
+            // --- NUEVO: Listener para limpiar la posición de la bola blanca en el servidor ---
+            window.addEventListener('clearcueballpositionrequest', async () => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        await updateDoc(gameRef, { cueBallPosition: null });
+                    } catch (error) {
+                        console.error("Error al limpiar la posición de la bola blanca:", error);
+                    }
+                }
             });
+
+
 
             // --- NUEVO: Listener para enviar los datos del tiro al servidor ---
             window.addEventListener('sendsingleplayer', async (event) => {
                 if (gameId && event.detail) {
+                    const { gameState: gameData, ...shotData } = event.detail; // Separar gameState del resto de los datos del tiro
                     const gameRef = doc(db, "games", gameId);
                     try {
                         await updateDoc(gameRef, { 
-                            lastShot: {
+                            lastShot: { // --- TEMPORAL: Directamente a lastShot para sincronización inmediata
                                 playerUid: auth.currentUser.uid,
-                                ...event.detail,
+                                currentPlayerUid: gameData.currentPlayerUid, // --- SOLUCIÓN: Incluir el UID del jugador actual en el resultado del turno
+                                // --- SOLUCIÓN: Incluir la información de ambos jugadores para la lógica del servidor ---
+                                player1: gameData.player1,
+                                player2: gameData.player2,
+                                ...shotData, // Enviar solo los datos del tiro, no todo el gameState
                                 timestamp: Date.now()
                             },
                             ballInHandFor: null, cueBallPosition: null,
-                            aimingSpin: { x: 0, y: 0 }, isSpinModalOpen: false,
-                            aimingPower: 0
+                            aimingSpin: { x: 0, y: 0 }, isSpinModalOpen: false
                         });
                     } catch (error) {
                         console.error("Error al enviar los datos del tiro:", error);
@@ -974,20 +981,7 @@
                 }
             });
 
-            // --- NUEVO: Canal para sincronizar el estado de las bolas durante el tiro ---
-            const sendBallStateUpdate = throttle(async (ballStates) => {
-                if (gameId) {
-                    try {
-                        const gameRef = doc(db, "games", gameId);
-                        // Usamos un nuevo campo 'liveBallState'
-                        await updateDoc(gameRef, { liveBallState: ballStates });
-                    } catch (error) {
-                        // No loguear errores aquí para no llenar la consola, es una operación de alta frecuencia.
-                    }
-                }
-            }, 100); // Enviar actualizaciones 10 veces por segundo (100ms)
 
-            window.addEventListener('sendballstates', (event) => event.detail && sendBallStateUpdate(event.detail));
         }
     </script>
 

@@ -207,11 +207,14 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
             if (hitBall.number === 8) {
                 // Es un golpe inválido a la bola 8 si al jugador todavía le quedan bolas.
                 const playerBallType = playerAssignments[currentPlayer];
-                const playerHasBallsLeft = balls.some(ball => {
-                    if (!ball.isActive || ball.number === null || ball.number === 8) return false;
-                    const ballType = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-                    return ballType === playerBallType;
-                });
+                let playerHasBallsLeft = false;
+                if (playerBallType) { // Solo verificar si el tipo de bola del jugador está asignado
+                    playerHasBallsLeft = balls.some(ball => {
+                        if (!ball.isActive || ball.number === null || ball.number === 8) return false;
+                        const ballType = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                        return ballType === playerBallType;
+                    });
+                }
                 if (playerHasBallsLeft) {
                     isInvalidHit = true;
                 }
@@ -219,7 +222,9 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
                 // Comprobar si es una bola del oponente.
                 const isSolid = hitBall.number >= 1 && hitBall.number <= 7;
                 const isStripe = hitBall.number >= 9 && hitBall.number <= 15;
-                if ((isSolid && playerAssignments[currentPlayer] === 'stripes') || (isStripe && playerAssignments[currentPlayer] === 'solids')) {
+                const hitBallType = isSolid ? 'solids' : (isStripe ? 'stripes' : null);
+
+                if (hitBallType && playerAssignments[currentPlayer] && hitBallType !== playerAssignments[currentPlayer]) {
                     isInvalidHit = true;
                 }
             }

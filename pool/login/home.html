@@ -7,6 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- SOLUCIÓN: Evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <style>
       :root {
         --primary-color: #00f291;
@@ -39,46 +41,6 @@
         position: relative;
         overflow: hidden; /* --- SOLUCIÓN: Evitar cualquier tipo de scroll en el body --- */
         /* padding: 20px; // El padding se gestiona en .app-container */
-      }
-
-      /* Aurora Background Effect */
-      body::before,
-      body::after {
-          content: '';
-          position: fixed; /* --- SOLUCIÓN: Evita que la animación afecte el tamaño de la página --- */
-          z-index: -2;
-          width: 80vmax;
-          height: 80vmax;
-          border-radius: 49% 51% 70% 30% / 43% 42% 58% 57%;
-          filter: blur(180px);
-          will-change: transform, border-radius, opacity;
-          mix-blend-mode: screen; 
-      }
-
-      body::before {
-          background: radial-gradient(circle, rgba(0, 242, 145, 0.7) 0%, transparent 65%);
-          top: -10%;
-          left: -20%;
-          animation: aurora-1 30s ease-in-out infinite alternate;
-      }
-
-      body::after {
-          background: radial-gradient(circle, rgba(173, 98, 247, 0.6) 0%, transparent 65%);
-          bottom: -10%;
-          right: -20%;
-          animation: aurora-2 35s ease-in-out infinite alternate;
-      }
-
-      @keyframes aurora-1 {
-          0% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 49% 51% 70% 30% / 43% 42% 58% 57%; opacity: 0.5; }
-          50% { transform: translate(20vw, 15vh) rotate(90deg) scale(1.2); opacity: 0.8; }
-          100% { transform: translate(-5vw, -10vh) rotate(-30deg) scale(1); border-radius: 68% 32% 35% 65% / 54% 30% 70% 46%; opacity: 0.5; }
-      }
-
-      @keyframes aurora-2 {
-          0% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 39% 61% 70% 30% / 48% 22% 78% 52%; opacity: 0.4; }
-          50% { transform: translate(-15vw, -20vh) rotate(-120deg) scale(1.1); opacity: 0.6; }
-          100% { transform: translate(10vw, 10vh) rotate(45deg) scale(1); border-radius: 49% 51% 70% 30% / 43% 42% 58% 57%; opacity: 0.4; }
       }
 
       #root {
@@ -643,14 +605,15 @@
         const waitingScreen = document.getElementById('waiting-screen');
         const cancelWaitBtn = document.getElementById('cancel-wait-btn');
         
-        onSessionStateChanged((user) => {
-            if (user) {
-                let username = user.email; // Fallback username
-                // Escuchar cambios en el perfil del usuario
-                onUserProfileUpdate(user.uid, (userData) => {
-                    userDisplayName.textContent = userData.username || user.email;
-                    userBalanceSpan.textContent = `$${userData.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                });
+        try {
+            onSessionStateChanged((user) => {
+                if (user) {
+                    userDisplayName.textContent = user.email; // Set initial display name to email
+                    // Escuchar cambios en el perfil del usuario
+                    onUserProfileUpdate(user.uid, (userData) => {
+                        userDisplayName.textContent = userData.username || user.email;
+                        userBalanceSpan.textContent = `$${userData.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    });
 
                 // Función de utilidad del primer script (ahora fusionado)
                 function showMatchLoading(message) {
@@ -660,12 +623,10 @@
 
                 // Function to clean up the user's waiting game
                 const cleanupWaitingGame = async () => {
-                    if (userWaitingGameId) {
-                        console.log(`Cleaning up waiting game: ${userWaitingGameId}`);
-                        await deleteDoc(doc(db, "games", userWaitingGameId)).catch(e => console.error("Error deleting game on cleanup:", e));
+                        // Se ha deshabilitado el borrado de salas al salir.
+                        // await deleteDoc(doc(db, "games", userWaitingGameId)).catch(e => console.error("Error deleting game on cleanup:", e));
                         userWaitingGameId = null;
                     }
-                };
 
                 logoutBtn.addEventListener('click', async () => {
                     await cleanupWaitingGame(); // Attempt to clean up before logging out
@@ -679,12 +640,32 @@
                 // --- Lógica de Matchmaking en tiempo real para el carrusel (MEJORADA) ---
                 const gamesRef = collection(db, "games");
                 const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting")); // CORRECCIÓN: Eliminado el limit(1)
-
-                let userWaitingGameId = null;
-
                 // --- NUEVO: Lógica para detectar y purgar partidas "fantasma" ---
                 const STALE_GAME_MINUTES = 10; // Partidas con más de 10 minutos en espera se consideran abandonadas
 
+                // --- SOLUCIÓN: Purgar partidas fantasma UNA SOLA VEZ al cargar, fuera del listener onSnapshot ---
+                const purgeStaleGames = async () => {
+                    try {
+                        const snapshot = await getDocs(waitingGamesQuery);
+                        const now = new Date();
+                        const promises = [];
+                        snapshot.forEach(docSnap => {
+                            const gameData = docSnap.data();
+                            const createdAt = gameData.createdAt?.toDate();
+                            if (createdAt) {
+                                const minutesDiff = (now - createdAt) / (1000 * 60);
+                                if (minutesDiff > STALE_GAME_MINUTES) {
+                                    // La lógica de borrado automático de salas antiguas ha sido eliminada.
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error("Error al purgar partidas antiguas:", error);
+                    }
+                };
+                purgeStaleGames(); // Ejecutar la purga.
+
+                let userWaitingGameId = null;
                 const unsubscribe = onSnapshot(waitingGamesQuery, (querySnapshot) => {
                     gameCarousel.innerHTML = ''; // Limpiar el carrusel en cada actualización
                     let userIsWaiting = false;
@@ -694,17 +675,6 @@
                     querySnapshot.forEach(docSnap => {
                         const gameData = docSnap.data();
                         const gameId = docSnap.id;
-
-                        // --- DETECCIÓN DE PARTIDAS FANTASMA ---
-                        const createdAt = gameData.createdAt.toDate(); // Convertir timestamp de Firestore a objeto Date
-                        const minutesDiff = (now - createdAt) / (1000 * 60);
-
-                        if (minutesDiff > STALE_GAME_MINUTES && gameData.player1.uid !== user.uid) {
-                            console.log(`Partida fantasma detectada y omitida: ${gameId} (creada hace ${Math.round(minutesDiff)} min)`);
-                            // Opcional: Podríamos borrarla aquí, pero por ahora solo la ignoramos para otros jugadores.
-                            // deleteDoc(doc(db, "games", gameId));
-                            return; // No mostrar esta tarjeta de partida
-                        }
 
                         if (gameData.player1.uid === user.uid) {
                             // Si yo soy el que está esperando, marco la bandera
@@ -724,17 +694,27 @@
                             `;
                             card.addEventListener('click', async () => {
                                // --- CORRECCIÓN: Asignar el turno inicial aleatoriamente al unirse ---
-                                const players = [gameData.player1.uid, user.uid];
-                                const startingPlayerUid = players[Math.floor(Math.random() * players.length)];
+                                const player1Uid = gameData.player1?.uid;
+                                // --- SOLUCIÓN: Obtener el usuario actual de forma fiable ---
+                                const currentUser = auth.currentUser;
+                                const player2Uid = currentUser?.uid;
+
+                                // --- SOLUCIÓN: Validar que ambos UIDs existen antes de continuar ---
+                                if (!player1Uid || !player2Uid) {
+                                    console.error("Error: Uno de los UIDs de los jugadores no es válido. No se puede unir a la partida.", { player1Uid, player2Uid, currentUser });
+                                    alert("No se puede unir a esta partida porque el creador ya no es válido. La partida desaparecerá en breve.");
+                                    return;
+                                }
+
+                                const startingPlayerUid = player1Uid;
 
                                 await updateDoc(doc(db, "games", gameId), {
-                                    player2: { uid: user.uid, username: userDisplayName.textContent },
+                                    player2: { uid: player2Uid, username: userDisplayName.textContent },
                                     status: "starting",
                                     // El UID del jugador que empieza se guarda en el servidor.
                                     currentPlayerUid: startingPlayerUid,
                                     turn: 1 // Asegurarse de que el contador de turnos esté en 1
-                                });
-                                window.location.href = `../index.html?gameId=${gameId}`;
+                                }).then(() => { window.location.href = `../index.html?gameId=${gameId}`; });
                             });
                             gameCarousel.appendChild(card);
                         }
@@ -808,6 +788,58 @@
                             });
                         });
                         gameCarousel.appendChild(createCard);
+
+                        // --- NUEVO: Botón para jugar 1 vs 1 (modo test) ---
+                        const createTestGameCard = document.createElement('div');
+                        createTestGameCard.className = 'game-card create-new';
+                        createTestGameCard.innerHTML = `
+                            <div class="create-icon">&#9881;</div> <!-- Icono de engranaje para test -->
+                            <span class="create-text">Jugar 1 vs 1 (Test)</span>
+                        `;
+                        createTestGameCard.addEventListener('click', async () => {
+                            createTestGameCard.style.pointerEvents = 'none';
+
+                            // Generar el estado inicial de las bolas (mismo que el anterior)
+                            const ballPositions = [];
+                            const RACK_SPACING_DIAMETER = 24;
+                            const TABLE_WIDTH = 1000;
+                            const TABLE_HEIGHT = 500;
+                            const startX = TABLE_WIDTH * 0.75;
+                            const startY = TABLE_HEIGHT / 2;
+                            const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+                            let ballIndex = 0;
+
+                            for (let i = 0; i < 5; i++) {
+                                for (let j = 0; j <= i; j++) {
+                                    const ballNumber = ballOrder[ballIndex++];
+                                    ballPositions.push({
+                                        number: ballNumber,
+                                        x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                                        y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                                        isActive: true
+                                    });
+                                }
+                            }
+                            ballPositions.push({
+                                number: null,
+                                x: TABLE_WIDTH / 4,
+                                y: TABLE_HEIGHT / 2,
+                                isActive: true
+                            });
+
+                            const newGame = await addDoc(gamesRef, {
+                                player1: { uid: user.uid, username: userDisplayName.textContent },
+                                player2: { uid: user.uid, username: userDisplayName.textContent + " (P2)" }, // Mismo usuario para P2
+                                status: "starting", // Iniciar directamente
+                                createdAt: new Date(),
+                                currentPlayerUid: user.uid, // El mismo usuario empieza
+                                balls: ballPositions,
+                                turn: 1
+                            });
+
+                            window.location.href = `../index.html?gameId=${newGame.id}`;
+                        });
+                        gameCarousel.appendChild(createTestGameCard);
                     }
                 });
 
@@ -830,10 +862,12 @@
             } else {
                 // El usuario no ha iniciado sesión.
                 // Redirigir a la página de login.
-                console.log("Usuario no autenticado, redirigiendo al login.");
                 window.location.href = 'login.html';
             }
         });
+        } catch (error) {
+            console.error("Error in onSessionStateChanged setup:", error);
+        }
     </script>
   </body>
 </html>

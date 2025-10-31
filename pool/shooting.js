@@ -1,11 +1,12 @@
 // --- Módulo de Disparo ---
 import * as THREE from 'three';
 import { areBallsMoving, updateBallPositions } from './fisicas.js';
-import { getGameState, startShot, setPlacingCueBall } from './gameState.js';
+import { getGameState, startShot, setPlacingCueBall, getOnlineGameData } from './gameState.js';
 import { playSound } from './audioManager.js';
 import { cueBall, getSceneBalls } from './ballManager.js';
 import { animateCueShot } from './aiming.js';
 import { getCurrentShotAngle } from './inputManager.js';
+import { auth } from './login/auth.js';
 
 let isShooting = false;
 
@@ -61,12 +62,25 @@ export function shoot(powerPercent) {
             cueBallStartPos: { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y }
         };
 
-        // --- CORRECCIÓN: Aplicar el tiro localmente de inmediato (Client-Side Prediction) ---
-        // Esto elimina el lag para el jugador que dispara.
-        window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
+        // --- NUEVO: Verificar si es el turno del jugador actual antes de enviar el tiro al servidor ---
+        const onlineGameData = getOnlineGameData();
+        const myUid = auth.currentUser?.uid;
+        if (onlineGameData.currentPlayerUid !== myUid) {
+            console.warn("Intento de disparo de un jugador que no tiene el turno. Tiro no enviado al servidor.");
+            isShooting = false; // Reseteamos el estado de disparo
+            return; // No enviar el tiro al servidor
+        }
+
+        // --- MODIFICADO: No aplicar el tiro localmente, esperar al servidor ---
+        // window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
 
         // --- Enviar los datos del tiro al servidor para el oponente ---
-        window.dispatchEvent(new CustomEvent('sendsingleplayer', { detail: shotData }));
+        window.dispatchEvent(new CustomEvent('sendsingleplayer', { 
+            detail: {
+                ...shotData,
+                gameState: gameState
+            } 
+        }));
 
         isShooting = false; // Reseteamos el estado de disparo
     });
