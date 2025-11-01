@@ -826,6 +826,8 @@
                             card.addEventListener('click', async () => {
                                 // --- SOLUCIÓN: Asignar el turno inicial aleatoriamente al unirse ---
                                 const random = Math.random();
+                                const player1Uid = gameData.player1.uid;
+                                const player2Uid = user.uid;
                                 const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
 
                                 await updateDoc(doc(db, "games", gameId), {
