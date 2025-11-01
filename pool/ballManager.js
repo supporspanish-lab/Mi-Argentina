@@ -62,6 +62,7 @@ const createBall = (props) => {
             if (originalDiameter > 0) {
                 const scaleFactor = (BALL_RADIUS * 2) / originalDiameter;
                 ballMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
             }
             const centeringBox = new THREE.Box3().setFromObject(ballMesh);
             const center = centeringBox.getCenter(new THREE.Vector3());
@@ -148,7 +149,7 @@ const createBall = (props) => {
     };
 };
 
-export function setupBalls(isInitialSetup = false, singleBallData = null) {
+export function setupBalls(isInitialSetup = false, singleBallData = null, isOnlineGame = false) {
     
     if (singleBallData) {
         // --- NUEVO: Crear una sola bola a partir de los datos ---
@@ -197,35 +198,38 @@ export function setupBalls(isInitialSetup = false, singleBallData = null) {
         });
     }
 
-    const ballColors = {
-        1: '#f1c40f', 2: '#3498db', 3: '#e74c3c', 4: '#9b59b6', 5: '#e67e22',
-        6: '#2ecc71', 7: '#a52a2a', 8: 'black', 9: '#f1c40f', 10: '#3498db',
-        11: '#e74c3c', 12: '#9b59b6', 13: '#e67e22', 14: '#2ecc71', 15: '#a52a2a'
-    };
+    // --- MODIFICADO: Solo rackear las bolas si NO es un juego online ---
+    if (!isOnlineGame) {
+        const ballColors = {
+            1: '#f1c40f', 2: '#3498db', 3: '#e74c3c', 4: '#9b59b6', 5: '#e67e22',
+            6: '#2ecc71', 7: '#a52a2a', 8: 'black', 9: '#f1c40f', 10: '#3498db',
+            11: '#e74c3c', 12: '#9b59b6', 13: '#e67e22', 14: '#2ecc71', 15: '#a52a2a'
+        };
 
-    const startX = TABLE_WIDTH * 0.75;
-    const startY = TABLE_HEIGHT / 2;
-    let ballCount = 1;
+        const startX = TABLE_WIDTH * 0.75;
+        const startY = TABLE_HEIGHT / 2;
+        let ballCount = 1;
 
-    const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+        const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
 
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j <= i; j++) {
-            const ballNumber = ballOrder[ballCount - 1];
-            const newBallData = {
-                id: ballNumber, // --- CORRECCIÓN: Usar el número real de la bola como ID
-                number: ballNumber,
-                distanceTraveled: 0, // --- NUEVO: Inicializar distancia para las bolas de color
-                color: ballColors[ballNumber],
-                x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
-                y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
-                radius: BALL_RADIUS, isActive: true
-            };
-            balls.push(createBall(newBallData));
-            ballCount++;
+        for (let i = 0; i < 5; i++) {
+            for (let j = 0; j <= i; j++) {
+                const ballNumber = ballOrder[ballCount - 1];
+                const newBallData = {
+                    id: ballNumber, // --- CORRECCIÓN: Usar el número real de la bola como ID
+                    number: ballNumber,
+                    distanceTraveled: 0, // --- NUEVO: Inicializar distancia para las bolas de color
+                    color: ballColors[ballNumber],
+                    x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                    y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                    radius: BALL_RADIUS, isActive: true
+                };
+                balls.push(createBall(newBallData));
+                ballCount++;
+            }
         }
     }
-}
+};
 
 /**
  * Carga los modelos 3D de las bolas.

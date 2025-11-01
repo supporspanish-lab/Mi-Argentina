@@ -43,6 +43,7 @@ export async function loginWithEmail(email, password) {
 
     if (!docSnap.exists()) {
         await setDoc(userDocRef, {
+            username: user.displayName || user.email.split('@')[0], // Extract username from email if displayName is not set
             email: user.email,
             balance: 0
         });
@@ -60,15 +61,21 @@ export function onSessionStateChanged(callback) {
 
 export function onUserProfileUpdate(userId, callback) {
     const userDocRef = doc(db, "saldo", userId);
-    return onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            callback(docSnap.data());
-            console.log("User profile data received:", docSnap.data());
-        } else {
-            // Si el perfil no existe, lo creamos.
+    return onSnapshot(userDocRef, async (docSnap) => {
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        // Check if username is currently the email and update if necessary
+                        if (userData.username === userData.email) {
+                            const newUsername = userData.email.split('@')[0];
+                            await updateDoc(userDocRef, { username: newUsername });
+                            userData.username = newUsername; // Update local userData for immediate callback
+                        }
+                        callback(userData);
+                        console.log("User profile data received:", userData);
+                    } else {            // Si el perfil no existe, lo creamos.
             console.log("Perfil no encontrado en Firestore, creando uno nuevo...");
             setDoc(userDocRef, {
-                username: auth.currentUser.displayName || auth.currentUser.email,
+                username: auth.currentUser.displayName || auth.currentUser.email.split('@')[0], // Extract username from email if displayName is not set
                 email: auth.currentUser.email,
                 balance: 0
             }).catch(error => {

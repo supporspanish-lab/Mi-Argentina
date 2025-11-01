@@ -1,7 +1,7 @@
 // --- Módulo de Controles de Potencia ---
 import * as THREE from 'three';
 import { cueBall } from './ballManager.js';
-import { updatePowerUI } from './ui.js';
+
 
 // --- Estado Interno ---
 let isPullingBackState = false;
@@ -45,7 +45,6 @@ export function startPowerCharge() {
     powerChargeInterval = setInterval(() => {
         const elapsedTime = (performance.now() - startTime) / 1000; // en segundos
         powerPercentState = Math.min(elapsedTime * POWER_CHARGE_RATE, 1);
-        updatePowerUI(powerPercentState);
     }, 16); // Actualizar ~60 veces por segundo
 }
 
@@ -61,35 +60,43 @@ export function stopPowerCharge() {
 // --- Funciones para la Barra de Potencia Deslizable ---
 
 export function startPowerDrag() {
+    // Esta función ahora se llama por un evento desde index.html
     isDraggingPowerState = true;
 }
 
-export function dragPower({ clientX }) {
-    if (!isDraggingPowerState) return;
+export function dragPower(powerPercent, logicalY, visualY) {
+    // Esta función ahora se llama por un evento desde index.html
+    if (!isDraggingPowerState) return; // Doble chequeo por si acaso
 
-    const powerBarContainer = document.getElementById('powerBarContainer');
-    const rect = powerBarContainer.getBoundingClientRect();
-    const relativeX = clientX - rect.left;
-    let newPower = relativeX / rect.width;
-    newPower = Math.max(0, Math.min(1, newPower));
-
-    powerPercentState = newPower;
-    // --- CORRECCIÓN: Restaurar la actualización local para una respuesta instantánea. ---
-    updatePowerUI(powerPercentState);
+    powerPercentState = powerPercent;
 
     // --- NUEVO: Enviar la actualización de la potencia al servidor ---
     // Disparamos un evento para que index.html lo capture y lo envíe a Firestore.
-    window.dispatchEvent(new CustomEvent('sendpower', { detail: { power: newPower } }));
+    window.dispatchEvent(new CustomEvent('sendpower', { detail: { power: powerPercent } }));
 }
 
 export function stopPowerDrag() {
     isDraggingPowerState = false;
     const finalPower = powerPercentState;
     powerPercentState = 0;
-    updatePowerUI(powerPercentState);
     return finalPower;
 }
 
+// --- NUEVO: Listeners para los eventos de la barra de potencia ---
+window.addEventListener('startpowerdrag', () => {
+    startPowerDrag();
+});
+
+window.addEventListener('dragpower', (event) => {
+    const { powerPercent, logicalY, visualY } = event.detail;
+    dragPower(powerPercent, logicalY, visualY);
+});
+
+window.addEventListener('stoppowerdrag', () => {
+    // La lógica de 'stopPowerDrag' ya se llama desde ui.js al soltar el ratón,
+    // así que este listener es principalmente para asegurar que el estado se limpie.
+    isDraggingPowerState = false;
+});
 // --- Getters de Estado ---
 
 export const isPullingBack = () => isPullingBackState;

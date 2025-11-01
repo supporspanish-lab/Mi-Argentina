@@ -1,5 +1,5 @@
 // --- Módulo de Revisión ---
-import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData } from './gameState.js';
+import { getGameState, showFoulMessage, setCurrentPlayer, setPlacingCueBall, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData, setOnlineGameData } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
@@ -21,79 +21,374 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             gameOver: juegoTerminado, // --- NUEVO: Obtener el estado de fin de partida
             isFirstTurn: esPrimerTurno // --- NUEVO: Obtener la bandera del primer turno.
             } = estadoInicialJuego;    // Muestra si el turno terminó porque el contador llegó a cero.
-    
-    // --- CORRECCIÓN: Asegurar que bolasAsignadasAlInicioTurno sea false si no hay asignaciones.
-    // Esto maneja el caso en que el estado de Firestore podría estar inconsistente.
-    if (bolasAsignadasAlInicioTurno && Object.values(playerAssignmentsAlInicioTurno).every(assignment => assignment === null)) {
-        bolasAsignadasAlInicioTurno = false;
-    }
 
-    // --- SOLUCIÓN: Procesar la asignación de bolas ANTES de comprobar las faltas.
-    // Si la mesa está abierta y se ha metido una bola de color, se asignan los grupos inmediatamente.
-    if (!bolasAsignadasAlInicioTurno && bolasEntroneradasEsteTurno.length > 0) {
-        const primeraBolaObjetivoEntronerada = bolasEntroneradasEsteTurno.find(b => b.number !== null && b.number !== 8);
-        if (primeraBolaObjetivoEntronerada) {
-            const tipo = (primeraBolaObjetivoEntronerada.number >= 1 && primeraBolaObjetivoEntronerada.number <= 7) ? 'solids' : 'stripes';
-            const { playerAssignments: nuevosPlayerAssignments, ballsAssigned: nuevasBolasAsignadas } = assignPlayerTypes(jugadorActual, tipo, playerAssignmentsAlInicioTurno, bolasAsignadasAlInicioTurno);
-            playerAssignmentsAlInicioTurno = nuevosPlayerAssignments;
-            bolasAsignadasAlInicioTurno = nuevasBolasAsignadas;
-            console.log(`Bola ${primeraBolaObjetivoEntronerada.number} entronerada. Jugador actual: ${jugadorActual}. Tu tipo de bola es: ${nuevosPlayerAssignments[jugadorActual]}.`);
-        }
-    }
+        const bolasAsignadasAntesDelTurno = bolasAsignadasAlInicioTurno; // Guardar el estado inicial de asignación de bolas.
 
-    // --- NUEVO: Detección de Faltas ---
-    let faltaCometida = false; // Falta que solo cambia el turno
-    let faltaConBolaEnMano = false; // Falta que da "bola en mano" al oponente
-    let motivoFalta = ""; // --- NUEVO: Variable para almacenar la razón de la falta
+            const playerAssignmentsAntesDelTurno = { ...playerAssignmentsAlInicioTurno }; // Guardar las asignaciones iniciales.
 
+            let acabaDeAsignar = false; // --- FIX: Bandera para saber si la asignación ocurrió en ESTE turno.
 
+        
 
+            // --- CORRECCIÓN: Asegurar que bolasAsignadasAlInicioTurno sea false si no hay asignaciones.
 
+            // Esto maneja el caso en que el estado de Firestore podría estar inconsistente.
 
-    // --- NUEVO: Detección de Falta por Tiempo Agotado ---
-    if (faltaPorTiempo) {
-        if (!faltaCometida) { // Solo establecer si no se ha cometido otra falta aún
-            faltaCometida = true;
-            faltaConBolaEnMano = true;
-            const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
-            motivoFalta = `${currentUsernameForFoul} se quedó sin tiempo. Bola en mano para el oponente.`;
-        }
-    }
+            if (bolasAsignadasAlInicioTurno && Object.values(playerAssignmentsAlInicioTurno).every(assignment => assignment === null)) {
 
-    // --- FALTA AÑADIDA: Meter la bola blanca ---
-    const bolaBlancaEntronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === null);
-    if (bolaBlancaEntronerada) {
-        if (!faltaCometida) { // Solo establecer si no se ha cometido otra falta aún
-            faltaCometida = true;
-            faltaConBolaEnMano = true;
-            const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
-            motivoFalta = `${currentUsernameForFoul} metió la bola blanca y te da bola en mano`;
+                bolasAsignadasAlInicioTurno = false;
 
-            // Lógica para "bola en mano": reposicionar la bola blanca.
-            setPlacingCueBall(true);
-            if (cueBall) {
-                cueBall.isPocketed = false;
-                cueBall.pocketedState = null;
-                cueBall.isActive = true; // Se activa para poder colocarla.
-                cueBall.mesh.visible = true; // Asegurar que vuelva a ser blanca
-                // --- CORRECCIÓN: Frenar la bola blanca completamente al reposicionarla.
-                cueBall.vx = 0;
-                cueBall.vy = 0;
-                if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
-                // La bola aparece en la zona de saque inicial.
-                cueBall.mesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, BALL_RADIUS);
-                if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
             }
-        }
-    }
 
-    // --- NUEVO: Falta por no golpear ninguna bola ---
-    if (!primeraBolaGolpeadaEsteTurno && !faltaCometida) {
-        faltaCometida = true;
-        faltaConBolaEnMano = true;
-        const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
-        motivoFalta = `${currentUsernameForFoul} no golpeó ninguna bola. Bola en mano para el oponente.`;
-    }
+        
+
+            // --- SOLUCIÓN: Procesar la asignación de bolas ANTES de comprobar las faltas.
+
+            // Si la mesa está abierta y se ha metido una bola de color, se asignan los grupos inmediatamente.
+
+            if (!bolasAsignadasAntesDelTurno && bolasEntroneradasEsteTurno.length > 0) {
+
+                const primeraBolaObjetivoEntronerada = bolasEntroneradasEsteTurno.find(b => b.number !== null && b.number !== 8);
+
+                if (primeraBolaObjetivoEntronerada) {
+
+                    acabaDeAsignar = true; // --- FIX: Marcar que la asignación ocurrió ahora.
+
+                    const tipo = (primeraBolaObjetivoEntronerada.number >= 1 && primeraBolaObjetivoEntronerada.number <= 7) ? 'solids' : 'stripes';
+
+                    const { playerAssignments: nuevosPlayerAssignments, ballsAssigned: nuevasBolasAsignadas } = assignPlayerTypes(jugadorActual, tipo, playerAssignmentsAlInicioTurno, bolasAsignadasAlInicioTurno);
+
+                    playerAssignmentsAlInicioTurno = nuevosPlayerAssignments;
+
+                    bolasAsignadasAlInicioTurno = nuevasBolasAsignadas;
+
+        
+
+                    console.log(`Bola ${primeraBolaObjetivoEntronerada.number} entronerada. Jugador actual: ${jugadorActual}. Tu tipo de bola es: ${nuevosPlayerAssignments[jugadorActual]}.`);
+
+                }
+
+            }
+
+        
+
+            // --- NUEVO: Detección de Faltas ---
+
+            let faltaCometida = false; // Falta que solo cambia el turno
+
+            let faltaConBolaEnMano = false; // Falta que da "bola en mano" al oponente
+
+            let motivoFalta = ""; // --- NUEVO: Variable para almacenar la razón de la falta
+
+        
+
+        
+
+        
+
+        
+
+        
+
+        
+
+        
+
+            // --- NUEVO: Detección de Falta por Tiempo Agotado ---
+
+            if (faltaPorTiempo) {
+
+                if (!faltaCometida) { // Solo establecer si no se ha cometido otra falta aún
+
+                    faltaCometida = true;
+
+                    faltaConBolaEnMano = true;
+
+                    const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+                    motivoFalta = `${currentUsernameForFoul} se quedó sin tiempo. Bola en mano para el oponente.`;
+
+                }
+
+            }
+
+        
+
+            // --- FALTA AÑADIDA: Meter la bola blanca ---
+
+            const bolaBlancaEntronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === null);
+
+            if (bolaBlancaEntronerada) {
+
+                if (!faltaCometida) { // Solo establecer si no se ha cometido otra falta aún
+
+                    faltaCometida = true;
+
+                    faltaConBolaEnMano = true;
+
+                    const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+                    motivoFalta = `${currentUsernameForFoul} metió la bola blanca y te da bola en mano`;
+
+        
+
+                    // Lógica para "bola en mano": reposicionar la bola blanca.
+
+                    setPlacingCueBall(true);
+
+                    if (cueBall) {
+
+                        cueBall.isPocketed = false;
+
+                        cueBall.pocketedState = null;
+
+                        cueBall.isActive = true; // Se activa para poder colocarla.
+
+                        cueBall.mesh.visible = true; // Asegurar que vuelva a ser blanca
+
+                        // --- CORRECCIÓN: Frenar la bola blanca completamente al reposicionarla.
+
+                        cueBall.vx = 0;
+
+                        cueBall.vy = 0;
+
+                        if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
+
+                        // La bola aparece en la zona de saque inicial.
+
+                        cueBall.mesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, BALL_RADIUS);
+
+                        if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
+
+                    }
+
+                }
+
+            }
+
+        
+
+           
+
+        
+
+            // --- NUEVO: Falta por no golpear ninguna bola ---
+
+            if (!primeraBolaGolpeadaEsteTurno && !faltaCometida) {
+
+                faltaCometida = true;
+
+                faltaConBolaEnMano = true;
+
+                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+                motivoFalta = `${currentUsernameForFoul} no golpeó ninguna bola. Bola en mano para el oponente.`;
+
+            }
+
+        
+
+            // --- NUEVO: Falta por no entronar bola para asignar en mesa abierta ---
+
+            const bolaDeColorEntronerada = bolasEntroneradasEsteTurno.some(b => b.number !== null && b.number !== 8);
+
+            if (!bolasAsignadasAntesDelTurno && primeraBolaGolpeadaEsteTurno && !bolaDeColorEntronerada && !faltaCometida) {
+
+                faltaCometida = true;
+
+                faltaConBolaEnMano = true;
+
+                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+                motivoFalta = `${currentUsernameForFoul} no entronó una bola en mesa abierta. Bola en mano para el oponente.`;
+
+            }
+
+        
+
+            // --- Lógica de si el jugador entronó una bola válida ---
+
+            const jugadorEntroneroSuBola = bolasEntroneradasEsteTurno.some(ball => {
+
+                if (ball.number === null || ball.number === 8) return false;
+
+                if (!bolasAsignadasAlInicioTurno) {
+
+                    return true;
+
+                }
+
+                const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+
+                return tipoBola === playerAssignmentsAlInicioTurno[jugadorActual];
+
+            });
+
+        
+
+            // --- NUEVO: Falta por no entronar una bola válida ---
+
+            if (bolasAsignadasAlInicioTurno && primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida) {
+
+                console.log("No se ha entronado una bola válida.");
+
+                faltaCometida = true;
+
+                faltaConBolaEnMano = true;
+
+                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+                motivoFalta = `${currentUsernameForFoul} no metió una bola válida. Bola en mano para el oponente.`;
+
+            }
+
+        
+
+                        // --- NUEVO: Falta por no golpear primero una bola propia (o la 8 ilegalmente) ---
+
+        
+
+            
+
+        
+
+                        if (bolasAsignadasAntesDelTurno && !acabaDeAsignar && primeraBolaGolpeadaEsteTurno && !faltaCometida) {
+
+        
+
+                            const tipoBolaJugador = playerAssignmentsAntesDelTurno[jugadorActual];
+
+        
+
+            
+
+        
+
+                            if (tipoBolaJugador) {
+
+        
+
+                                const primeraBola = primeraBolaGolpeadaEsteTurno;
+
+        
+
+            
+
+        
+
+                                // Comprobar si al jugador todavía le quedan bolas de su tipo en la mesa.
+
+        
+
+                                const jugadorTieneBolasRestantes = balls.some(ball => {
+
+        
+
+                                    if (!ball.isActive || ball.number === null || ball.number === 8) return false;
+
+        
+
+                                    const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+
+        
+
+                                    return tipoBola === tipoBolaJugador;
+
+        
+
+                                });
+
+        
+
+            
+
+        
+
+                                // FALTA: Golpear la bola 8 primero cuando aún quedan bolas propias.
+
+        
+
+                                if (primeraBola.number === 8 && jugadorTieneBolasRestantes) {
+
+        
+
+                                    faltaCometida = true;
+
+        
+
+                                    faltaConBolaEnMano = true;
+
+        
+
+                                    const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+        
+
+                                    motivoFalta = `${currentUsernameForFoul} golpeó la bola 8 primero ilegalmente. Bola en mano para el oponente.`;
+
+        
+
+                                
+
+        
+
+                                // FALTA: Golpear una bola del oponente primero.
+
+        
+
+                                } else {
+
+        
+
+                                    const tipoPrimeraBola = (primeraBola.number >= 1 && primeraBola.number <= 7) ? 'solids' : 'stripes';
+
+        
+
+                                    if (primeraBola.number !== 8 && tipoPrimeraBola !== tipoBolaJugador) {
+
+        
+
+                                        const bolasEntroneradasNumeros = bolasEntroneradasEsteTurno.map(b => b.number).join(', ') || 'ninguna';
+
+        
+
+                                        console.log(`Falta detectada: Jugador ${jugadorActual} golpeó una bola incorrecta. Tipo asignado: ${tipoBolaJugador}. Bola golpeada: #${primeraBola.number} (tipo: ${tipoPrimeraBola}). Bolas entroneradas: ${bolasEntroneradasNumeros}.`);
+
+        
+
+                                        
+
+        
+
+                                        faltaCometida = true;
+
+        
+
+                                        faltaConBolaEnMano = true;
+
+        
+
+                                        const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+        
+
+                                        motivoFalta = `${currentUsernameForFoul} no golpeó primero una bola de su tipo. Bola en mano para el oponente.`;
+
+        
+
+                                    }
+
+        
+
+                                }
+
+        
+
+                            }
+
+        
+
+                        }
 
     // --- CORRECCIÓN: Volver a obtener el estado actualizado DESPUÉS de la posible asignación de bolas.
     const estadoActualJuego = getGameState();
@@ -114,16 +409,16 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 y cometiste una falta.`, currentPlayerUid);
         } else {
             // No hay falta. Comprobar si el jugador tenía derecho a meter la 8.
-            const tipoBolaJugador = estadoActualJuego.playerAssignments[jugadorActual];
+            const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
             let jugadorTieneBolasRestantes = false;
-            if (estadoActualJuego.ballsAssigned && tipoBolaJugador) {
+            if (bolasAsignadasAlInicioTurno && tipoBolaJugador) {
                 jugadorTieneBolasRestantes = balls.some(ball => {
                     if (!ball.isActive || ball.number === null || ball.number === 8) return false;
                     const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
                     return tipoBola === tipoBolaJugador;
                 });
             }
-            if (jugadorTieneBolasRestantes || !estadoActualJuego.ballsAssigned) {
+            if (jugadorTieneBolasRestantes || !bolasAsignadasAlInicioTurno) {
                 // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
                 setGameOver(true);
                 const currentPlayerUid = onlineGameData[`player${jugadorActual}`]?.uid;
@@ -138,21 +433,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     }
 
     // --- Lógica de cambio de turno ---
-    const jugadorEntroneroSuBola = bolasEntroneradasEsteTurno.some(ball => {
-        // Ignorar la bola blanca y la bola 8 para esta comprobación
-        if (ball.number === null || ball.number === 8) return false;
-
-        // --- CORRECCIÓN: Lógica para mesa abierta ---
-        // Si las bolas aún no están asignadas, cualquier bola de color que se meta
-        // permite al jugador continuar su turno.
-        if (!bolasAsignadasAlInicioTurno) {
-            return true;
-        }
-
-        // Si las bolas ya están asignadas, comprobar que la bola metida es del tipo del jugador
-        const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-        return tipoBola === estadoActualJuego.playerAssignments[jugadorActual];
-    });
 
     // --- LÓGICA DE CAMBIO DE TURNO ---
 
@@ -218,6 +498,15 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             nextPlayerUid = onlineGameData.currentPlayerUid;
         }
 
+        // --- SOLUCIÓN: Actualizar el estado local de onlineGameData inmediatamente.
+        const currentOnlineData = getOnlineGameData();
+        setOnlineGameData({
+            ...currentOnlineData,
+            playerAssignments: playerAssignmentsAlInicioTurno,
+            ballsAssigned: bolasAsignadasAlInicioTurno,
+            currentPlayerUid: nextPlayerUid, // Asegurarse de que el UID del jugador actual se actualice localmente
+        });
+
         // Construir el paquete de actualización para Firestore
         const updatePayload = {
             balls: balls.map((b) => ({ // Posiciones finales de todas las bolas
@@ -236,6 +525,12 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
             turnTimestamp: Date.now() // Marcar el momento de la actualización del turno
         };
+
+        // --- SOLUCIÓN DEFINITIVA: Actualización de UI Optimista ---
+        // Despachar el evento localmente de inmediato para evitar el retraso de la UI.
+        // Esto asegura que el jugador que realizó el tiro vea el resultado (como la asignación de bolas) al instante.
+        const optimisticGameData = { ...getOnlineGameData(), ...updatePayload };
+        window.dispatchEvent(new CustomEvent('updateassignments', { detail: optimisticGameData }));
 
         // Enviar la actualización autoritativa al servidor
         updateDoc(gameRef, updatePayload).then(() => {

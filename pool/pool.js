@@ -183,56 +183,45 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
 
                 const pocketedInFrame = updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS);
 
-                
-
                 if (pocketedInFrame.length > 0) {
-
+                    const { pocketedThisTurn } = getGameState(); // Get the current list from gameState
                     for (const ball of pocketedInFrame) {
-
-                        addPocketedBall(ball);
-
-        
-
-                        if (gameRef && isMyTurn) {
-
-                            const gameState = getOnlineGameData();
-
-                            const ballStates = gameState.balls || [];
-
-                            const ballToUpdate = ballStates.find(b => b.number === ball.number);
-
-                    
-
-                            if (ballToUpdate) {
-
-                                ballToUpdate.isActive = false;
-
-                    
-
-                                if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
-
-                                    const { assignPlayerTypes } = await import('./gameState.js');
-
-                                    const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-
-                                    assignPlayerTypes(currentGameState.currentPlayerUid, type);
-
-                                    gameState.ballsAssigned = true;
-
-                                    gameState.playerAssignments = getGameState().playerAssignments;
-
+                        // --- FIX: Check if the ball has already been pocketed this turn to prevent duplication ---
+                        const alreadyPocketed = pocketedThisTurn.some(p => p.number === ball.number);
+                        if (!alreadyPocketed) {
+                            addPocketedBall(ball);
+                            if (gameRef && isMyTurn) {
+                                const gameState = getOnlineGameData();
+                                const ballStates = gameState.balls || [];
+                                const ballToUpdate = ballStates.find(b => b.number === ball.number);
+                                if (ballToUpdate) {
+                                    ballToUpdate.isActive = false;
+                                    if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
+                                        const { assignPlayerTypes } = await import('./gameState.js');
+                                        const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                                        const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
+                                        const { playerAssignments: newPlayerAssignments, ballsAssigned: newBallsAssigned } = assignPlayerTypes(
+                                            currentPlayerNumber,
+                                            type,
+                                            gameState.playerAssignments,
+                                            gameState.ballsAssigned
+                                        );
+                                        gameState.ballsAssigned = newBallsAssigned;
+                                        gameState.playerAssignments = newPlayerAssignments;
+                                        if (gameRef) {
+                                            await updateDoc(gameRef, {
+                                                ballsAssigned: newBallsAssigned,
+                                                playerAssignments: newPlayerAssignments
+                                            });
+                                        }
+                                    }
+                                    const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
+                                    const playerType = gameState.playerAssignments[currentPlayerNumber] || 'no asignado';
+                                    window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
                                 }
-
-                    
-
-                                window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
-
                             }
-
                         }
-
                     }
-
                 }
 
         // --- MODIFICACIÓN: El turno solo termina si no hay bolas moviéndose NI animándose ---
@@ -273,10 +262,13 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
                     ball.vx = 0; ball.vy = 0;
                     addPocketedBall(ball);
                 } else { // Si es una bola de color
-                    // La eliminamos de la escena y del array de bolas.
-                    scene.remove(ball.mesh);
+                    // La marcamos como inactiva y la añadimos a la lista de entroneradas para que se gestione la falta.
+                    ball.isActive = false;
+                    ball.vx = 0; ball.vy = 0;
+                    addPocketedBall(ball); // Add to local pocketed list for foul checking
+                    scene.remove(ball.mesh); // Still remove from 3D scene
                     if (ball.shadowMesh) scene.remove(ball.shadowMesh);
-                    balls.splice(i, 1);
+                    // No remove from balls array, just set isActive to false
                 }
             } 
         }
@@ -353,7 +345,7 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
             // --- CORRECCIÓN: Enviar el ángulo Y LA POTENCIA al servidor para sincronización en tiempo real ---
             window.dispatchEvent(new CustomEvent('sendaim', { detail: { angle: localAngle, power: localPower } }));
 
-            updateAimingGuides(localAngle, currentGameState, localPower, true);
+            updateAimingGuides(localAngle, getGameState(), localPower, true);
             if (cueMesh) cueMesh.visible = true;
         } else {
             // Si es el turno del oponente, uso los datos del servidor.
@@ -364,16 +356,14 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
                 // Interpolar el ángulo para una animación suave
                 smoothedAimAngle += (serverAimAngle - smoothedAimAngle) * 0.1;
 
-                updateAimingGuides(smoothedAimAngle, currentGameState, serverPowerPercent, true);
-                if (cueMesh) cueMesh.visible = true;
+                                    updateAimingGuides(smoothedAimAngle, getGameState(), serverPowerPercent, true);                if (cueMesh) cueMesh.visible = true;
             } else {
                 smoothedAimAngle = null;
                 hideAimingGuides();
             }
         }
     } else {
-        // Si no, ocultar todas las guías.
-        hideAimingGuides();
+        // Si no, las guías se ocultarán después de la animación del taco.
     }
 
     // --- CORRECCIÓN: Actualizar la posición del punto de efecto (spin) en cada frame ---
@@ -449,8 +439,10 @@ function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     cueBall.spin = { ...spin };
 
     // Iniciar la animación del taco y los efectos visuales/sonoros
-    import('./aiming.js').then(({ animateCueShot }) => {
-        animateCueShot(angle, powerPercent, () => {});
+    import('./aiming.js').then(({ animateCueShot, hideAimingGuides }) => {
+        animateCueShot(angle, powerPercent, () => {
+            hideAimingGuides(); // Ocultar las guías después de la animación del taco
+        });
     });
 
     const shakeIntensity = Math.pow(powerPercent, 2) * 2.5;
@@ -466,6 +458,11 @@ function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
 
 // --- NUEVO: Hacer que la función de aplicar tiro sea accesible globalmente ---
 window.applyLocalShot = applyServerShot;
+
+// --- NUEVO: Exponer funciones y variables globales para el control de disparo local ---
+window.getCurrentShotAngle = getCurrentShotAngle;
+window.getCurrentAimingSpin = () => currentGameState.aimingSpin || { x: 0, y: 0 }; // Asegurar que siempre devuelve un objeto válido
+
 
 // --- NUEVO: Función para marcar que un tiro ha comenzado ---
 window.startShot = () => { // --- CORRECCIÓN: Hacerla global para que ui.js pueda llamarla
@@ -508,7 +505,7 @@ function connectToGame(gameId) {
             // Usuario autenticado
             localUserId = user.uid;
             const userProfileDoc = await getDoc(doc(db, "saldo", user.uid));
-            localUsername = userProfileDoc.exists() ? userProfileDoc.data().username : user.email;
+            localUsername = userProfileDoc.exists() && userProfileDoc.data().username ? userProfileDoc.data().username : 'Jugador Invitado'; // Usar un nombre genérico si el username no está disponible
         } else {
             // Usuario invitado
             localUserId = sessionStorage.getItem('guestId');
@@ -528,8 +525,15 @@ function connectToGame(gameId) {
                 return;
             }
 
-            const gameData = docSnap.data() || {}; // --- SOLUCIÓN: Evitar error si gameData es undefined
+            const gameData = docSnap.data() || {};
             setOnlineGameData(gameData);
+
+            // --- NUEVO: Asegurar que el username del jugador 1 esté correctamente establecido ---
+            if (gameData.player1 && gameData.player1.uid === localUserId && gameData.player1.username !== localUsername) {
+                updateDoc(gameRef, {
+                    'player1.username': localUsername
+                }).catch(err => console.error("Error al actualizar username de jugador 1:", err));
+            }
 
             if (gameData.balls && !areBallsMoving(balls)) {
                 syncBallPositionsFromServer(gameData.balls, gameData, localUserId);
@@ -640,12 +644,17 @@ setOnLoadingComplete((step, onStepComplete) => {
         case 'init_ui':
             // --- SOLUCIÓN: Inicializar la UI como un paso separado después de initGame ---
             initializeUI();
+            // --- FIX: Reanudar el juego ahora que la UI está lista para recibir eventos ---
+            import('./gameState.js').then(({ setGamePaused }) => {
+                setGamePaused(false);
+            });
             break;
 
         case 'setup_balls':
             // --- MODIFICADO: Solo colocar las bolas si no es una partida online ---
             // Los modelos ya están cargados, ahora creamos las bolas en la escena.
-            setupBalls(true); // El 'true' indica que es la configuración inicial.
+            const onlineGameId = getOnlineGameData().gameId;
+            setupBalls(true, null, !!onlineGameId); // El 'true' indica que es la configuración inicial.
             break;
 
         case 'warmup_physics':

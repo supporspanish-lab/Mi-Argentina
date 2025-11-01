@@ -78,8 +78,9 @@
         padding: 10px 0;
         border-bottom: 1px solid var(--border-color);
         flex-shrink: 0;
-        position: relative; /* Needed for the shine effect */
-        overflow: hidden;   /* Needed to contain the shine effect */
+        position: relative;
+        /* overflow: hidden; // This was preventing the dropdown from showing */
+        z-index: 100; /* Lower z-index to allow menu to pop over */
       }
 
       .app-header::after {
@@ -92,6 +93,7 @@
         background: linear-gradient(to right, transparent 0%, var(--primary-color) 50%, transparent 100%);
         animation: slide-shine 4s ease-in-out infinite;
         animation-delay: 1s; /* Start after a small delay */
+        z-index: 1; /* Ensure it's below other elements */
       }
 
       @keyframes slide-shine {
@@ -120,6 +122,7 @@
         padding: 6px 12px;
         border-radius: 12px;
         border: 1px solid var(--border-color);
+        z-index: 101; /* Ensure user profile and its menu are on top */
       }
 
       .user-info {
@@ -530,6 +533,99 @@
 
         .create-icon { font-size: 50px; }
       }
+      .profile-picture-container {
+        width: 40px; /* Adjust size as needed */
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2px solid var(--primary-color); /* Optional: add a border */
+        flex-shrink: 0; /* Prevent it from shrinking */
+      }
+
+      #profile-picture {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensure the image covers the container */
+      }
+
+      .user-icon {
+        width: 100%;
+        height: 100%;
+        color: var(--text-color); /* Or primary-color, depending on desired look */
+        padding: 5px; /* Add some padding so the icon isn't right against the border */
+      }
+
+      .menu-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        z-index: 102; /* Ensure menu container is on top */
+      }
+
+      .menu-toggle-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary-color);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .menu-toggle-btn:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: var(--primary-color);
+      }
+
+      .user-menu {
+        position: absolute;
+        top: 100%; /* Position below the toggle button */
+        right: 0;
+        background-color: var(--container-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        min-width: 160px; /* Keep or adjust as needed */
+        z-index: 103; /* Highest z-index to ensure it appears on top */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s;
+      }
+
+      .user-menu.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+
+      .menu-item {
+        display: block;
+        width: 100%;
+        padding: 10px 15px;
+        background: none;
+        border: none;
+        color: var(--text-color);
+        text-align: left;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+      }
+
+      .menu-item:hover {
+        background-color: rgba(255,255,255,0.08);
+      }
+
+      .logout-item {
+        color: #e74c3c;
+        font-weight: 700;
+      }
+
+      .logout-item:hover {
+        background-color: rgba(231, 76, 60, 0.1);
+      }
     </style>
   </head>
   <body>
@@ -544,19 +640,25 @@
                     <h1 class="app-title">BlackBall</h1>
                 </div>
                 <div class="user-profile">
+                    <div class="profile-picture-container">
+                        <svg id="profile-picture-svg" class="user-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                        </svg>
+                    </div>
                     <div class="user-info">
                         <span id="user-display-name">Cargando...</span>
                         <div class="user-balance">
-                            <svg class="balance-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2.5C6.75 2.5 2.5 6.75 2.5 12s4.25 9.5 9.5 9.5 9.5-4.25 9.5-9.5S17.25 2.5 12 2.5ZM13.06 6.5h-2.12c-.52 0-1.01.26-1.32.69L7.5 10.5h3.06c.52 0-1.01-.26-1.32-.69L13.99 7.5h-3.06c-.3 0-.58-.1-.81-.27l.94-1.23Zm-4.25 8.19c.31.43.8.69 1.32.69h2.12c.52 0 1.01-.26 1.32-.69L16.5 13.5h-3.06c-.52 0-1.01.26-1.32.69L10.01 16.5h3.06c.3 0 .58.1.81.27l-.94 1.23Z" />
-                            </svg>
                             <span>$1,250</span>
                         </div>
                     </div>
-                    <button id="logout-btn" title="Cerrar sesión">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 13v-2H7v-2h9V7l4 4-4 4Zm-5-1c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2Zm7-7H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm0 16H5V5h13v14Z"></path></svg>
-                    </button>
-                </div>
+                    <div class="menu-container">
+                        <button id="menu-toggle-btn" class="menu-toggle-btn" title="Opciones de usuario">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+                        </button>
+                        <div id="user-menu" class="user-menu">
+                            <button id="configure-ui-btn" class="menu-item">Configurar UI</button>
+                            <button id="menu-logout-btn" class="menu-item logout-item">Cerrar Sesión</button>
+                    </div>
             </header>
             <main class="main-content">
                 <div class="game-carousel-container">
@@ -588,11 +690,22 @@
             </div>
         </div>
     </div>
+    <!-- --- NUEVO: Contenedor para Configuración de UI --- -->
+    <div id="ui-config-container" class="modal-overlay">
+        <div class="modal-box white-bg">
+            <h3>Configuración de Interfaz de Usuario</h3>
+            <p>Aquí irán las opciones para configurar la UI.</p>
+            <button id="close-ui-config" class="cancel-button">Cerrar</button>
+        </div>
+    </div>
     <script type="module">
 
         const userDisplayName = document.getElementById('user-display-name');
         const userBalanceSpan = document.querySelector('.user-balance span'); // NUEVO
-        const logoutBtn = document.getElementById('logout-btn');
+        const logoutBtn = document.getElementById('menu-logout-btn');
+        const menuToggleBtn = document.getElementById('menu-toggle-btn'); // NUEVO/ NUEVO
+        const userMenu = document.getElementById('user-menu'); // NUEVO
+        const configureUiBtn = document.getElementById('configure-ui-btn'); // NUEVO
         const matchLoadingOverlay = document.getElementById('match-loading-overlay');
         const matchLoadingText = document.getElementById('match-loading-text');
         
@@ -608,7 +721,7 @@
         try {
             onSessionStateChanged((user) => {
                 if (user) {
-                    userDisplayName.textContent = user.email; // Set initial display name to email
+                    // userDisplayName.textContent = user.email; // Set initial display name to email
                     // Escuchar cambios en el perfil del usuario
                     onUserProfileUpdate(user.uid, (userData) => {
                         userDisplayName.textContent = userData.username || user.email;
@@ -628,6 +741,18 @@
                         userWaitingGameId = null;
                     }
 
+                // --- NUEVO: Lógica para el menú desplegable ---
+                menuToggleBtn.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Prevent document click from closing it immediately
+                    userMenu.classList.toggle('active');
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (!userMenu.contains(event.target) && !menuToggleBtn.contains(event.target)) {
+                        userMenu.classList.remove('active');
+                    }
+                });
+
                 logoutBtn.addEventListener('click', async () => {
                     await cleanupWaitingGame(); // Attempt to clean up before logging out
                     logout().then(() => { // Then proceed with logout
@@ -636,6 +761,12 @@
                     }).catch((error) => {
                         console.error('Error al cerrar sesión:', error);
                     });
+                });
+
+                configureUiBtn.addEventListener('click', () => {
+                    console.log('Botón Configurar UI clickeado! Redirigiendo a index.html para configuración de UI.');
+                    window.location.href = '../offline/index_offline.html'; // Redirige a index_offline.html para ver la UI offline
+                    userMenu.classList.remove('active'); // Cerrar el menú después de la acción
                 });
                 // --- Lógica de Matchmaking en tiempo real para el carrusel (MEJORADA) ---
                 const gamesRef = collection(db, "games");
@@ -693,20 +824,9 @@
                                 <div class="card-player-count">1/2</div>
                             `;
                             card.addEventListener('click', async () => {
-                               // --- CORRECCIÓN: Asignar el turno inicial aleatoriamente al unirse ---
-                                const player1Uid = gameData.player1?.uid;
-                                // --- SOLUCIÓN: Obtener el usuario actual de forma fiable ---
-                                const currentUser = auth.currentUser;
-                                const player2Uid = currentUser?.uid;
-
-                                // --- SOLUCIÓN: Validar que ambos UIDs existen antes de continuar ---
-                                if (!player1Uid || !player2Uid) {
-                                    console.error("Error: Uno de los UIDs de los jugadores no es válido. No se puede unir a la partida.", { player1Uid, player2Uid, currentUser });
-                                    alert("No se puede unir a esta partida porque el creador ya no es válido. La partida desaparecerá en breve.");
-                                    return;
-                                }
-
-                                const startingPlayerUid = player1Uid;
+                                // --- SOLUCIÓN: Asignar el turno inicial aleatoriamente al unirse ---
+                                const random = Math.random();
+                                const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
 
                                 await updateDoc(doc(db, "games", gameId), {
                                     player2: { uid: player2Uid, username: userDisplayName.textContent },

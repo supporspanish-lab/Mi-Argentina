@@ -31,7 +31,7 @@ export function prepareAimingResources() {
         // Esto evita que la textura se vea "lavada" o con un color incorrecto debido a la gestión de color de Three.js.
         cueTexture.colorSpace = THREE.SRGBColorSpace;
         cueTexture.needsUpdate = true;
-        const cueLength = 300;
+        const cueLength = 350;
         const cueHeight = cueLength / imageAspectRatio;
 
         const cueGeometry = new THREE.PlaneGeometry(cueLength, cueHeight);
@@ -68,9 +68,7 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
     if (cueMesh) {
         const cueLength = cueMesh.children[0].geometry.parameters.width;
         // --- SOLUCIÓN: Hacer que el taco retroceda con la potencia ---
-        const MAX_PULL_DISTANCE = 100; // Distancia máxima de retroceso en unidades del juego
-        const pullBackDistance = powerPercent * MAX_PULL_DISTANCE;
-        const cueOffset = (cueLength / 2) + BALL_RADIUS + 5 + pullBackDistance;
+        const cueOffset = (cueLength / 2) + BALL_RADIUS + 5;
         cueMesh.position.x = cueBall.mesh.position.x - Math.cos(shotAngle) * cueOffset; 
         cueMesh.position.y = cueBall.mesh.position.y - Math.sin(shotAngle) * cueOffset;
         cueMesh.rotation.z = shotAngle;
@@ -224,7 +222,12 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
                 const isStripe = hitBall.number >= 9 && hitBall.number <= 15;
                 const hitBallType = isSolid ? 'solids' : (isStripe ? 'stripes' : null);
 
-                if (hitBallType && playerAssignments[currentPlayer] && hitBallType !== playerAssignments[currentPlayer]) {
+                const currentPlayerAssignedType = playerAssignments[currentPlayer];
+
+
+
+                // Si las bolas están asignadas y la bola golpeada no es del tipo del jugador actual, es una falta.
+                if (hitBallType && currentPlayerAssignedType && hitBallType !== currentPlayerAssignedType) {
                     isInvalidHit = true;
                 }
             }
@@ -327,6 +330,8 @@ export function animateCueShot(shotAngle, power, onHit) {
         onHit(power); // Si el taco no está listo, ejecuta la acción de golpeo inmediatamente
         return;
     }
+
+    cueMesh.visible = true; // Asegurarse de que el taco sea visible durante la animación
 
     // --- MODIFICADO: La animación ahora es un rápido movimiento hacia adelante ---
     // La posición hacia atrás ya se gestiona en updateAimingGuides.

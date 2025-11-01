@@ -171,6 +171,9 @@
             width: 100%;
             height: 100%;
             display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         /* --- NUEVO: Estilo para la información de bolas entroneradas --- */
         #pocketedInfo {
@@ -223,102 +226,96 @@
         /* --- NUEVO: Estilo para los contenedores de bolas de jugador --- */
         .pocketed-balls-container {
             display: flex;
-            flex-direction: column; /* --- SOLUCIÓN: Apilar bolas verticalmente --- */
-            gap: 8px;
+            flex-direction: row;
+            flex-wrap: nowrap; /* Asegura que los elementos permanezcan en una sola fila */
+            gap: 0.5vw; /* Espacio responsivo más pequeño entre los elementos */
             background-color: rgba(0, 0, 0, 0.6);
-            padding: 8px;
+            padding: 0.5vw; /* Padding responsivo más pequeño */
             border-radius: 8px;
             z-index: 10;
-            width: 48px; /* --- SOLUCIÓN: Ancho fijo para la columna --- */
+            min-height: 30px; /* Altura mínima más pequeña */
+            max-width: 35vw; /* Ancho máximo más restrictivo */
+            width: auto; /* Ancho automático para el contenido */
             align-items: center;
             box-sizing: border-box;
+            flex-shrink: 1; /* Permite que el contenedor se encoja si es necesario */
         }
-        .pocketed-ball-placeholder {
-            width: 100%; /* --- CORRECCIÓN: Usar el ancho completo del contenedor padre --- */
-            aspect-ratio: 1 / 1; /* Mantiene la proporción cuadrada para que sea un círculo */
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.2); /* Un color tenue para el placeholder */
-            border: 1px dashed #fff;
-            flex-shrink: 0; /* Evita que se encoja si no hay espacio */
+        .player-avatar {
+            width: 3.5vw; /* Tamaño responsivo aún más pequeño para el avatar */
+            height: 3.5vw; 
+            margin-right: 0.5vw; /* Espacio responsivo más pequeño */
+            /* flex-shrink: 0; */ /* Eliminado para permitir que se encoja */
+            transition: filter 0.3s ease; 
         }
-        /* --- NUEVO: Estilo para el icono de la bola entronerada en el contenedor del jugador --- */
+
+        .player-avatar.active .timer-line {
+            stroke: #2ecc71; /* Borde verde vibrante para el temporizador */
+        }
+
+
+
+        /* --- NUEVO: Estilos para el icono de la bola entronerada en el contenedor del jugador --- */
         .player-ball-icon {
-            width: 100%; /* --- SOLUCIÓN: Usar el ancho completo, igual que el placeholder --- */
-            aspect-ratio: 1 / 1;
+            width: 2.5vw; /* Tamaño responsivo aún más pequeño para las bolas */
+            height: 2.5vw; 
             border-radius: 50%;
-            flex-shrink: 0;
-            background-size: 115%; /* Zoom para ocultar bordes blancos de las imágenes */
+            /* flex-shrink: 0; */ /* Eliminado para permitir que se encoja */
+            background-size: 115%;
             background-position: center;
             background-repeat: no-repeat;
         }
-        /* --- NUEVO: Contenedor flexible para la UI superior --- */
-        /* --- SOLUCIÓN: Estilo para el avatar del jugador --- */
-        .player-avatar {
-            /* --- SOLUCIÓN: El contenedor ahora es solo un SVG --- */
-            width: 100%; /* Ocupa todo el ancho del contenedor */
-            aspect-ratio: 1 / 1; /* Mantiene la proporción cuadrada */
-            margin-bottom: 10px; /* Espacio entre el avatar y las bolas */
-            flex-shrink: 0; /* Evita que se encoja */
-            transition: filter 0.3s ease; /* Transición para el efecto de brillo */
+        .pocketed-ball-placeholder {
+            width: 2.5vw; /* Tamaño responsivo aún más pequeño para el placeholder */
+            height: 2.5vw; 
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px dashed #fff;
+            flex-shrink: 0; /* Asegura que no se encoja y mantenga su forma circular */
         }
 
         .player-name {
-            font-size: 12px;
+            font-size: 1.2vw; /* Tamaño de fuente responsivo aún más pequeño para el nombre */
             font-weight: bold;
             color: white;
             text-align: center;
-            margin-bottom: 8px;
-        }
-
-        /* --- SOLUCIÓN: Estilos para los círculos dentro del SVG --- */
-        .player-avatar .timer-track { /* La pista gris de fondo */
-            stroke: rgba(255, 255, 255, 0.1);
-        }
-        .player-avatar .timer-line { /* La línea verde que se anima */
-            stroke: rgba(46, 204, 113, 0.4); /* Color tenue por defecto */
-            transform: rotate(-90deg); /* Empezar desde arriba */
-            transform-origin: center;
-            transition: stroke 0.3s ease, stroke-dashoffset 0.1s linear;
-        }
-        .player-avatar .avatar-icon-bg { /* Círculo de fondo para el icono */
-            fill: rgba(255, 255, 255, 0.1);
-        }
-        .player-avatar .avatar-icon { /* El icono del jugador */
-            fill: rgba(255, 255, 255, 0.7);
-        }
-
-        /* --- SOLUCIÓN: Estilo para el avatar del jugador activo --- */
-        .player-avatar.active {
-            filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.7)); /* Efecto de brillo con filtro */
-        }
-        .player-avatar.active .timer-line {
-            stroke: #2ecc71; /* Color verde brillante para el jugador activo */
+            margin-right: 0.5vw; /* Espacio responsivo más pequeño */
+            white-space: nowrap; /* Evita que el texto se envuelva */
+            overflow: hidden; /* Oculta el texto que se desborda */
+            text-overflow: ellipsis; /* Muestra puntos suspensivos para el texto desbordado */
+            flex-shrink: 1; /* Permite que el nombre se encoja */
         }
 
         #top-ui-container {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 2vh;
+            left: 50%;
+            transform: translateX(-50%);
             width: 100%;
             display: flex;
-            justify-content: space-between; /* --- SOLUCIÓN: Separa los elementos a los extremos --- */
-            align-items: flex-start;
-            padding: 2vh 2vw; /* Espaciado desde los bordes de la pantalla */
-            box-sizing: border-box;
-            pointer-events: none; /* Permite hacer clic a través del contenedor */
+            justify-content: center;
+            gap: 2vw; /* Espacio entre los contenedores de los jugadores */
+            z-index: 10;
         }
-        /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
+
         #player1PocketedContainer.editable-ui {
-            position: absolute;
-            bottom: 2vh;
-            left: 2vw;
-            pointer-events: auto; /* Reactivar eventos para este elemento */
+            /* position: absolute; */ /* Eliminado */
+            /* top: 2vh; */ /* Eliminado */
+            /* left: 2vw; */ /* Eliminado */
+            bottom: auto;
+            pointer-events: auto;
+            transform: scaleX(-1); /* Voltear horizontalmente el contenedor completo */
+        }
+        #player1PocketedContainer.editable-ui > .player-name,
+        #player1PocketedContainer.editable-ui > .pocketed-ball-placeholder,
+        #player1PocketedContainer.editable-ui > .player-ball-icon {
+            transform: scaleX(-1); /* Contrarrestar el volteo para el texto, avatar y bolas */
         }
         #player2PocketedContainer.editable-ui {
-            position: absolute;
-            bottom: 2vh;
-            right: 2vw;
-            pointer-events: auto; /* Reactivar eventos para este elemento */
+            /* position: absolute; */ /* Eliminado */
+            /* top: 2vh; */ /* Eliminado */
+            /* right: 2vw; */ /* Eliminado */
+            bottom: auto; /* Eliminar posición inferior */
+            pointer-events: auto; 
         }
         /* --- NUEVO: Estilos para la miniatura del selector de efecto --- */
         #miniSpinSelector {
@@ -485,24 +482,38 @@
             font-size: 24px;
         }
 
-        /* --- SOLUCIÓN: Estilos para el mensaje de falta que no se veían --- */
+        @keyframes fall-from-top {
+            0% {
+                transform: translate(-50%, -200%);
+                opacity: 0;
+            }
+            100% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+            }
+        }
+
         #foulMessage {
             position: absolute;
-            top: 25%; /* Misma posición que el indicador de turno */
+            top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%) scale(0.8); /* Inicia un poco más pequeño */
-            background-color: rgba(231, 76, 60, 0.9); /* Rojo de falta, más opaco */
+            transform: translate(-50%, -200%);
+            background-color: rgba(231, 76, 60, 0.9);
             color: white;
-            padding: 15px 30px;
-            border-radius: 12px;
-            border: 2px solid #c0392b; /* Borde rojo oscuro */
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #c0392b;
             font-family: Arial, sans-serif;
-            font-size: 24px;
+            font-size: 12px;
             font-weight: bold;
-            z-index: 21; /* Por encima del indicador de turno */
+            z-index: 21;
             opacity: 0;
-            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             pointer-events: none;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        #foulMessage.show {
+            animation: fall-from-top 0.5s ease-in-out forwards;
         }
         /* --- SOLUCIÓN: Botón dentro del mensaje de falta/victoria --- */
         #foulMessage button {
@@ -511,42 +522,41 @@
             pointer-events: auto; /* Reactivar puntero para el botón */
         }
 
-        /* --- NUEVO: Estilos para la barra de potencia horizontal --- */
-        #powerBarContainer {
+        /* --- NUEVO: Estilos para la nueva barra de potencia vertical --- */
+        #newPowerBarContainer {
+            width: 3vw; /* Ancho de la barra responsivo */
+            height: 40vh; /* Altura total de la barra responsiva */
+            /* --- NUEVO: Degradado de fondo con líneas --- */
+            background: 
+                /* Capa 2: Líneas horizontales repetidas */
+                repeating-linear-gradient(
+                    to top,
+                    transparent, transparent 19px, /* 19px de espacio transparente */
+                    rgba(0, 0, 0, 0.3) 19px, rgba(0, 0, 0, 0.3) 20px /* 1px de línea oscura */
+                ),
+                /* Capa 1: Degradado de color de fondo */
+                linear-gradient(to top, #e74c3c, #ff8c00, #f1c40f); /* Rojo -> Naranja -> Amarillo */
+
+            border: 2px solid #333;
+            border-radius: 25px;
+            position: absolute; /* Cambiado a absolute */
+            top: 2vh; /* Posición por defecto */
+            left: 2vw; /* Posición por defecto */
+            overflow: hidden; /* Para que el relleno no se salga */
+            z-index: 30; /* Alto z-index para que esté encima */
+        }
+
+        #newPowerBarHandle {
+            width: 150px; /* Altura original del taco, ahora será el ancho */
+            height: 40px; /* Ancho original del taco, ahora será la altura */
+            object-fit: contain;
             position: absolute;
-            top: 2vh;
             left: 50%;
-            transform: translateX(-50%);
-            width: 50vw;
-            max-width: 400px;
-            height: 15px;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: 2px solid #fff;
-            border-radius: 10px;
-            z-index: 10;
-            display: none; /* Oculto por defecto */
-        }
-        #powerBarFill {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 0%; /* El ancho se animará con JS */
-            background: linear-gradient(to right, #3498db, #f1c40f, #e74c3c);
-            border-radius: 8px;
-            transition: width 0.05s linear;
-        }
-        #powerBarHandle {
-            position: absolute;
-            top: 50%;
-            left: 0%;
-            width: 10px;
-            height: 25px;
-            background-color: #f1c40f;
-            border: 2px solid white;
-            border-radius: 3px;
-            transform: translate(-50%, -50%);
-            cursor: pointer;
+            transform: translate(-50%, -50%) rotate(270deg); /* Centrar horizontal y verticalmente, y luego rotar */
+            top: 0%;
+            transform-origin: center center; /* Asegurar que la rotación sea desde el centro */
+            cursor: grab;
+            transition: top 0.1s linear;
         }
 
         /* --- NUEVO: Estilos para modales personalizados --- */
@@ -655,10 +665,9 @@
     </div>
 
     <div id="gameContainer">
-        <!-- --- NUEVO: Barra de potencia horizontal --- -->
-        <div id="powerBarContainer" class="editable-ui">
-            <div id="powerBarFill"></div>
-            <div id="powerBarHandle"></div>
+        <!-- --- MODIFICADO: Nueva barra de potencia vertical --- -->
+        <div id="newPowerBarContainer" class="editable-ui">
+            <div id="newPowerBarHandle" style="background-image: url('imajenes/taco.png'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
             <!-- --- NUEVO: Agarraderas para edición de UI --- -->
             <div class="resize-handle tl"></div><div class="resize-handle br"></div>
         </div>
@@ -706,53 +715,51 @@
 
         <canvas id="poolCanvas"></canvas>
 
-        <!-- --- SOLUCIÓN: Mover los contenedores de bolas fuera del contenedor superior --- -->
-        <!-- Contenedor para las bolas del jugador 1 -->
-        <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
-            <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
-            <div id="player1-name" class="player-name">Jugador 1</div>
-            <svg class="player-avatar" viewBox="0 0 36 36">
-                <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
-                <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
-                <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
-                <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
-                    <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
-                </g>
-            </svg>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <!-- --- NUEVO: Agarraderas para edición de UI --- -->
-            <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+        <div id="top-ui-container">
+            <!-- Contenedor para las bolas del jugador 1 -->
+            <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
+                <div id="player1-name" class="player-name">Jugador 1</div>
+                <svg class="player-avatar" viewBox="0 0 36 36">
+                    <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
+                    <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
+                    <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                    <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                        <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                    </g>
+                </svg>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+            </div>
+            <!-- Contenedor para las bolas del jugador 2 -->
+            <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
+                <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
+                <div id="player2-name" class="player-name">Jugador 2</div>
+                <svg class="player-avatar" viewBox="0 0 36 36">
+                    <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
+                    <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
+                    <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                    <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                        <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                    </g>
+                </svg>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+            </div>
         </div>
-        <!-- Contenedor para las bolas del jugador 2 -->
-        <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
-            <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
-            <div id="player2-name" class="player-name">Jugador 2</div>
-            <svg class="player-avatar" viewBox="0 0 36 36">
-                <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
-                <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
-                <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
-                <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
-                    <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
-                </g>
-            </svg>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <div class="pocketed-ball-placeholder"></div>
-            <!-- --- NUEVO: Agarraderas para edición de UI --- -->
-            <div class="resize-handle tl"></div><div class="resize-handle br"></div>
-        </div>
-
-        <!-- --- CORRECCIÓN: Mover los elementos de la UI aquí para que estén dentro del gameContainer --- -->
         <div id="pocketedInfo"></div>
         <div id="foulMessage">
             <span id="foulMessageText"></span>
@@ -917,7 +924,7 @@
             // --- NUEVO: Listener para el evento de potencia ---
             window.addEventListener('sendpower', (event) => {
                 if (event.detail && typeof event.detail.power !== 'undefined') {
-                    sendPowerUpdate(event.detail.power);
+                    sendPowerUpdate(Number(event.detail.power));
                 }
             });
 
@@ -1058,5 +1065,112 @@
                 window.dispatchEvent(new Event('resize'));
             });
         });
+    </script>
+    <script>
+        const newPowerBarContainer = document.getElementById('newPowerBarContainer');
+        const newPowerBarHandle = document.getElementById('newPowerBarHandle');
+        // const powerDisplay = document.getElementById('powerDisplay'); // Ya no es necesario
+
+        let isDragging = false;
+        let powerPercent = 0;
+        let dragStartY = 0; // --- NUEVO: Para guardar la posición Y inicial del arrastre
+
+        // --- CORRECCIÓN: El evento ahora se escucha en todo el contenedor de la barra ---
+        newPowerBarContainer.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            newPowerBarContainer.setPointerCapture(e.pointerId); // Capturar el puntero en el contenedor
+            e.preventDefault(); // Prevenir el comportamiento por defecto del navegador
+
+            // --- CORRECCIÓN: Guardar la posición Y inicial y resetear la barra a 0% ---
+            dragStartY = e.clientY;
+            powerPercent = 0;
+            updatePowerBar(0); // Actualizar la UI a 0%
+        });
+
+        document.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+
+            const rect = newPowerBarContainer.getBoundingClientRect();
+            const containerHeight = rect.height;
+
+            // Calcular el desplazamiento desde el inicio del arrastre
+            const dragDistance = dragStartY - e.clientY; 
+
+            // --- CORRECCIÓN: El 100% de potencia se alcanza al 80% del recorrido ---
+            // La potencia se calcula sobre la altura total, pero se limita a 0.8 (80%).
+            const newPowerPercent = Math.max(0, Math.min(dragDistance / containerHeight, 0.8));
+            
+            powerPercent = newPowerPercent;
+            updatePowerBar(powerPercent);
+            // --- NUEVO: Despachar evento para actualizar la potencia en powerControls.js ---
+            window.dispatchEvent(new CustomEvent('dragpower', { detail: { powerPercent: powerPercent } }));
+        });
+
+        document.addEventListener('pointerup', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                // Liberar la captura del puntero desde el contenedor
+                // Es importante hacer esto para que otros elementos de la UI vuelvan a funcionar.
+                // Usamos un try-catch por si el puntero ya se liberó por otras razones (ej. salir de la ventana).
+                try {
+                    // --- CORRECCIÓN: Usar el 'e' del evento para obtener el pointerId ---
+                    if (e.pointerId) newPowerBarContainer.releasePointerCapture(e.pointerId);
+                } catch (err) {
+                    // No hacer nada si hay un error, significa que la captura ya no existía.
+                }
+
+                // --- NUEVO: Animar la barra de vuelta a 0% ---
+                // La transición CSS se encargará de la animación visual.
+                updatePowerBar(0);
+                window.dispatchEvent(new CustomEvent('sendpower', { detail: { power: powerPercent } }));
+
+                // --- NUEVO: Disparar la bola blanca localmente ---
+                if (typeof window.applyLocalShot === 'function' && typeof window.getCurrentShotAngle === 'function' && typeof window.getCurrentAimingSpin === 'function') {
+                    const currentAngle = window.getCurrentShotAngle();
+                    const currentSpin = window.getCurrentAimingSpin();
+                    window.applyLocalShot(currentAngle, powerPercent, currentSpin, null);
+                } else {
+                    console.error("Funciones globales de disparo no disponibles.");
+                }
+            }
+        });
+
+        // --- NUEVO: Función que actualiza la UI de la barra de potencia ---
+        function updatePowerBar(percent) {
+            // --- CORRECCIÓN: Obtener las dimensiones del contenedor DENTRO de la función ---
+            const containerHeight = newPowerBarContainer.offsetHeight;
+            const handleHeight = newPowerBarHandle.offsetHeight;
+            const extraDragAmount = handleHeight * 1.5;
+            const visualMaxY = containerHeight + extraDragAmount;
+
+            // Calcular las posiciones 'top' basadas en el porcentaje de potencia (que va de 0 a 1)
+            // Ambas posiciones deben calcularse de la misma manera para que estén sincronizadas.
+            // La posición del relleno va de containerHeight (abajo) a 0 (arriba).
+            const logicalY = containerHeight * (1 - percent);
+            // La posición del taco debe seguir al relleno, pero con un desplazamiento adicional
+            // que se reduce a medida que la potencia aumenta, para que la punta siempre coincida.
+            const visualY = logicalY + extraDragAmount * (1 - percent);
+
+            newPowerBarHandle.style.top = `${visualY}px`;
+            // powerDisplay.textContent = `${Math.round((percent / 0.8) * 100)}%`; // Ya no es necesario
+        }
+
+        window.addEventListener('sendpower', (event) => {
+            if (event.detail && typeof event.detail.power !== 'undefined') {
+                updatePowerBar(event.detail.power);
+            }
+        });
+
+
+        // Inicializar la barra de potencia a 0
+        // --- CORRECCIÓN: Posicionar el relleno en la parte inferior al inicio ---
+        const initialContainerHeight = newPowerBarContainer.offsetHeight;
+        const initialHandleHeight = newPowerBarHandle.offsetHeight;
+        const initialExtraDrag = initialHandleHeight * 1.5; // Usar el mismo multiplicador que en el evento 'pointermove'
+
+        // --- CORRECCIÓN: Posicionar el taco en su punto más bajo posible, que es 0% de potencia.
+        // La posición inicial del taco es la del relleno (initialContainerHeight) más el extra.
+        newPowerBarHandle.style.top = `${initialContainerHeight + initialExtraDrag}px`;
+        // powerDisplay.textContent = '0%'; // Ya no es necesario
     </script>
 </body></html>

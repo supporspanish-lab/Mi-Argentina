@@ -8,7 +8,7 @@ import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
 import { animateCueShot, hideAimingGuides, isAimingAtBall } from './aiming.js';
 import { playSound } from './audioManager.js';
 import { areBallsMoving } from './fisicas.js';
-import { updatePowerUI } from './ui.js';
+
 import { getSpinOffset, wasDraggingSpin } from './spinControls.js';
 import { isValidPlacement } from './cuePlacement.js'; // --- NUEVO: Importar la función de validación
 import { startPowerCharge, stopPowerCharge, getPowerPercent } from './powerControls.js';
@@ -67,8 +67,11 @@ function onPointerDown(e) {
             movingCueBall = true;
             pointerDown = true; // El puntero está presionado solo si se mueve la bola
         } else {
-            // Si no se hace clic en la bola blanca, no hacer nada. No iniciar el apuntado.
-            return; // Salir de la función si no se hace clic en la bola blanca
+            // Si no se hace clic en la bola blanca, pero estamos en modo "bola en mano",
+            // entonces el usuario quiere apuntar.
+            pointerDown = true;
+            movingCueBall = false;
+            startAiming = true;
         }
     } else if (!getGameState().shotInProgress && !areBallsMoving(getSceneBalls())) {
         pointerDown = true;

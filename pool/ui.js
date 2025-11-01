@@ -12,7 +12,7 @@ import { initializeSpinControls, wasDraggingSpin } from './spinControls.js'; // 
 import { getPowerPercent } from './powerControls.js';
 
 // --- Referencias a elementos del DOM ---
-const powerBarContainer = document.getElementById('powerBarContainer');
+const powerBarContainer = document.getElementById('newPowerBarContainer');
 
 // --- Estado de la UI ---
 // --- NUEVO: Variable para rastrear si las bolas se estaban moviendo en el frame anterior ---
@@ -55,9 +55,18 @@ export function initializeUI() {
 
     // --- SOLUCIÓN: Reintroducir los listeners para la barra de potencia deslizable ---
     if (powerBarContainer) {
+        // --- NUEVO: Establecer una posición inicial por defecto si no hay un layout guardado
+        if (!localStorage.getItem('poolUILayout')) {
+            powerBarContainer.style.top = '50%';
+            powerBarContainer.style.left = '10px';
+            powerBarContainer.style.transform = 'translateY(-50%)';
+            powerBarContainer.style.right = 'auto';
+        }
         const onPowerBarStart = (e) => {
-            if (isUIEditModeActive() || wasDraggingSpin()) return;
-            e.stopPropagation();
+            if (isUIEditModeActive() || wasDraggingSpin()) {
+                return; // If in UI edit mode or dragging spin, do nothing and let other handlers take over
+            }
+            e.stopPropagation(); // Only stop propagation if we are handling power drag
             import('./powerControls.js').then(({ startPowerDrag, dragPower }) => {
                 startPowerDrag();
                 dragPower(e.touches ? e.touches[0] : e); // Aplicar potencia inicial
@@ -121,7 +130,7 @@ export function initializeUI() {
         // --- MODIFICACIÓN: Lógica para cambiar entre vistas del panel de opciones ---
         const mainOptionsView = document.getElementById('main-options-view');
         // --- SOLUCIÓN: No activar ningún jugador al inicio. La activación se hará después de la carga.
-        // updateActivePlayerUI(getGameState().currentPlayer);
+        updateActivePlayerUI(getGameState().currentPlayer);
 
         const editUiOptionsView = document.getElementById('edit-ui-options-view');
         const modifyUiBtn = document.getElementById('modify-ui-btn');
@@ -296,8 +305,9 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
 export function updateActivePlayerUI(activePlayer) {
     const player1Container = document.getElementById('player1PocketedContainer');
     const player2Container = document.getElementById('player2PocketedContainer');
+    const turnIndicator = document.getElementById('turnIndicator'); // --- NUEVO: Referencia al indicador de turno
 
-    if (!player1Container || !player2Container) return;
+    if (!player1Container || !player2Container || !turnIndicator) return;
 
     const avatar1 = player1Container.querySelector('.player-avatar');
     const avatar2 = player2Container.querySelector('.player-avatar');
@@ -305,15 +315,25 @@ export function updateActivePlayerUI(activePlayer) {
     avatar1.classList.toggle('active', activePlayer === 1);
     avatar2.classList.toggle('active', activePlayer === 2);
 
+    // --- NUEVO: Mostrar/ocultar el indicador de turno ---
+    if (activePlayer === 1 || activePlayer === 2) {
+        // turnIndicator.style.opacity = '1';
+        // turnIndicator.style.transform = 'translate(-50%, -50%)'; // Resetear la posición si estaba animada
+        // turnIndicator.textContent = `Turno del Jugador ${activePlayer}`; // Actualizar texto
+    } else {
+        turnIndicator.style.opacity = '0';
+    }
+
     // --- SOLUCIÓN: Reiniciar el temporizador circular del jugador inactivo ---
     const timerLine1 = avatar1 ? avatar1.querySelector('.timer-line') : null;
     const timerLine2 = avatar2 ? avatar2.querySelector('.timer-line') : null;
 
     if (activePlayer === 1) {
-        // Reiniciar el temporizador del jugador 2 (inactivo)
-        if (timerLine2) timerLine2.style.strokeDashoffset = 100;
+        if (timerLine1) timerLine1.style.strokeDashoffset = 0; // Activar el temporizador del jugador 1
+        if (timerLine2) timerLine2.style.strokeDashoffset = 100; // Reiniciar el temporizador del jugador 2 (inactivo)
     } else {
-        if (timerLine1) timerLine1.style.strokeDashoffset = 100;
+        if (timerLine1) timerLine1.style.strokeDashoffset = 100; // Reiniciar el temporizador del jugador 1 (inactivo)
+        if (timerLine2) timerLine2.style.strokeDashoffset = 0; // Activar el temporizador del jugador 2
     }
 }
 
@@ -359,19 +379,7 @@ export function updateUI() {
     // La función updateUI se mantiene por si se necesita en el futuro, pero ahora está vacía.
 }
 
-/**
- * --- NUEVO: Actualiza los elementos visuales de la barra de potencia horizontal.
- * @param {number} newPowerPercent - El nuevo porcentaje de potencia (0 a 1).
- */
-export function updatePowerUI(newPowerPercent) {
-    requestAnimationFrame(() => {
-        const powerBarFill = document.getElementById('powerBarFill');
-        const powerBarHandle = document.getElementById('powerBarHandle');
 
-        powerBarFill.style.width = `${newPowerPercent * 100}%`;
-        powerBarHandle.style.left = `${newPowerPercent * 100}%`;
-    });
-}
 
 /**
  * --- NUEVO: Inicia el listener para actualizar la UI de asignación de bolas.
@@ -407,12 +415,14 @@ function setupAssignmentsListener() {
         serverBalls.forEach(serverBall => {
             if (!serverBall.isActive && serverBall.number !== null && serverBall.number !== 8) {
                 const ballType = (serverBall.number >= 1 && serverBall.number <= 7) ? 'solids' : 'stripes';
-                let targetContainer;
-                
-                // --- CORRECCIÓN: Comprobar a qué jugador (1 o 2) pertenece la bola ---
-                if (gameData.player1 && playerAssignments[gameData.player1.uid] === ballType) {
+                let targetContainer = null;
+
+                // Check player 1's assignment
+                if (gameData.playerAssignments && gameData.playerAssignments[1] === ballType) {
                     targetContainer = player1Container;
-                } else if (gameData.player2 && playerAssignments[gameData.player2.uid] === ballType) {
+                }
+                // Check player 2's assignment
+                else if (gameData.playerAssignments && gameData.playerAssignments[2] === ballType) {
                     targetContainer = player2Container;
                 }
 
@@ -499,6 +509,13 @@ function loadUILayout() {
                 Object.assign(el.style, layout[id]);
             }
         });
+        // --- NUEVO: Asegurar que la barra de potencia esté siempre a la izquierda ---
+        const powerBar = document.getElementById('newPowerBarContainer');
+        if (powerBar) {
+            powerBar.style.left = '10px';
+            powerBar.style.transform = 'none';
+            powerBar.style.right = 'auto'; // Asegurarse de que no haya conflicto con 'right'
+        }
         // --- NUEVO: Cargar el estado de la cámara ---
         if (layout.cameraState) {
             zoomState.level = layout.cameraState.level;
@@ -511,15 +528,15 @@ function loadUILayout() {
 
 function setupUIEditListeners() {
     // --- MODIFICACIÓN: Unificar la lógica de inicio de arrastre para ratón y táctil ---
-    const onEditStart = (e) => {
-        if (!isUIEditMode) return;
-
-        const target = e.target;
-        const editableEl = target.closest('.editable-ui.editing');
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        // --- NUEVO: Lógica de Panning de la mesa ---
+                    const onEditStart = (e) => {
+                        if (!isUIEditMode) return;
+            
+                        const target = e.target;
+                        const editableEl = target.closest('.editable-ui.editing');
+                        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            // --- NUEVO: Lógica de Panning de la mesa ---
         if (!editableEl) {
             if (e.touches && e.touches.length === 2) { // Gesto de pellizcar para zoom
                 e.preventDefault();
@@ -579,7 +596,17 @@ function setupUIEditListeners() {
             initialBottom: window.innerHeight - rect.bottom,
             initialWidth: rect.width,
             initialHeight: rect.height,
+            initialTransformX: 0, // Default
+            initialTransformY: -50, // Default for translateY(-50%)
         };
+
+        // If the element has a transform, parse it to get initial translate values
+        if (editableEl.id === 'newPowerBarContainer' && editableEl.style.transform) {
+            const transformMatch = editableEl.style.transform.match(/translateY\(([-+]?\d*\.?\d+)(%|px)\)/);
+            if (transformMatch && transformMatch[2] === '%') {
+                activeDrag.initialTransformY = parseFloat(transformMatch[1]);
+            }
+        }
 
         if (target.classList.contains('resize-handle')) {
             activeDrag.type = target.classList.contains('br') ? 'resize-br' : 'resize-tl';
@@ -645,8 +672,11 @@ function setupUIEditListeners() {
             // Si el elemento está centrado (como la barra de potencia), ajustamos el 'left'
             // pero mantenemos la transformación para que siga centrado respecto a su nueva posición.
             // --- CORRECCIÓN: La miniatura del selector de efecto necesita un tratamiento especial.
-            if (el.id === 'powerBarContainer') {
-                el.style.left = `${activeDrag.initialLeft + dx + (activeDrag.initialWidth / 2)}px`;
+            if (el.id === 'newPowerBarContainer') {
+                const newTop = activeDrag.initialTop + dy;
+                el.style.top = `${newTop}px`;
+                el.style.left = `${activeDrag.initialLeft + dx}px`;
+                el.style.right = 'auto';
             } else if (el.style.left !== 'auto') {
                 el.style.left = `${activeDrag.initialLeft + dx}px`;
                 el.style.right = 'auto';
@@ -691,7 +721,7 @@ function setupUIEditListeners() {
 
     // Asignar los nuevos manejadores a los eventos de ratón y táctiles
     document.addEventListener('mousedown', onEditStart);
-    document.addEventListener('touchstart', onEditStart, { passive: true });
+    document.addEventListener('touchstart', onEditStart, { passive: false });
     document.addEventListener('mousemove', onEditMove);
     document.addEventListener('touchmove', onEditMove, { passive: false });
     document.addEventListener('mouseup', onEditEnd);

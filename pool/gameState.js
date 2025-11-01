@@ -13,7 +13,7 @@ export let pocketedThisTurn = [];
 export let shotStartTime = 0; // --- NUEVO: Timestamp del inicio del tiro
 export let isPlacingCueBall = false; // --- NUEVO: Estado para cuando el jugador está colocando la bola blanca
 export let isDampingEnabled = true; // --- NUEVO: Controla si el frenado en la tronera está activo
-export let gamePaused = false;
+export let gamePaused = true;
 export let gameOver = false; // --- SOLUCIÓN: Nuevo estado para el fin de la partida
 let isFirstTurn = true; // --- NUEVO: Bandera para controlar el primer turno de la partida.
 
@@ -134,8 +134,7 @@ export function showFoulMessage(reason, targetPlayerUid = null) {
 
     if (foulMessageContainer && foulMessageText && playAgainBtn) {
         foulMessageText.textContent = reason;
-        foulMessageContainer.style.opacity = '1';
-        foulMessageContainer.style.transform = 'translate(-50%, -50%) scale(1)';
+        foulMessageContainer.classList.add('show');
 
         if (gameOver) {
             playAgainBtn.style.display = 'block';
@@ -143,7 +142,7 @@ export function showFoulMessage(reason, targetPlayerUid = null) {
         } else {
             playAgainBtn.style.display = 'none';
             // Ocultar el mensaje de falta después de un tiempo si no es fin de partida
-            setTimeout(() => { foulMessageContainer.style.opacity = '0'; foulMessageContainer.style.transform = 'translate(-50%, -50%) scale(0.8)'; }, 2500);
+            setTimeout(() => { foulMessageContainer.classList.remove('show'); }, 2500);
         }
     }
 }
@@ -158,10 +157,11 @@ export function setFirstHitBall(ball) {
 }
  
 export function addPocketedBall(ball) {
-    pocketedThisTurn.push(ball);
-    const gameState = getGameState();
-    const currentPlayerType = gameState.playerAssignments[gameState.currentPlayer];
-
+    // --- FIX: Prevent duplicate balls from being added to the list ---
+    const alreadyPocketed = pocketedThisTurn.some(p => p.number === ball.number);
+    if (!alreadyPocketed) {
+        pocketedThisTurn.push(ball);
+    }
 }
 
 export function setBallsAssigned(areAssigned) {
@@ -291,7 +291,8 @@ export function getGameState() {
         firstBallHitThisTurn, // --- SOLUCIÓN: Exponer la primera bola golpeada para que revisar.js pueda consultarla
         pocketedThisTurn, // --- SOLUCIÓN: Exponer las bolas entroneradas para que revisar.js pueda consultarlas
         isFirstTurn, // --- NUEVO: Exponer la bandera del primer turno.
-        ...onlineData
+        ...onlineData,
+        currentPlayer: derivedCurrentPlayer // Asegurarse de que derivedCurrentPlayer siempre tenga precedencia
     };
 } 
 
