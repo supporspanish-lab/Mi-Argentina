@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlackBall</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- SOLUCIÓN: Evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <style>
+      :root {
+        --primary-color: #00f291;
+        --bg-color: #1a1a1a;
+        --container-bg-color: rgba(35, 35, 35, 0.85);
+        --input-bg-color: #2c2c2c;
+        --border-color: rgba(255, 255, 255, 0.2);
+        --text-color: #ffffff;
+        --text-secondary-color: #a0a0a0;
+        --shadow-color: rgba(0, 242, 145, 0.5);
+        --option-card-size: 220px;
+      }
+
+      /* Reset and base styles */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html, body {
+        height: 100%;
+        width: 100vw;
+        height: var(--vh, 100vh);
+        overflow: hidden; /* Asegurar que no haya scroll en ningún caso */
+      }
+
+      body {
+        font-family: 'Roboto', sans-serif;
+        background-color: var(--bg-color);
+        background-image: linear-gradient(160deg, #0a100d 0%, #1a1a1a 100%);
+        color: var(--text-color);
+        position: relative;
+        overflow: hidden; /* Evita cualquier scroll en el body */
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+        max-width: 1400px; /* Ancho máximo para el contenido en pantallas grandes */
+        margin: 0 auto;
+        position: relative;
+        z-index: 1; 
+      }
+
+      /* Main App Container */
+      .app-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start; /* Alinear contenido desde arriba */
+        width: 100%;
+        width: 100vw;
+        height: var(--vh, 100vh); /* Usar la variable CSS para altura consistente */
+        animation: fadeIn 0.8s ease-out forwards;
+        will-change: transform, opacity;
+        position: relative;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      /* Header */
+      .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px; /* SOLUCIÓN: Añadir padding horizontal aquí */
+        border-bottom: 1px solid var(--border-color);
+        flex-shrink: 0;
+        position: relative;
+        /* overflow: hidden; // This was preventing the dropdown from showing */
+        z-index: 100; /* Lower z-index to allow menu to pop over */
+      }
+
+      .app-header::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: -100%;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(to right, transparent 0%, var(--primary-color) 50%, transparent 100%);
+        animation: slide-shine 4s ease-in-out infinite;
+        animation-delay: 1s; /* Start after a small delay */
+        z-index: 1; /* Ensure it's below other elements */
+      }
+
+      @keyframes slide-shine {
+        0% { left: -100%; }
+        100% { left: 100%; }
+      }
+
+      .title-container {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+      }
+
+      .app-title {
+        font-family: 'Righteous', cursive;
+        font-size: 28px;
+        color: var(--primary-color);
+        letter-spacing: 1px;
+      }
+
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background-color: var(--input-bg-color);
+        padding: 6px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        z-index: 101; /* Ensure user profile and its menu are on top */
+      }
+
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      #user-display-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-color);
+      }
+
+      .user-balance {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 12px;
+        color: var(--text-secondary-color);
+      }
+
+      .user-balance .balance-icon {
+        color: var(--primary-color);
+      }
+
+      .balance-icon {
+        width: 20px;
+        height: 20px;
+        color: var(--primary-color);
+      }
+
+      #logout-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary-color);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      #logout-btn:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: #e74c3c;
+      }
+
+      /* Header Pool Balls Icon */
+      .header-pool-ball-container {
+          display: flex;
+          align-items: center;
+          transform: rotate(-15deg);
+      }
+
+      .header-pool-ball-container .pool-ball {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          position: relative;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0,0,0,0.5);
+      }
+
+      .header-pool-ball-container .pool-ball::before {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 5px;
+          width: 12px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.2);
+          filter: blur(2px);
+          transform: rotate(-30deg);
+      }
+
+      .header-pool-ball-container .ball-white {
+          background: radial-gradient(circle at 50% 40%, #ffffff, #d4d4d4);
+          z-index: 10;
+          margin-right: -8px;
+      }
+
+      .header-pool-ball-container .ball-black {
+          background: radial-gradient(circle at 50% 40%, #3a3a3a, #000000);
+      }
+
+
+      /* Main Content */
+      .main-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        overflow: hidden;
+        padding: 0 20px 20px 20px; /* SOLUCIÓN: Añadir padding aquí */
+        position: relative;
+      }
+
+      /* --- NUEVO: Estilos para el carrusel de partidas --- */
+      .game-carousel-container {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 20px 0;
+      }
+
+      .game-carousel {
+          display: flex;
+          gap: 25px;
+          padding: 10px 25px;
+          max-width: 100%;
+          overflow-x: auto;
+          /* Custom scrollbar for a better look */
+          scrollbar-width: thin;
+          scrollbar-color: var(--primary-color) var(--input-bg-color);
+      }
+
+      .game-carousel::-webkit-scrollbar {
+          height: 8px;
+      }
+
+      .game-carousel::-webkit-scrollbar-track {
+          background: var(--input-bg-color);
+          border-radius: 4px;
+      }
+
+      .game-carousel::-webkit-scrollbar-thumb {
+          background-color: var(--primary-color);
+          border-radius: 4px;
+      }
+
+      .game-card {
+          flex: 0 0 var(--option-card-size);
+          width: var(--option-card-size);
+          height: var(--option-card-size);
+          background-color: var(--container-bg-color);
+          border: 1px solid var(--border-color);
+          border-radius: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px;
+          cursor: pointer;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          position: relative;
+      }
+
+      .game-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 0 15px var(--shadow-color);
+      }
+
+      .card-player-info {
+          text-align: center;
+      }
+
+      .player-name-waiting {
+          font-weight: 700;
+          font-size: 18px;
+          color: var(--primary-color);
+          display: block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 160px;
+      }
+
+      .status-text {
+          font-size: 14px;
+          color: var(--text-secondary-color);
+      }
+
+      .card-player-count {
+          font-size: 24px;
+          font-weight: bold;
+          background-color: var(--input-bg-color);
+          padding: 5px 15px;
+          border-radius: 10px;
+      }
+
+      .create-icon {
+          font-size: 80px;
+          font-weight: 200;
+          color: var(--primary-color);
+          line-height: 1;
+      }
+
+      .create-text {
+          font-weight: 700;
+      }
+      
+      /* --- MODIFICADO: Estilos para la pantalla de espera --- */
+      #waiting-screen {
+          display: none; /* Oculto por defecto */
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 25px;
+          padding: 40px;
+          background-color: var(--container-bg-color);
+          border: 1px solid var(--border-color);
+          border-radius: 24px;
+          width: 100%;
+          max-width: 450px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          margin-bottom: 80px; /* Ajusta este valor para moverlo más arriba */
+      }
+
+      /* --- NUEVO: Estilos para el avatar dentro de la tarjeta --- */
+      .card-avatar {
+          width: 80px;
+          height: 80px;
+          margin: 10px 0;
+      }
+      .card-avatar .avatar-icon-bg {
+          fill: rgba(255, 255, 255, 0.05);
+      }
+      .card-avatar .avatar-icon {
+          fill: var(--primary-color);
+          opacity: 0.8;
+      }
+
+      /* --- NUEVO: Estilos para la tarjeta de "Esperando" del propio usuario --- */
+      .game-card.disabled {
+          cursor: not-allowed;
+          filter: grayscale(80%);
+          opacity: 0.7;
+      }
+      .game-card.disabled:hover {
+          transform: none;
+          box-shadow: none;
+      }
+
+      .waiting-text {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--text-secondary-color);
+          display: flex;
+          align-items: center;
+      }
+
+      .pulsing-dots span {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: var(--primary-color);
+          margin-left: 8px;
+          animation: pulse-dot 1.4s infinite ease-in-out both;
+      }
+      .pulsing-dots span:nth-child(1) { animation-delay: -0.32s; }
+      .pulsing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+      @keyframes pulse-dot {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+      }
+
+      .cancel-button {
+          padding: 15px 30px;
+          border: 1px solid #e74c3c;
+          background-color: rgba(231, 76, 60, 0.1);
+          color: #e74c3c;
+          border-radius: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          margin-top: 15px;
+      }
+      .cancel-button:hover {
+          background-color: #e74c3c;
+          color: #fff;
+          box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+      }
+
+      .play-button {
+        padding: 20px 50px;
+        border: none;
+        border-radius: 15px;
+        background: var(--primary-color);
+        color: #000;
+        font-size: 28px;
+        font-weight: 700;
+        font-family: 'Righteous', cursive;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        box-shadow: 0 5px 20px rgba(0, 242, 145, 0.3);
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .play-button:hover {
+        box-shadow: 0 0 25px var(--shadow-color);
+        transform: translateY(-3px) scale(1.05);
+      }
+
+      .play-button:active {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 0 10px var(--shadow-color);
+      }
+
+      .play-button[disabled] {
+          background-color: #555;
+          color: #999;
+          cursor: not-allowed;
+          box-shadow: none;
+          transform: none;
+      }
+
+      .play-button.glowing {
+        animation: glow-animation 1.5s infinite alternate;
+      }
+
+      @keyframes glow-animation {
+          from {
+              box-shadow: 0 0 15px var(--shadow-color);
+          }
+          to {
+              box-shadow: 0 0 35px var(--primary-color), 0 0 15px var(--shadow-color);
+          }
+      }
+
+      /* --- NUEVO: Media Queries para Responsividad --- */
+
+      /* Para tablets y móviles en horizontal (hasta 768px) */
+      @media (max-width: 768px) {
+        :root {
+          --option-card-size: 180px; /* Reducir tamaño de tarjetas */
+        }
+
+        .app-title {
+          font-size: 24px; /* Reducir tamaño del título principal */
+        }
+
+        .user-profile {
+          padding: 4px 8px;
+          gap: 8px;
+        }
+
+        #user-display-name {
+          font-size: 13px;
+        }
+
+        .user-balance {
+          font-size: 11px;
+        }
+
+        .game-carousel {
+          gap: 15px; /* Menos espacio entre tarjetas */
+        }
+
+        .create-icon {
+          font-size: 60px;
+        }
+
+        #waiting-screen {
+          max-width: 90vw; /* Usar ancho de la ventana */
+          padding: 30px;
+          margin-bottom: 40px;
+        }
+
+        .waiting-text {
+          font-size: 20px;
+        }
+
+        .play-button {
+          font-size: 24px;
+          padding: 15px 40px;
+        }
+      }
+
+      /* Para móviles en vertical (hasta 480px) */
+      @media (max-width: 480px) {
+        :root {
+          --option-card-size: 150px; /* Tarjetas aún más pequeñas */
+        }
+
+        .app-header {
+          flex-direction: column; /* Apilar título y perfil de usuario */
+          gap: 15px;
+          padding-bottom: 15px;
+        }
+
+        .user-profile {
+          align-self: flex-end; /* Alinear el perfil a la derecha */
+        }
+
+        .game-carousel-container {
+          padding: 10px 0;
+        }
+
+        .game-card {
+          padding: 15px;
+          border-radius: 15px;
+        }
+
+        .player-name-waiting {
+          font-size: 16px;
+        }
+
+        .create-icon { font-size: 50px; }
+      }
+      .profile-picture-container {
+        width: 40px; /* Adjust size as needed */
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2px solid var(--primary-color); /* Optional: add a border */
+        flex-shrink: 0; /* Prevent it from shrinking */
+      }
+
+      #profile-picture {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensure the image covers the container */
+      }
+
+      .user-icon {
+        width: 100%;
+        height: 100%;
+        color: var(--text-color); /* Or primary-color, depending on desired look */
+        padding: 5px; /* Add some padding so the icon isn't right against the border */
+      }
+
+      .menu-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        z-index: 102; /* Ensure menu container is on top */
+      }
+
+      .menu-toggle-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary-color);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .menu-toggle-btn:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: var(--primary-color);
+      }
+
+      .user-menu {
+        position: absolute;
+        top: 100%; /* Position below the toggle button */
+        right: 0;
+        background-color: var(--container-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        min-width: 160px; /* Keep or adjust as needed */
+        z-index: 103; /* Highest z-index to ensure it appears on top */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0.2s;
+      }
+
+      .user-menu.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+
+      .menu-item {
+        display: block;
+        width: 100%;
+        padding: 10px 15px;
+        background: none;
+        border: none;
+        color: var(--text-color);
+        text-align: left;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+      }
+
+      .menu-item:hover {
+        background-color: rgba(255,255,255,0.08);
+      }
+
+      .logout-item {
+        color: #e74c3c;
+        font-weight: 700;
+      }
+
+      .logout-item:hover {
+        background-color: rgba(231, 76, 60, 0.1);
+      }
+
+      /* Estilos para modales generales */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 999; /* Un z-index ligeramente menor que el modal de errores */
+        visibility: hidden;
+        opacity: 0;
+        transition: visibility 0.3s, opacity 0.3s;
+      }
+
+      .modal-overlay.visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .modal-box {
+        background-color: var(--container-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 25px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        color: var(--text-color);
+        text-align: center;
+      }
+
+      .modal-box h3 {
+        color: var(--primary-color);
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+
+      .modal-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 10px;
+      }
+
+      .loading-box {
+        background-color: var(--container-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      }
+
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      /* Estilos para el modal de errores */
+      .error-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        visibility: hidden;
+        opacity: 0;
+        transition: visibility 0.3s, opacity 0.3s;
+      }
+
+      .error-modal-overlay.visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .error-modal-box {
+        background-color: var(--container-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 25px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        color: var(--text-color);
+      }
+
+      .error-modal-box h3 {
+        color: var(--primary-color);
+        font-size: 22px;
+        margin-bottom: 10px;
+      }
+
+      .error-modal-box textarea {
+        width: 100%;
+        height: 250px;
+        background-color: var(--input-bg-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 10px;
+        color: var(--text-color);
+        font-family: 'Roboto Mono', monospace; /* Fuente monoespaciada para errores */
+        font-size: 14px;
+        resize: vertical;
+      }
+
+      .error-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .error-modal-actions button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        transition: background-color 0.2s, color 0.2s;
+      }
+
+      .error-modal-actions .copy-button {
+        background-color: var(--primary-color);
+        color: #000;
+      }
+
+      .error-modal-actions .copy-button:hover {
+        background-color: #00d47a;
+      }
+
+      .error-modal-actions .close-button {
+        background-color: #555;
+        color: #fff;
+      }
+
+      .error-modal-actions .close-button:hover {
+        background-color: #777;
+      }
+
+      /* Botón para abrir el modal de errores */
+      #open-error-modal-btn {
+        background: none;
+        border: none;
+        color: #e74c3c; /* Color de error */
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s, color 0.2s;
+        margin-left: 10px; /* Espacio del menú */
+      }
+      #open-error-modal-btn:hover {
+        background-color: rgba(231, 76, 60, 0.1);
+        color: #ff7b6f;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+        <div class="app-container">
+            <header class="app-header">
+                <div class="title-container">
+                    <div class="header-pool-ball-container">
+                        <div class="pool-ball ball-white"></div>
+                        <div class="pool-ball ball-black"></div>
+                    </div>
+                    <h1 class="app-title">BlackBall</h1>
+                </div>
+                <div class="user-profile">
+                    <div class="profile-picture-container">
+                        <svg id="profile-picture-svg" class="user-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                        </svg>
+                    </div>
+                    <div class="user-info">
+                        <span id="user-display-name">Cargando...</span>
+                        <div class="user-balance">
+                            <span>$1,250</span>
+                        </div>
+                    </div>
+                    <div class="menu-container">
+                        <button id="menu-toggle-btn" class="menu-toggle-btn" title="Opciones de usuario">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+                        </button>
+                        <div id="user-menu" class="user-menu">
+                            <button id="configure-ui-btn" class="menu-item">Configurar UI</button>
+                            <button id="menu-logout-btn" class="menu-item logout-item">Cerrar Sesión</button>
+                        </div>
+                    </div>
+            </header>
+            <main class="main-content">
+                <div class="game-carousel-container">
+                    <div id="waiting-screen">
+                        <div class="waiting-text">
+                            Esperando Oponente <span class="pulsing-dots"><span></span><span></span><span></span></span>
+                        </div>
+                        <button id="cancel-wait-btn" class="cancel-button">Cancelar</button>
+                    </div>
+                    <div class="game-carousel" id="game-carousel"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <!-- --- NUEVO: Pantalla de carga al encontrar partida --- -->
+    <div id="match-loading-overlay" class="modal-overlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <h3 id="match-loading-text">Cargando...</h3>
+        </div>
+    </div>
+        <!-- --- NUEVO: Modal para copiar errores de consola --- -->
+    <div id="error-console-modal" class="error-modal-overlay">
+        <div class="error-modal-box">
+            <h3>Errores de Consola</h3>
+            <textarea id="error-console-textarea" readonly></textarea>
+            <div class="error-modal-actions">
+                <button id="copy-errors-btn" class="copy-button">Copiar Errores</button>
+                <button id="close-error-modal-btn" class="close-button">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { onSessionStateChanged, onUserProfileUpdate, logout } from './auth.js';
+        // --- NUEVO: Importar Firebase para matchmaking ---
+        import { db, auth } from './auth.js';
+        import { collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const userDisplayName = document.getElementById('user-display-name');
+        const userBalanceSpan = document.querySelector('.user-balance span');
+        const logoutBtn = document.getElementById('menu-logout-btn');
+        const menuToggleBtn = document.getElementById('menu-toggle-btn');
+        const userMenu = document.getElementById('user-menu');
+        const configureUiBtn = document.getElementById('configure-ui-btn');
+        const matchLoadingOverlay = document.getElementById('match-loading-overlay');
+        const matchLoadingText = document.getElementById('match-loading-text');
+
+        const gameCarousel = document.getElementById('game-carousel');
+        const waitingScreen = document.getElementById('waiting-screen');
+        const cancelWaitBtn = document.getElementById('cancel-wait-btn');
+
+        // --- NUEVO: Lógica para el modal de errores de consola ---
+        const errorConsoleModal = document.getElementById('error-console-modal');
+        const errorConsoleTextarea = document.getElementById('error-console-textarea');
+        const copyErrorsBtn = document.getElementById('copy-errors-btn');
+        const closeErrorModalBtn = document.getElementById('close-error-modal-btn');
+        const capturedErrors = [];
+
+        function updateErrorConsole() {
+            errorConsoleTextarea.value = capturedErrors.join('\n\n');
+        }
+
+        // Capturar errores de consola
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            capturedErrors.push('Console Error: ' + args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' '));
+            updateErrorConsole();
+            errorConsoleModal.classList.add('visible'); // Mostrar modal automáticamente
+        };
+
+        // --- DEBUG: Observador para detectar cambios de tamaño ---
+        try {
+            const body = document.body;
+            const appContainer = document.querySelector('.app-container');
+
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const { width, height } = entry.contentRect;
+                    // Removed debug console.log to prevent console output
+                }
+            });
+
+            if (body) resizeObserver.observe(body);
+            if (appContainer) resizeObserver.observe(appContainer);
+        } catch (e) {
+            console.error("Error al iniciar el ResizeObserver para depuración:", e);
+        }
+
+        // Capturar errores no controlados
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorString = `Uncaught Error: ${message}\n  Source: ${source}\n  Line: ${lineno}, Column: ${colno}\n  Stack: ${error ? error.stack : 'N/A'}`;
+            capturedErrors.push(errorString);
+            updateErrorConsole();
+            errorConsoleModal.classList.add('visible'); // Mostrar modal automáticamente
+            // Para evitar que el error se muestre en la consola por duplicado si ya lo hemos capturado
+            return false;
+        };
+
+        // Capturar promesas rechazadas no controladas
+        window.onunhandledrejection = function(event) {
+            const reason = event.reason;
+            const errorString = `Unhandled Promise Rejection: ${reason instanceof Error ? reason.message : reason}\n  Stack: ${reason instanceof Error ? reason.stack : 'N/A'}`;
+            capturedErrors.push(errorString);
+            updateErrorConsole();
+            errorConsoleModal.classList.add('visible'); // Mostrar modal automáticamente
+            // Prevenir el comportamiento por defecto para evitar que el error se muestre en la consola
+            event.preventDefault();
+        };
+
+
+
+        closeErrorModalBtn.addEventListener('click', () => {
+            errorConsoleModal.classList.remove('visible');
+        });
+
+        copyErrorsBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(errorConsoleTextarea.value);
+                alert('Errores copiados al portapapeles!');
+            } catch (err) {
+                console.error('Error al copiar los errores con navigator.clipboard.writeText:', err);
+                // Fallback para entornos no seguros (HTTP) o navegadores antiguos
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = errorConsoleTextarea.value;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    alert('Errores copiados al portapapeles (método alternativo)!');
+                } catch (fallbackErr) {
+                    console.error('Error al copiar los errores con document.execCommand(\'copy\'):', fallbackErr);
+                    alert('No se pudieron copiar los errores automáticamente. Por favor, selecciona el texto y cópialo manualmente.');
+                }
+            }
+        });
+        // --- FIN NUEVO: Lógica para el modal de errores de consola ---
+        
+        try {
+            onSessionStateChanged((user) => {
+                if (user) {
+                    // userDisplayName.textContent = user.email; // Set initial display name to email
+                    // Escuchar cambios en el perfil del usuario
+                    onUserProfileUpdate(user.uid, (userData) => {
+                        userDisplayName.textContent = userData.username || user.email;
+                        userBalanceSpan.textContent = `$${userData.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    });
+
+                // Función de utilidad del primer script (ahora fusionado)
+                function showMatchLoading(message) {
+                    matchLoadingText.textContent = message;
+                    matchLoadingOverlay.classList.add('visible');
+                }
+
+                // Function to clean up the user's waiting game
+                const cleanupWaitingGame = async () => {
+                        // Se ha deshabilitado el borrado de salas al salir.
+                        // await deleteDoc(doc(db, "games", userWaitingGameId)).catch(e => console.error("Error deleting game on cleanup:", e));
+                        userWaitingGameId = null;
+                    }
+
+                // --- NUEVO: Lógica para el menú desplegable ---
+                menuToggleBtn.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Prevent document click from closing it immediately
+                    userMenu.classList.toggle('active');
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (!userMenu.contains(event.target) && !menuToggleBtn.contains(event.target)) {
+                        userMenu.classList.remove('active');
+                    }
+                });
+
+                logoutBtn.addEventListener('click', async () => {
+                    await cleanupWaitingGame(); // Attempt to clean up before logging out
+                    logout().then(() => { // Then proceed with logout
+                        // Cierre de sesión exitoso.
+                        window.location.href = 'login.html';
+                    }).catch((error) => {
+                        console.error('Error al cerrar sesión:', error);
+                    });
+                });
+
+                configureUiBtn.addEventListener('click', () => {
+                    console.log('Botón Configurar UI clickeado! Redirigiendo a index.html para configuración de UI.');
+                    window.location.href = '../offline/index_offline.html'; // Redirige a index_offline.html para ver la UI offline
+                    userMenu.classList.remove('active'); // Cerrar el menú después de la acción
+                });
+                // --- Lógica de Matchmaking en tiempo real para el carrusel (MEJORADA) ---
+                const gamesRef = collection(db, "games");
+                const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting")); // CORRECCIÓN: Eliminado el limit(1)
+                // --- NUEVO: Lógica para detectar y purgar partidas "fantasma" ---
+                const STALE_GAME_MINUTES = 10; // Partidas con más de 10 minutos en espera se consideran abandonadas
+
+                // --- SOLUCIÓN: Purgar partidas fantasma UNA SOLA VEZ al cargar, fuera del listener onSnapshot ---
+                const purgeStaleGames = async () => {
+                    try {
+                        const snapshot = await getDocs(waitingGamesQuery);
+                        const now = new Date();
+                        const promises = [];
+                        snapshot.forEach(docSnap => {
+                            const gameData = docSnap.data();
+                            const createdAt = gameData.createdAt?.toDate();
+                            if (createdAt) {
+                                const minutesDiff = (now - createdAt) / (1000 * 60);
+                                if (minutesDiff > STALE_GAME_MINUTES) {
+                                    // La lógica de borrado automático de salas antiguas ha sido eliminada.
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error("Error al purgar partidas antiguas:", error);
+                    }
+                };
+                purgeStaleGames(); // Ejecutar la purga.
+
+                let userWaitingGameId = null;
+                const unsubscribe = onSnapshot(waitingGamesQuery, (querySnapshot) => {
+                    gameCarousel.innerHTML = ''; // Limpiar el carrusel en cada actualización
+                    let userIsWaiting = false;
+                    const now = new Date();
+
+                    // 1. Iterar sobre las partidas en espera
+                    querySnapshot.forEach(docSnap => {
+                        const gameData = docSnap.data();
+                        const gameId = docSnap.id;
+
+                        if (gameData.player1.uid === user.uid) {
+                            // Si yo soy el que está esperando, marco la bandera
+                            userIsWaiting = true;
+                            userWaitingGameId = gameId;
+                        } else {
+                            // Si es otro jugador, creo la tarjeta para unirme
+                            const card = document.createElement('div');
+                            card.className = 'game-card waiting';
+                            card.dataset.gameId = gameId;
+                            card.innerHTML = `
+                                <div class="card-player-info">
+                                    <span class="player-name-waiting">${gameData.player1.username}</span>
+                                    <span class="status-text">está esperando...</span>
+                                </div>
+                                <div class="card-player-count">1/2</div>
+                            `;
+                            card.addEventListener('click', async () => {
+                                // --- SOLUCIÓN: Asignar el turno inicial aleatoriamente al unirse ---
+                                const random = Math.random();
+                                const player1Uid = gameData.player1.uid;
+                                const player2Uid = user.uid;
+                                const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
+
+                                await updateDoc(doc(db, "games", gameId), {
+                                    player2: { uid: player2Uid, username: userDisplayName.textContent },
+                                    status: "starting",
+                                    // El UID del jugador que empieza se guarda en el servidor.
+                                    currentPlayerUid: startingPlayerUid,
+                                    turn: 1 // Asegurarse de que el contador de turnos esté en 1
+                                }).then(() => { window.location.href = `../index.html?gameId=${gameId}`; });
+                            });
+                            gameCarousel.appendChild(card);
+                        }
+                    });
+
+                    if (userIsWaiting) {
+                        // Si el usuario está esperando, ocultar el lobby y mostrar la pantalla de espera
+                        gameCarousel.style.display = 'none';
+                        waitingScreen.style.display = 'flex';
+                    } else {
+                        // Si no, mostrar el lobby y ocultar la pantalla de espera
+                        gameCarousel.style.display = 'flex';
+                        waitingScreen.style.display = 'none';
+
+                        // Añadir la tarjeta para crear una nueva partida
+                        const createCard = document.createElement('div');
+                        createCard.className = 'game-card create-new';
+                        createCard.innerHTML = `
+                            <div class="create-icon">+</div>
+                            <span class="create-text">Crear Partida</span>
+                        `;
+                        createCard.addEventListener('click', async () => {
+                            createCard.style.pointerEvents = 'none';
+
+                            // --- NUEVO: Generar el estado inicial de las bolas ---
+                            const ballPositions = [];
+                            const RACK_SPACING_DIAMETER = 24;
+                            const TABLE_WIDTH = 1000;
+                            const TABLE_HEIGHT = 500;
+                            const startX = TABLE_WIDTH * 0.75;
+                            const startY = TABLE_HEIGHT / 2;
+                            const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+                            let ballIndex = 0;
+
+                            for (let i = 0; i < 5; i++) {
+                                for (let j = 0; j <= i; j++) {
+                                    const ballNumber = ballOrder[ballIndex++];
+                                    ballPositions.push({
+                                        number: ballNumber,
+                                        x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                                        y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                                        isActive: true
+                                    });
+                                }
+                            }
+                            // Añadir la bola blanca
+                            ballPositions.push({
+                                number: null,
+                                x: TABLE_WIDTH / 4,
+                                y: TABLE_HEIGHT / 2,
+                                isActive: true
+                            });
+
+                            // --- FIN NUEVO ---
+
+                            const newGame = await addDoc(gamesRef, {
+                                player1: { uid: user.uid, username: userDisplayName.textContent },
+                                player2: null,
+                                status: "waiting",
+                                createdAt: new Date(),
+                                currentPlayerUid: null, // El turno se decidirá cuando el jugador 2 se una
+                                balls: ballPositions, // Guardar las posiciones iniciales
+                                turn: 1
+                            });
+
+                            // --- MEJORA: Escuchar activamente la partida que acabamos de crear ---
+                            onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
+                                if (gameSnap.data()?.status === "starting") {
+                                    window.location.href = `../index.html?gameId=${newGame.id}`;
+                                }
+                            });
+                        });
+                        gameCarousel.appendChild(createCard);
+
+                        // --- NUEVO: Botón para jugar 1 vs 1 (modo test) ---
+                        const createTestGameCard = document.createElement('div');
+                        createTestGameCard.className = 'game-card create-new';
+                        createTestGameCard.innerHTML = `
+                            <div class="create-icon">&#9881;</div> <!-- Icono de engranaje para test -->
+                            <span class="create-text">Jugar 1 vs 1 (Test)</span>
+                        `;
+                        createTestGameCard.addEventListener('click', async () => {
+                            createTestGameCard.style.pointerEvents = 'none';
+
+                            // Generar el estado inicial de las bolas (mismo que el anterior)
+                            const ballPositions = [];
+                            const RACK_SPACING_DIAMETER = 24;
+                            const TABLE_WIDTH = 1000;
+                            const TABLE_HEIGHT = 500;
+                            const startX = TABLE_WIDTH * 0.75;
+                            const startY = TABLE_HEIGHT / 2;
+                            const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+                            let ballIndex = 0;
+
+                            for (let i = 0; i < 5; i++) {
+                                for (let j = 0; j <= i; j++) {
+                                    const ballNumber = ballOrder[ballIndex++];
+                                    ballPositions.push({
+                                        number: ballNumber,
+                                        x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                                        y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                                        isActive: true
+                                    });
+                                }
+                            }
+                            ballPositions.push({
+                                number: null,
+                                x: TABLE_WIDTH / 4,
+                                y: TABLE_HEIGHT / 2,
+                                isActive: true
+                            });
+
+                            const newGame = await addDoc(gamesRef, {
+                                player1: { uid: user.uid, username: userDisplayName.textContent },
+                                player2: { uid: user.uid, username: userDisplayName.textContent + " (P2)" }, // Mismo usuario para P2
+                                status: "starting", // Iniciar directamente
+                                createdAt: new Date(),
+                                currentPlayerUid: user.uid, // El mismo usuario empieza
+                                balls: ballPositions,
+                                turn: 1
+                            });
+
+                            window.location.href = `../index.html?gameId=${newGame.id}`;
+                        });
+                        gameCarousel.appendChild(createTestGameCard);
+                    }
+                });
+
+                // Lógica para el botón de cancelar
+                cancelWaitBtn.addEventListener('click', async () => {
+                    if (userWaitingGameId) {
+                        await deleteDoc(doc(db, "games", userWaitingGameId));
+                        userWaitingGameId = null;
+                        // El onSnapshot se encargará de volver a mostrar el carrusel
+                    }
+                });
+
+                // Attempt to clean up waiting game if the user navigates away or closes the tab
+                window.addEventListener('beforeunload', async (event) => {
+                    // Note: async operations in beforeunload are not guaranteed to complete.
+                    // This is a best-effort attempt.
+                    await cleanupWaitingGame();
+                });
+
+            } else {
+                // El usuario no ha iniciado sesión.
+                // Redirigir a la página de login.
+                window.location.href = 'login.html';
+            }
+        });
+        } catch (error) {
+            console.error("Error in onSessionStateChanged setup:", error);
+        }
+    </script>
+  </body>
+  <script>
+    // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
+    // Esta función establece la altura del contenedor principal a la altura
+    // de la ventana interna en el momento de la carga. Esto previene que el
+    // layout "salte" cuando la barra de direcciones del navegador móvil
+    // aparece o desaparece.
+    function setAppHeight() {
+      const appContainer = document.querySelector('.app-container');
+      if (!appContainer) return;
+    
+      const setHeight = () => {
+        const vh = window.innerHeight;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+        appContainer.style.height = `${window.innerHeight}px`;
+      };
+    
+      setHeight();
+    
+      let resizeTimeout;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(setHeight, 100);
+      });
+    }
+    window.addEventListener('load', setAppHeight);
+  </script>
+</html>
