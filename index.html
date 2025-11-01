@@ -556,7 +556,6 @@
             top: 0%;
             transform-origin: center center; /* Asegurar que la rotación sea desde el centro */
             cursor: grab;
-            transition: top 0.1s linear;
         }
 
         /* --- NUEVO: Estilos para modales personalizados --- */
@@ -857,20 +856,20 @@
                         console.error("Error al sincronizar el apuntado:", error);
                     }
                 }
-            }, 1000); // Límite de 1000ms.
+            }, 100); // Límite de 100ms.
 
             // --- NUEVO: Función para enviar la actualización de la potencia a Firestore ---
             const sendPowerUpdate = throttle(async (power) => {
                 if (gameId) {
                     try {
                         const gameRef = doc(db, "games", gameId);
-                        // Usamos un nuevo campo 'aimingPower' para la potencia
+                        // Usamos un nuevo campo \'aimingPower\' para la potencia
                         await updateDoc(gameRef, { aimingPower: power });
                     } catch (error) {
                         console.error("Error al sincronizar la potencia:", error);
                     }
                 }
-            }, 1000); // Mismo límite para la potencia
+            }, 100); // Mismo límite para la potencia
 
             // --- NUEVO: Función para enviar la posición de la bola blanca durante "bola en mano" ---
             const sendCueBallPositionUpdate = async (position) => {
