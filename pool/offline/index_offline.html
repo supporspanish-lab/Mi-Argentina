@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- --- MODIFICADO: Añadir user-scalable=no para una mejor experiencia en móviles --- -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">    <title>Juego de BlackBal con Canvas</title>
+    <!-- NUEVO: Evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <style>
+        /* Reinicio CSS para asegurar que el HTML y el Body ocupen el 100% */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Asegura que no haya scrollbars en el body */
+            /* --- NUEVO: Mejoras para la experiencia táctil --- */
+            touch-action: none; /* Evita acciones del navegador como hacer zoom o scroll */
+            user-select: none; /* Evita que el texto se seleccione al tocar */
+            box-sizing: border-box; /* Incluye padding y border en el ancho/alto */
+        }
+        #gameContainer {
+            position: relative; /* Cambiado de absolute para que los cálculos sean más sencillos */
+            width: 100%;
+            height: 100%;
+        }
+        /* --- NUEVO: Estilos para forzar la orientación horizontal en móviles --- */
+        #orientation-lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0d203b;
+            z-index: 200; /* Por encima de todo */
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #orientation-lock-screen svg {
+            width: 64px;
+            height: 64px;
+            fill: white;
+            margin-bottom: 20px;
+            animation: rotate-animation 2s infinite linear;
+        }
+        @keyframes rotate-animation {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(90deg); }
+        }
+        /* Mostrar la pantalla de bloqueo solo en modo vertical */
+        @media (orientation: portrait) {
+            #orientation-lock-screen {
+                display: flex;
+            }
+        }
+
+        /* --- NUEVO: Estilos para la pantalla de carga --- */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0d203b;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        #progress-container {
+            width: 80%;
+            max-width: 400px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #2ecc71;
+            transition: width 0.2s ease;
+        }
+        #progress-text {
+            margin-top: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0d203b; /* Un azul oscuro más profundo */
+        }
+        /* --- NUEVO: Estilos para los controles de tamaño de la mesa --- */
+        #table-resize-controls {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            z-index: 20;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: none; /* Oculto por defecto */
+        }
+        #table-resize-controls input {
+            width: 60px;
+        }
+
+        /* --- MODIFICACIÓN: Usar una clase para que ambos puntos compartan estilo --- */
+        .spin-selector-dot {
+            position: absolute;
+            width: 20%; /* --- MODIFICACIÓN: Punto un poco más pequeño --- */
+            height: 20%;
+            background-color: #e74c3c; /* Rojo */
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            border: 1px solid rgba(0,0,0,0.5);
+            box-shadow: 0 0 5px #e74c3c;
+            /* --- MODIFICACIÓN: El centrado ahora se hará con la posición calculada --- */
+            transform: translate(-50%, -50%);
+        }
+
+        /* --- NUEVO: Estilos para el modal del selector de efecto --- */
+        #spinModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        #largeSpinSelector {
+            width: 35vh; /* Tamaño grande, relativo a la altura de la pantalla */
+            height: 35vh;
+            max-width: 90vw; /* Evitar que sea demasiado grande en pantallas anchas */
+            max-height: 90vw;
+            position: relative;
+            cursor: pointer;
+            transform: scale(0.8);
+            border-radius: 50%;
+            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
+            background-image: url('imajenes/BolasMetidas/efecto.png');
+            background-size: contain; /* Asegura que toda la bola sea visible */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent; /* Evita que se vea un color de fondo */
+            transition: transform 0.2s ease-in-out;
+        }
+        #spinModalOverlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+        #spinModalOverlay.visible #largeSpinSelector {
+            transform: scale(1);
+        }
+        /* --- SOLUCIÓN: Indicar explícitamente al navegador que el canvas no es para hacer scroll --- */
+        /* Esto ayuda a eliminar las advertencias de "non-passive event listener". */
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        /* --- NUEVO: Estilo para la información de bolas entroneradas --- */
+        #pocketedInfo {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            display: none; /* Oculto por defecto */
+        }
+        /* --- NUEVO: Estilo para el botón de prueba --- */
+        #testPocketButton {
+            position: absolute;
+            top: 130px; /* Debajo del panel de información del jugador */
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            z-index: 10;
+            cursor: pointer;
+        }
+        /* --- NUEVO: Estilos para el visualizador de bolas entroneradas --- */
+        #pocketed-balls-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex; /* Para alinear las bolas en horizontal */
+            gap: 8px; /* Espacio entre las bolas */
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 8px;
+            border-radius: 8px;
+            z-index: 10;
+            height: 36px; /* Altura fija para el contenedor */
+            align-items: center;
+        }
+        .pocketed-ball-icon {
+            width: 32px; /* Tamaño del icono de la bola */
+            height: 32px;
+            border-radius: 50%;
+            background-color: #ccc; /* Color de fondo por si la imagen no carga */
+            /* --- CORREGIDO: Hacemos un "zoom" a la imagen para ocultar los bordes blancos --- */
+            background-size: 115%; /* Un poco más grande que el contenedor */
+            background-position: center; /* Asegura que la imagen esté centrada */
+            flex-shrink: 0; /* Evita que los iconos se encojan */
+        }
+        /* --- NUEVO: Estilo para los contenedores de bolas de jugador --- */
+        .pocketed-balls-container {
+            display: flex;
+            flex-direction: row; /* Cambiado a horizontal */
+            gap: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 8px;
+            border-radius: 8px;
+            z-index: 10;
+            height: 48px; /* Altura fija para la fila */
+            width: auto; /* Ancho automático para el contenido */
+            align-items: center;
+            box-sizing: border-box;
+        }
+        .pocketed-ball-placeholder {
+            width: 32px; /* Tamaño fijo para que quepan en el contenedor horizontal */
+            height: 32px; /* Tamaño fijo para que quepan en el contenedor horizontal */
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px dashed #fff;
+            flex-shrink: 0;
+        }
+        /* --- NUEVO: Estilo para el icono de la bola entronerada en el contenedor del jugador --- */
+        .player-ball-icon {
+            width: 32px; /* Tamaño fijo para que quepan en el contenedor horizontal */
+            height: 32px; /* Tamaño fijo para que quepan en el contenedor horizontal */
+            border-radius: 50%;
+            flex-shrink: 0;
+            background-size: 115%;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        /* --- NUEVO: Contenedor flexible para la UI superior --- */
+        /* --- SOLUCIÓN: Estilo para el avatar del jugador --- */
+        .player-avatar {
+            width: 40px; /* Tamaño fijo para el avatar en horizontal */
+            height: 40px; 
+            margin-right: 8px; /* Espacio entre el avatar y las bolas */
+            flex-shrink: 0; 
+            transition: filter 0.3s ease; 
+        }
+
+        .player-name {
+            font-size: 10px; /* Tamaño de fuente más pequeño para el nombre */
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            margin-right: 8px; /* Espacio entre el nombre y las bolas */
+        }
+
+        /* --- SOLUCIÓN: Estilos para los círculos dentro del SVG --- */
+        .player-avatar .timer-track { /* La pista gris de fondo */
+            stroke: rgba(255, 255, 255, 0.1);
+        }
+        .player-avatar .timer-line { /* La línea verde que se anima */
+            stroke: rgba(46, 204, 113, 0.4); /* Color tenue por defecto */
+            transform: rotate(-90deg); /* Empezar desde arriba */
+            transform-origin: center;
+            transition: stroke 0.3s ease, stroke-dashoffset 0.1s linear;
+        }
+        .player-avatar .avatar-icon-bg { /* Círculo de fondo para el icono */
+            fill: rgba(255, 255, 255, 0.1);
+        }
+        .player-avatar .avatar-icon { /* El icono del jugador */
+            fill: rgba(255, 255, 255, 0.7);
+        }
+
+        /* --- SOLUCIÓN: Estilo para el avatar del jugador activo --- */
+        .player-avatar.active {
+            filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.7)); /* Efecto de brillo con filtro */
+        }
+        .player-avatar.active .timer-line {
+            stroke: #2ecc71; /* Color verde brillante para el jugador activo */
+        }
+
+        #top-ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between; /* --- SOLUCIÓN: Separa los elementos a los extremos --- */
+            align-items: flex-start;
+            padding: 2vh 2vw; /* Espaciado desde los bordes de la pantalla */
+            box-sizing: border-box;
+            pointer-events: none; /* Permite hacer clic a través del contenedor */
+        }
+        /* --- CORRECCIÓN: Los contenedores de los jugadores ahora son hijos del contenedor flex --- */
+        #player1PocketedContainer.editable-ui {
+            position: absolute;
+            top: 2vh;
+            left: 2vw;
+            bottom: auto;
+            pointer-events: auto;
+            transform: scaleX(-1); /* Voltear horizontalmente el contenedor completo */
+        }
+        #player1PocketedContainer.editable-ui > .player-name,
+        #player1PocketedContainer.editable-ui > .player-avatar,
+        #player1PocketedContainer.editable-ui > .pocketed-ball-placeholder,
+        #player1PocketedContainer.editable-ui > .player-ball-icon {
+            transform: scaleX(-1); /* Contrarrestar el volteo para el texto, avatar y bolas */
+        }
+        #player2PocketedContainer.editable-ui {
+            position: absolute;
+            top: 2vh; /* Posición en la parte superior */
+            right: 2vw;
+            bottom: auto; /* Eliminar posición inferior */
+            pointer-events: auto; 
+        }
+        /* --- NUEVO: Estilos para la miniatura del selector de efecto --- */
+        #miniSpinSelector {
+            width: 7vh; /* Tamaño relativo a la altura de la pantalla */
+            height: 7vh; 
+            position: absolute; /* --- CORRECCIÓN: Posicionamiento absoluto para ser editable --- */
+            cursor: pointer;
+            /* --- MODIFICACIÓN: Usar una imagen para la miniatura del efecto --- */
+            background-image: url('imajenes/BolasMetidas/efecto.png');
+            background-size: contain; /* Asegura que toda la bola sea visible */
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            pointer-events: auto; /* Permitir clics en este elemento */
+            /* --- NUEVO: Posición por defecto --- */
+            top: 2vh;
+            right: 2vw;
+        }
+
+        /* --- NUEVO: Animación de pulso para los indicadores --- */
+        @keyframes fade-pulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* --- NUEVO: Estilos para el indicador de mover sobre la sombra --- */
+        #move-indicator {
+            position: absolute;
+            width: 80px; /* Un poco más grande para que se vea bien sobre la sombra */
+            height: 80px;
+            background-image: url('imajenes/mover.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: 29; /* Debajo del indicador de la mano */
+            display: none;
+            transform: translate(-50%, -50%); /* Centrar sobre la posición de la sombra */
+            opacity: 0; /* Inicia invisible */
+        }
+
+        /* --- NUEVO: Estilos para el indicador de mano para mover la bola --- */
+        #hand-indicator {
+            position: absolute;
+            width: 64px; /* Tamaño del icono de la mano */
+            height: 64px;
+            background-image: url('imajenes/mano.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none; /* Para que no interfiera con los clics */
+            z-index: 30;
+            display: none; /* Oculto por defecto */
+            transform: translate(-50%, -100%); /* Centrar horizontalmente y colocar la punta del dedo encima */
+        }
+        /* --- SOLUCIÓN: Estilos para el nuevo indicador de turno --- */
+        #turnIndicator {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(44, 62, 80, 0.85);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+            font-family: Arial, sans-serif;
+            font-size: 22px;
+            font-weight: bold;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            pointer-events: none; /* Para que no interfiera con el ratón */
+        }
+
+        /* --- NUEVO: Estilos para los sliders en el panel de opciones --- */
+        #options-panel label {
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        #options-panel input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #555;
+            border-radius: 5px;
+            outline: none;
+        }
+        #options-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3498db;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        /* --- NUEVO: Estilo para los botones dentro del panel de opciones --- */
+        #options-panel button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            background-color: #3498db;
+            border: 1px solid #2980b9;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #options-panel button:hover {
+            background-color: #4aa3df;
+        }
+
+        /* --- NUEVO: Estilos para el panel de opciones deslizable --- */
+        #options-panel {
+            position: fixed;
+            top: 0; /* Pegado a la parte superior */
+            left: 0; /* Pegado a la izquierda */
+            width: 300px; /* Ancho fijo para el panel */
+            max-width: 90vw; /* Ancho máximo en pantallas pequeñas */
+            max-height: 80vh; /* --- CORRECCIÓN: Altura máxima para evitar que se salga de la pantalla --- */
+            overflow-y: auto; /* --- NUEVO: Añadir scroll si el contenido es más alto --- */
+            height: auto; /* La altura se ajusta al contenido */
+            background-color: rgba(13, 32, 59, 0.95); /* Mismo color de fondo que el body */
+            border-bottom: 2px solid #3498db;
+            border-right: 2px solid #3498db; /* Borde derecho */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transform: translateY(-100%); /* Inicia oculto arriba */
+            transition: transform 0.3s ease-in-out;
+            z-index: 200;
+            padding: 50px 20px 20px 20px; /* Padding superior para no solaparse con el botón */
+            box-sizing: border-box; /* --- CORRECCIÓN: Asegurar que el padding no aumente el tamaño total --- */
+            color: white;
+            font-family: Arial, sans-serif;
+            border-bottom-right-radius: 10px;
+        }
+        #options-panel.open {
+            transform: translateY(0); /* Muestra el panel */
+        }
+        #options-toggle-btn {
+            position: fixed;
+            top: 0;
+            left: 0; /* Pegado a la izquierda */
+            transform: none; /* Sin transformación inicial */
+            width: 80px;
+            height: 30px;
+            background-color: #3498db;
+            border: none;
+            border-bottom-right-radius: 10px;
+            cursor: pointer;
+            z-index: 201; /* Por encima del panel cuando está cerrado */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0 5px 0; /* Pequeño ajuste para centrar el icono */
+            transition: transform 0.3s ease-in-out;
+        }
+        #options-toggle-btn span {
+            color: white;
+            font-size: 24px;
+        }
+
+        /* --- SOLUCIÓN: Estilos para el mensaje de falta que no se veían --- */
+        #foulMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -200%);
+            background-color: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #c0392b;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 21;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        /* --- SOLUCIÓN: Botón dentro del mensaje de falta/victoria --- */
+        #foulMessage button {
+            display: none; /* Oculto por defecto */
+            margin-top: 15px;
+            pointer-events: auto; /* Reactivar puntero para el botón */
+        }
+
+        /* --- NUEVO: Estilos para la barra de potencia horizontal --- */
+        #powerBarContainer {
+            position: absolute;
+            top: 50%;
+            left: 2vw;
+            transform: translateY(-50%); /* Centrar verticalmente */
+            width: 15px; /* Ancho de la barra */
+            height: 50vw; /* Altura de la barra */
+            max-height: 400px; /* Altura máxima */
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            z-index: 10;
+            display: none;
+        }
+        #powerBarFill {
+            position: absolute;
+            bottom: 0; /* Empieza desde abajo */
+            left: 0;
+            width: 100%;
+            height: 0%; /* La altura se animará con JS */
+            background: linear-gradient(to top, #3498db, #f1c40f, #e74c3c); /* Gradiente de abajo hacia arriba */
+            border-radius: 8px;
+            transition: height 0.05s linear;
+        }
+        #powerBarHandle {
+            position: absolute;
+            bottom: 0%; /* La posición vertical será animada por JS, empezando desde abajo */
+            left: 50%; /* Centrado horizontalmente */
+            width: 25px; /* Ancho del manejador */
+            height: 10px; /* Altura del manejador */
+            background-color: #f1c40f;
+            border: 2px solid white;
+            border-radius: 3px;
+            transform: translateX(-50%) translateY(50%); /* Centrar el manejador en su posición inferior */
+            cursor: pointer;
+        }
+
+        /* --- NUEVO: Estilos para modales personalizados --- */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000; /* Muy alto para estar por encima de todo */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            font-family: Arial, sans-serif;
+        }
+        .custom-modal-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .custom-modal-box {
+            background-color: #1a2b42;
+            padding: 20px 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 450px;
+            border: 2px solid #3498db;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            color: white;
+            text-align: center;
+        }
+        .custom-modal-box h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        .custom-modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 25px;
+        }
+        .custom-modal-buttons button {
+            padding: 10px 25px;
+        }
+
+
+
+        /* --- SOLUCIÓN: Estilos para el modal de error --- */
+        #error-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999; /* Por encima de todo */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #error-modal {
+            background-color: #2c3e50;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            border: 2px solid #e74c3c;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #error-modal h2 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        #error-details {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap; /* Para que el texto se ajuste */
+            word-break: break-all; /* Para romper palabras largas si es necesario */
+            overflow-y: auto; /* Scroll si el error es muy largo */
+            flex-grow: 1;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- --- NUEVO: Pantalla para solicitar la rotación del dispositivo --- -->
+    <div id="orientation-lock-screen">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M18.5,6.5H14.5a1,1,0,0,1,0-2h6a1,1,0,0,1,1,1V11.5a1,1,0,0,1-2,0V7.53l-3.22,3.22a1,1,0,0,1-1.42-1.42Z"/><path d="M5.5,17.5h4a1,1,0,0,1,0,2h-6a1,1,0,0,1-1-1V12.5a1,1,0,0,1,2,0v3.97l3.22-3.22a1,1,0,0,1,1.42,1.42Z"/>
+        </svg>
+        <p>Por favor, rota tu dispositivo a modo horizontal para jugar.</p>
+    </div>
+    <!-- --- NUEVO: Pantalla de carga --- -->
+    <div id="loading-screen">
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="progress-text">0%</div>
+    </div>
+
+    <div id="gameContainer">
+        <!-- --- NUEVO: Barra de potencia horizontal --- -->
+        <div id="powerBarContainer" class="editable-ui">
+            <div id="powerBarFill"></div>
+            <div id="powerBarHandle"></div>
+            <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+            <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+        </div>
+
+        <!-- --- NUEVO: Panel de opciones deslizable --- -->
+        <div id="options-panel">
+            <div id="main-options-view">
+                <h3>Opciones</h3>
+                <button id="modify-ui-btn">Modificar UI</button>
+            </div>
+            <div id="edit-ui-options-view" style="display: none;">
+                <h3>Ajustar Interfaz</h3>
+                <label for="player-pockets-size">Tamaño Marcadores</label>
+                <input type="range" id="player-pockets-size" min="30" max="100" value="48">
+                <label for="power-bar-size">Ancho Medidor Potencia</label>
+                <input type="range" id="power-bar-size" min="100" max="600" value="400">
+                <label for="power-bar-height">Grosor Medidor Potencia</label>
+                <input type="range" id="power-bar-height" min="10" max="50" value="15">
+                <button id="reset-ui-btn">Restablecer Configuración</button>
+                <button id="exit-edit-mode-btn">Volver</button>
+            </div>
+        </div>
+        <button id="options-toggle-btn"><span>&#9881;</span></button>
+
+        <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->
+
+        <!-- --- NUEVO: Modal para el selector de efecto en grande --- -->
+        <div id="spinModalOverlay">
+            <div id="largeSpinSelector">
+                <div id="spinSelectorDot" class="spin-selector-dot"></div>
+            </div>
+        </div>
+
+        <!-- --- NUEVO: Modal de confirmación personalizado --- -->
+        <div id="confirm-reset-modal" class="custom-modal-overlay">
+            <div class="custom-modal-box">
+                <h3>Restablecer Configuración</h3>
+                <p>¿Estás seguro de que quieres restablecer la interfaz a sus valores por defecto? Esta acción no se puede deshacer.</p>
+                <div class="custom-modal-buttons">
+                    <button id="confirm-reset-no" class="modal-btn cancel" style="background-color: #555;">Cancelar</button>
+                    <button id="confirm-reset-yes" class="modal-btn confirm" style="background-color: #c0392b;">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="poolCanvas"></canvas>
+
+        <div id="top-ui-container">
+            <!-- Contenedor para las bolas del jugador 1 -->
+            <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
+                <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
+                <div id="player1-name" class="player-name">Jugador 1</div>
+                <svg class="player-avatar" viewBox="0 0 36 36">
+                    <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
+                    <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+                    <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                    <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                        <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                    </g>
+                </svg>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+            </div>
+            <!-- Contenedor para las bolas del jugador 2 -->
+            <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
+                <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
+                <div id="player2-name" class="player-name">Jugador 2</div>
+                <svg class="player-avatar" viewBox="0 0 36 36">
+                    <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
+                    <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+                    <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                    <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                        <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                    </g>
+                </svg>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+            </div>
+        </div>
+        <div id="pocketedInfo"></div>
+        <div id="foulMessage">
+            <span id="foulMessageText"></span>
+            <button id="playAgainBtn">Jugar de Nuevo</button>
+        </div>
+
+        <!-- --- CORRECCIÓN: Mover el selector de efecto fuera del contenedor flexbox --- -->
+        <div id="miniSpinSelector" class="editable-ui">
+            <div id="miniSpinSelectorDot" class="spin-selector-dot"></div>
+        </div>
+
+        <!-- --- NUEVO: Indicador para mover sobre la sombra de la bola --- -->
+        <div id="move-indicator"></div>
+
+        <!-- --- SOLUCIÓN: Nuevo elemento para el indicador de turno --- -->
+        <div id="turnIndicator"></div>
+
+    </div>
+
+    <!-- --- SOLUCIÓN: Modal para mostrar errores --- -->
+    <div id="error-overlay">
+        <div id="error-modal">
+            <h2>¡Oh no! Ocurrió un error inesperado.</h2>
+            <p>Por favor, copia este error y envíalo al desarrollador para ayudar a solucionarlo.</p>
+            <pre id="error-details"></pre>
+            <button id="copy-error-btn" style="padding: 10px; font-size: 16px; cursor: pointer;">Copiar Error</button>
+        </div>
+    </div>
+
+
+    <!-- 
+        1. Import map: Le dice al navegador qué archivo cargar cuando vea "import 'three'".
+    -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+            }
+        }
+    </script>
+    <!-- 2. Cargar pool.js como un módulo para permitir el uso de 'import' -->
+    <script type="module" src="pool.js"></script>
+
+    <!-- --- SOLUCIÓN: Script para capturar errores globales --- -->
+    <script>
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorDetails = document.getElementById('error-details');
+        const copyErrorBtn = document.getElementById('copy-error-btn');
+        
+        function showErrorModal(errorInfo) {
+            errorDetails.textContent = errorInfo;
+            errorOverlay.style.display = 'flex';
+        }
+
+        copyErrorBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(errorDetails.textContent).then(() => {
+                copyErrorBtn.textContent = '¡Copiado!';
+                setTimeout(() => {
+                    copyErrorBtn.textContent = 'Copiar Error';
+                }, 2000);
+            }).catch(err => {
+                console.error('No se pudo copiar el error: ', err);
+                copyErrorBtn.textContent = 'Error al copiar';
+            });
+        });
+
+        // Capturar errores de JavaScript estándar
+        window.onerror = function (message, source, lineno, colno, error) {
+            const errorInfo = `Error: ${message}\nArchivo: ${source}\nLínea: ${lineno}, Columna: ${colno}\n\nPila de llamadas:\n${error ? error.stack : 'No disponible'}`;
+            showErrorModal(errorInfo);
+            return true; // Evita que el error se muestre en la consola del navegador por defecto
+        };
+
+        // Capturar errores en promesas que no fueron manejados (ej. fetch)
+        window.addEventListener('unhandledrejection', function (event) {
+            const reason = event.reason;
+            let errorInfo = 'Error en una promesa no manejada.\n';
+            if (reason instanceof Error) {
+                errorInfo += `Error: ${reason.message}\n\nPila de llamadas:\n${reason.stack}`;
+            } else {
+                errorInfo += `Razón: ${JSON.stringify(reason, null, 2)}`;
+            }
+            showErrorModal(errorInfo);
+        });
+    </script>
+
+    <!-- 3. Registrar el Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { // --- CORRECCIÓN: Usar 'load' para asegurar que todo el DOM esté listo
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => { /* El Service Worker se registró correctamente. */ })
+                    .catch(error => {
+                        console.log('Error en el registro del Service Worker:', error);
+                    });
+            });
+        }
+
+        // --- NUEVO: Lógica para forzar la orientación horizontal ---
+        window.addEventListener('load', () => {
+            const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (isMobile) {
+                // Intentar bloquear la orientación en horizontal solo en móviles
+                if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                    screen.orientation.lock('landscape').catch(error => {
+                        // El error es común si el usuario no interactúa primero,
+                        // la pantalla de aviso CSS actuará como fallback.
+                    });
+                }
+            }
+
+            // Escuchar cambios de orientación para asegurar que la UI se actualice
+            screen.orientation.addEventListener('change', () => {
+                window.dispatchEvent(new Event('resize'));
+            });
+        });
+    </script>
+</body></html>

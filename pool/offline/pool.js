@@ -1,0 +1,290 @@
+import * as THREE from 'three';
+import { updateBallPositions, areBallsMoving } from './fisicas.js';
+import TWEEN from 'https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js';
+import { db, auth } from './login/auth.js';
+import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
+import { scene, camera, renderer, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
+import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders, getSceneBalls } from './ballManager.js'; // --- SOLUCIÓN: Quitar updateSafeArea
+import { handleInput, initializeUI, updateUI, prepareUIResources, updateTurnTimerUI } from './ui.js'; // --- SOLUCIÓN: Importar updateTurnTimerUI
+import { initAudio, loadSound, prepareAudio } from './audioManager.js';
+import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js'; // --- CORRECCIÓN: Importar showFoulMessage
+import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
+import { initCueBallEffects, updateCueBallEffects, showShotEffect } from './cueBallEffects.js';
+import { prepareAimingResources, updateAimingGuides } from './aiming.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress } from './gameState.js';
+import { revisarEstado } from './revisar.js';
+
+let lastTime;
+
+// --- NUEVO: Variables para el efecto de vibración de la cámara ---
+let gameRef = null; // --- NUEVO: Referencia global a la partida online
+window.getGameRef = (gameId) => { // --- NUEVO: Función global para obtener la referencia
+    if (!gameRef) gameRef = doc(db, "games", gameId);
+    return gameRef;
+};
+let shakeIntensity = 0;
+let shakeDuration = 0;
+let originalCameraPosition = new THREE.Vector3();
+
+
+function gameLoop(time) {
+    // --- LOG: Indica el inicio de un nuevo fotograma en el bucle del juego.
+    // console.log('[GameLoop] Iniciando nuevo fotograma...');
+
+    TWEEN.update(time); // --- NUEVO: Actualizar el motor de animaciones TWEEN
+    // Vuelve a llamar a gameLoop para el siguiente fotograma
+    requestAnimationFrame(gameLoop);
+
+    // --- NUEVO: Log para verificar el estado de pausa ---
+    // console.log(`Juego Pausado: ${getGameState().gamePaused}`);
+
+    // --- NUEVO: Si el juego está pausado, no se actualiza la lógica, solo se renderiza. ---
+    if (getGameState().gamePaused) {
+        // --- LOG: Indica que el bucle está en modo pausa.
+        // console.log('[GameLoop] Juego en pausa, solo renderizando.');
+        renderer.render(scene, camera); // Renderizar la escena
+        return; // Detener la ejecución del resto del bucle
+    }
+
+    // --- NUEVO: Lógica para la vibración de la cámara ---
+    if (shakeDuration > 0 && lastTime !== undefined) {
+        const dt = (time - lastTime) / 1000;
+        // Aplicar el desplazamiento aleatorio
+        camera.position.x = originalCameraPosition.x + (Math.random() - 0.5) * shakeIntensity;
+        camera.position.y = originalCameraPosition.y + (Math.random() - 0.5) * shakeIntensity;
+
+        // Reducir la duración y la intensidad
+        shakeDuration -= dt;
+        shakeIntensity *= 0.95; // Decaimiento suave de la intensidad
+
+        if (shakeDuration <= 0) {
+            camera.position.copy(originalCameraPosition); // Restaurar la posición original
+        }
+    }
+    let dt = 0;
+    if (lastTime !== undefined) {
+        dt = (time - lastTime) / 1000; // Delta time en segundos
+        // --- LOG: Indica que se va a actualizar la física de las bolas.
+        // console.log('[GameLoop] Llamando a updateBallPositions...');
+        const pocketedInFrame = updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS);
+
+        if (pocketedInFrame.length > 0) {
+            pocketedInFrame.forEach(ball => addPocketedBall(ball));
+        }
+
+        // --- MODIFICACIÓN: El turno solo termina si no hay bolas moviéndose NI animándose ---
+        // --- SOLUCIÓN: Usar una variable de estado para asegurar que la revisión se haga una sola vez ---
+        const ballsHaveStopped = !areBallsMoving(balls) && !areBallsAnimating(balls);
+        // --- CORRECCIÓN: La revisión del estado debe ocurrir si las bolas se acaban de detener.
+        // Se usa una variable externa (importada de ui.js) para saber si en el frame anterior se estaban moviendo.
+        // Esta es la forma más fiable de detectar el fin de un tiro.
+        if (window.ballsWereMoving && ballsHaveStopped) {
+            // --- LOG: Indica que se cumplen las condiciones para finalizar el turno.
+            // --- MODIFICACIÓN: El log ahora se muestra dentro de handleTurnEnd para ser más preciso.
+            
+            // --- SOLUCIÓN: La revisión del estado ahora se hace aquí, después de que las bolas se detienen.
+            handleTurnEnd(); // Marcar el tiro como finalizado (resetea shotInProgress)
+            revisarEstado(false); // Revisar el resultado del tiro (sin falta por tiempo)
+
+            // --- MEJORA: Restablecer la rotación visual de la bola blanca para el siguiente tiro ---
+            if (cueBall && cueBall.mesh) {
+                cueBall.mesh.quaternion.set(0, 0, 0, 1); // Resetea a la rotación identidad
+            }
+        }
+    }
+    lastTime = time;
+
+    // --- CORREGIDO: Lógica para la rotación visual de las bolas ---
+    if (dt > 0) {
+        const timeStep = dt * 100; // Usamos el mismo multiplicador que en fisicas.js
+
+        // --- CORRECCIÓN: Iterar hacia atrás para poder eliminar elementos de forma segura ---
+        for (let i = balls.length - 1; i >= 0; i--) {
+            const ball = balls[i];
+
+            // --- CORRECCIÓN: Reestructurar la lógica de estados para que sea más clara ---
+
+    // Estado 1: La bola está siendo simulada por el motor de física 3D (Cannon.js)
+            // --- NUEVO: Comprobar si una bola de color fue recolectada para eliminarla ---
+            if (ball.pocketedState === 'collected') {
+                if (ball.number === null) { // Si es la bola blanca
+                    // La marcamos como inactiva y la añadimos a la lista de entroneradas para que se gestione la falta.
+                    ball.isActive = false;
+                    ball.vx = 0; ball.vy = 0;
+                    addPocketedBall(ball);
+                } else { // Si es una bola de color
+                    // La eliminamos de la escena y del array de bolas.
+                    scene.remove(ball.mesh);
+                    if (ball.shadowMesh) scene.remove(ball.shadowMesh);
+                    balls.splice(i, 1);
+                }
+            } 
+        }
+
+        balls.forEach(ball => {
+            if (ball.isActive && (ball.vx !== 0 || ball.vy !== 0)) {
+                // --- CORRECCIÓN: La rotación debe ser proporcional a la distancia recorrida ---
+                // Esto hace que la animación de giro sea realista y dependa de la velocidad.
+                const distance = Math.sqrt((ball.vx * timeStep)**2 + (ball.vy * timeStep)**2);
+                const rotationAngle = distance / BALL_RADIUS;
+
+                // --- CORRECCIÓN: El eje de rotación debe ser perpendicular a la dirección del movimiento.
+                // Esto asegura que la bola "ruede" en la dirección en la que se mueve.
+                // La velocidad de la animación es fija, pero la dirección del giro es dinámica.
+                const rotationAxis = new THREE.Vector3(-ball.vy, ball.vx, 0).normalize();
+
+                const deltaQuaternion = new THREE.Quaternion();
+                deltaQuaternion.setFromAxisAngle(rotationAxis, rotationAngle);
+
+                // --- SOLUCIÓN DEFINITIVA: Aplicar primero la rotación de rodado y luego la de efecto ---
+                // 1. Aplicar la rotación de rodado natural a la malla de la bola.
+                ball.mesh.children[0].quaternion.premultiply(deltaQuaternion);
+
+                // 2. Si es la bola blanca y tiene efecto, aplicar esa rotación adicionalmente en su espacio local.
+                if (ball === cueBall && (ball.spin.x !== 0 || ball.spin.y !== 0)) {
+                    // Efecto lateral (spin.x) alrededor del eje Y local de la bola
+                    const sideSpinAxis = new THREE.Vector3(0, 1, 0); 
+                    const sideSpinAngle = -ball.spin.x * 0.05 * timeStep; // Reducimos un poco la velocidad del efecto visual
+                    ball.mesh.children[0].rotateOnWorldAxis(sideSpinAxis, sideSpinAngle);
+
+                    // Efecto vertical (spin.y) alrededor del eje X local de la bola
+                    const verticalSpinAxis = new THREE.Vector3(1, 0, 0); 
+                    const verticalSpinAngle = ball.spin.y * 0.05 * timeStep; // Reducimos un poco la velocidad del efecto visual
+
+                    // --- SOLUCIÓN: Mostrar el efecto de estela si es la bola blanca y se mueve rápido ---
+                    if (ball === cueBall) {
+                        showShotEffect();
+                    }
+
+                    ball.mesh.children[0].rotateOnWorldAxis(verticalSpinAxis, verticalSpinAngle);
+                }
+            }
+        });
+    }
+
+    handleInput();
+    updateCueBallEffects(dt);
+    updateUI(); // --- NUEVO: Actualizar la UI (incluyendo el taco)
+
+    // --- SOLUCIÓN: Actualizar el temporizador de turno ---
+    if (isTurnTimerActive()) {
+        const elapsedTime = performance.now() - turnStartTime;
+        const timeRemainingPercent = Math.max(0, 1 - (elapsedTime / TURN_TIME_LIMIT));
+        updateTurnTimerUI(getGameState().currentPlayer, timeRemainingPercent);
+        if (checkTurnTimer()) {
+            // --- CORRECCIÓN: Forzar fin de turno y revisar el estado inmediatamente.
+            // Detener el temporizador para que no se siga ejecutando.
+            stopTurnTimer();
+            // Se llama a revisarEstado con la bandera de tiempo agotado para procesar la falta.
+            revisarEstado(true, gameRef);
+        }
+    }
+    renderer.render(scene, camera);
+}
+
+// --- NUEVO: Función para marcar que un tiro ha comenzado ---
+window.startShot = () => { // --- CORRECCIÓN: Hacerla global para que ui.js pueda llamarla
+    startShot();
+}
+
+// --- NUEVO: Función global para activar la vibración de la pantalla ---
+window.triggerScreenShake = (intensity, duration) => {
+    shakeIntensity = intensity;
+    shakeDuration = duration;
+    // Guardar la posición actual de la cámara para restaurarla después
+    originalCameraPosition.copy(camera.position);
+};
+
+// --- 4. Iniciar el juego --- (Lógica de inicialización refactorizada)
+function initGame() {
+    initializeHandles(); // Inicializamos los puntos de los bordes
+
+    // --- MODIFICACIÓN: La inicialización de audio y UI se hace aquí, pero la carga se dispara después ---
+    initAudio(camera);
+    initCueBallEffects(); // --- SOLUCIÓN: Inicializar el sistema de efectos de la bola blanca
+
+    // --- ELIMINADO: Lógica para modo online vs offline ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameId = urlParams.get('gameId');
+    if (gameId) connectToGame(gameId);
+
+    gameLoop(); // Iniciar el bucle del juego en ambos modos
+}
+
+setOnLoadingComplete((step, onStepComplete) => {
+    // El loadingManager nos dice qué paso ejecutar.
+    // --- LOG: Indica qué paso de procesamiento posterior a la carga se está ejecutando.
+    switch (step) {
+        case 'init_game':
+            initGame();
+            // El bucle del juego ya está corriendo, pero la pantalla de carga sigue encima.
+            break;
+
+        case 'init_ui':
+            // --- SOLUCIÓN: Inicializar la UI como un paso separado después de initGame ---
+            initializeUI();
+            break;
+
+        case 'setup_balls':
+            // --- MODIFICADO: Solo colocar las bolas si no es una partida online ---
+            // Los modelos ya están cargados, ahora creamos las bolas en la escena.
+            setupBalls(true); // El 'true' indica que es la configuración inicial.
+            break;
+
+        case 'warmup_physics':
+            // Ejecuta una simulación muy breve para forzar la compilación JIT del navegador.
+            const warmUpFrames = 15; // Aumentamos un poco para asegurar la compilación
+            for (let i = 0; i < warmUpFrames; i++) {
+                updateBallPositions(1 / 60, balls, pockets, handles, BALL_RADIUS);
+            }
+            // Reseteamos cualquier posible micro-movimiento que se haya podido generar
+            balls.forEach(ball => {
+                ball.vx = 0;
+                ball.vy = 0;
+            });
+            break;
+        
+        case 'super_warmup':
+            // --- SOLUCIÓN DEFINITIVA: Simular un golpe real de forma invisible ---
+            // 1. Silenciar todos los sonidos temporalmente.
+            window.muteAllSounds(true);
+
+            // 2. Simular un golpe potente a la bola blanca.
+            if (cueBall) {
+                cueBall.vx = 1500; // Impulso fuerte para asegurar colisiones.
+                cueBall.vy = 50;
+            }
+
+            // 3. Ejecutar varios frames de la simulación completa.
+            // Esto forzará la compilación JIT de las colisiones, la compilación de shaders
+            // y la inicialización de los buffers de audio.
+            for (let i = 0; i < 20; i++) {
+                updateBallPositions(1 / 60, balls, pockets, handles, BALL_RADIUS);
+            }
+
+            // 4. Resetear completamente el estado del juego a su posición inicial.
+            setupBalls(true); // Esto recoloca todas las bolas y resetea sus velocidades.
+            window.muteAllSounds(false); // 5. Reactivar los sonidos.
+            break;
+    }
+
+    // Notificamos al loadingManager que este paso ha terminado, para que pueda actualizar la barra
+    // de progreso y decidir si empieza el siguiente paso o finaliza la carga.
+    onStepComplete();
+});
+
+// --- MODIFICACIÓN: Centralizar el inicio de todas las cargas ---
+
+// 0. Definimos los pasos de procesamiento que ocurrirán después de la descarga de archivos.
+setProcessingSteps(['init_game', 'init_ui', 'setup_balls', 'warmup_physics', 'super_warmup']);
+
+// 1. Preparamos todos los cargadores
+prepareAudio();
+prepareBallLoaders();
+prepareUIResources();
+prepareAimingResources(); // --- CORRECCIÓN: Añadir la llamada para cargar los recursos del taco.
+loadTableTexture(); // --- NUEVO: Iniciar la carga de la textura de la mesa aquí.
+
+// 2. Iniciamos la carga de los modelos, que es la operación principal que el LoadingManager rastreará.
+// --- MODIFICACIÓN: Ya no se llama a setupBalls aquí. Se ha convertido en un paso de procesamiento.
+loadBallModels();

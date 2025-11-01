@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlackBall</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --primary-color: #00f291;
+        --bg-color: #1a1a1a;
+        --container-bg-color: rgba(35, 35, 35, 0.85);
+        --input-bg-color: #2c2c2c;
+        --border-color: rgba(255, 255, 255, 0.2);
+        --text-color: #ffffff;
+        --text-secondary-color: #a0a0a0;
+        --shadow-color: rgba(0, 242, 145, 0.5);
+        --option-card-size: 220px;
+      }
+
+      /* Reset and base styles */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html, body {
+        height: 100%;
+      }
+
+      body {
+        font-family: 'Roboto', sans-serif;
+        background-color: var(--bg-color);
+        background-image: linear-gradient(160deg, #0a100d 0%, #1a1a1a 100%);
+        color: var(--text-color);
+        position: relative;
+        overflow-y: auto; /* Permitir scroll vertical */
+        padding: 20px;
+      }
+
+      /* Aurora Background Effect */
+      body::before,
+      body::after {
+          content: '';
+          position: absolute;
+          z-index: -2;
+          width: 80vmax;
+          height: 80vmax;
+          border-radius: 49% 51% 70% 30% / 43% 42% 58% 57%;
+          filter: blur(180px);
+          will-change: transform, border-radius, opacity;
+          mix-blend-mode: screen; 
+      }
+
+      body::before {
+          background: radial-gradient(circle, rgba(0, 242, 145, 0.7) 0%, transparent 65%);
+          top: -10%;
+          left: -20%;
+          animation: aurora-1 30s ease-in-out infinite alternate;
+      }
+
+      body::after {
+          background: radial-gradient(circle, rgba(173, 98, 247, 0.6) 0%, transparent 65%);
+          bottom: -10%;
+          right: -20%;
+          animation: aurora-2 35s ease-in-out infinite alternate;
+      }
+
+      @keyframes aurora-1 {
+          0% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 49% 51% 70% 30% / 43% 42% 58% 57%; opacity: 0.5; }
+          50% { transform: translate(20vw, 15vh) rotate(90deg) scale(1.2); opacity: 0.8; }
+          100% { transform: translate(-5vw, -10vh) rotate(-30deg) scale(1); border-radius: 68% 32% 35% 65% / 54% 30% 70% 46%; opacity: 0.5; }
+      }
+
+      @keyframes aurora-2 {
+          0% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 39% 61% 70% 30% / 48% 22% 78% 52%; opacity: 0.4; }
+          50% { transform: translate(-15vw, -20vh) rotate(-120deg) scale(1.1); opacity: 0.6; }
+          100% { transform: translate(10vw, 10vh) rotate(45deg) scale(1); border-radius: 49% 51% 70% 30% / 43% 42% 58% 57%; opacity: 0.4; }
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+        max-width: 1400px; /* Ancho máximo para el contenido en pantallas grandes */
+        margin: 0 auto; /* Centrar el contenedor principal */
+        position: relative;
+        z-index: 1; 
+      }
+
+      /* Main App Container */
+      .app-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 100%;
+        height: 100vh;
+        padding: 20px;
+        animation: fadeIn 0.8s ease-out forwards;
+        will-change: transform, opacity;
+        overflow: hidden;
+        position: relative;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      /* Header */
+      .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-color);
+        flex-shrink: 0;
+        position: relative; /* Needed for the shine effect */
+        overflow: hidden;   /* Needed to contain the shine effect */
+      }
+
+      .app-header::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: -100%;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(to right, transparent 0%, var(--primary-color) 50%, transparent 100%);
+        animation: slide-shine 4s ease-in-out infinite;
+        animation-delay: 1s; /* Start after a small delay */
+      }
+
+      @keyframes slide-shine {
+        0% { left: -100%; }
+        100% { left: 100%; }
+      }
+
+      .title-container {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+      }
+
+      .app-title {
+        font-family: 'Righteous', cursive;
+        font-size: 28px;
+        color: var(--primary-color);
+        letter-spacing: 1px;
+      }
+
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background-color: var(--input-bg-color);
+        padding: 6px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+      }
+
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      #user-display-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-color);
+      }
+
+      .user-balance {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 12px;
+        color: var(--text-secondary-color);
+      }
+
+      .user-balance .balance-icon {
+        color: var(--primary-color);
+      }
+
+      .balance-icon {
+        width: 20px;
+        height: 20px;
+        color: var(--primary-color);
+      }
+
+      #logout-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary-color);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      #logout-btn:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: #e74c3c;
+      }
+
+      /* Header Pool Balls Icon */
+      .header-pool-ball-container {
+          display: flex;
+          align-items: center;
+          transform: rotate(-15deg);
+      }
+
+      .header-pool-ball-container .pool-ball {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          position: relative;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0,0,0,0.5);
+      }
+
+      .header-pool-ball-container .pool-ball::before {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 5px;
+          width: 12px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.2);
+          filter: blur(2px);
+          transform: rotate(-30deg);
+      }
+
+      .header-pool-ball-container .ball-white {
+          background: radial-gradient(circle at 50% 40%, #ffffff, #d4d4d4);
+          z-index: 10;
+          margin-right: -8px;
+      }
+
+      .header-pool-ball-container .ball-black {
+          background: radial-gradient(circle at 50% 40%, #3a3a3a, #000000);
+      }
+
+
+      /* Main Content */
+      .main-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* --- NUEVO: Estilos para el carrusel de partidas --- */
+      .game-carousel-container {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 20px 0;
+      }
+
+      .game-carousel {
+          display: flex;
+          gap: 25px;
+          padding: 10px 25px;
+          max-width: 100%;
+          overflow-x: auto;
+          /* Custom scrollbar for a better look */
+          scrollbar-width: thin;
+          scrollbar-color: var(--primary-color) var(--input-bg-color);
+      }
+
+      .game-carousel::-webkit-scrollbar {
+          height: 8px;
+      }
+
+      .game-carousel::-webkit-scrollbar-track {
+          background: var(--input-bg-color);
+          border-radius: 4px;
+      }
+
+      .game-carousel::-webkit-scrollbar-thumb {
+          background-color: var(--primary-color);
+          border-radius: 4px;
+      }
+
+      .game-card {
+          flex: 0 0 var(--option-card-size);
+          width: var(--option-card-size);
+          height: var(--option-card-size);
+          background-color: var(--container-bg-color);
+          border: 1px solid var(--border-color);
+          border-radius: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px;
+          cursor: pointer;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          position: relative;
+      }
+
+      .game-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 0 15px var(--shadow-color);
+      }
+
+      .card-player-info {
+          text-align: center;
+      }
+
+      .player-name-waiting {
+          font-weight: 700;
+          font-size: 18px;
+          color: var(--primary-color);
+          display: block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 160px;
+      }
+
+      .status-text {
+          font-size: 14px;
+          color: var(--text-secondary-color);
+      }
+
+      .card-player-count {
+          font-size: 24px;
+          font-weight: bold;
+          background-color: var(--input-bg-color);
+          padding: 5px 15px;
+          border-radius: 10px;
+      }
+
+      .create-icon {
+          font-size: 80px;
+          font-weight: 200;
+          color: var(--primary-color);
+          line-height: 1;
+      }
+
+      .create-text {
+          font-weight: 700;
+      }
+      
+      /* --- MODIFICADO: Estilos para la pantalla de espera --- */
+      #waiting-screen {
+          display: none; /* Oculto por defecto */
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 25px;
+          padding: 40px;
+          background-color: var(--container-bg-color);
+          border: 1px solid var(--border-color);
+          border-radius: 24px;
+          width: 100%;
+          max-width: 450px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          margin-bottom: 80px; /* Ajusta este valor para moverlo más arriba */
+      }
+
+      /* --- NUEVO: Estilos para el avatar dentro de la tarjeta --- */
+      .card-avatar {
+          width: 80px;
+          height: 80px;
+          margin: 10px 0;
+      }
+      .card-avatar .avatar-icon-bg {
+          fill: rgba(255, 255, 255, 0.05);
+      }
+      .card-avatar .avatar-icon {
+          fill: var(--primary-color);
+          opacity: 0.8;
+      }
+
+      /* --- NUEVO: Estilos para la tarjeta de "Esperando" del propio usuario --- */
+      .game-card.disabled {
+          cursor: not-allowed;
+          filter: grayscale(80%);
+          opacity: 0.7;
+      }
+      .game-card.disabled:hover {
+          transform: none;
+          box-shadow: none;
+      }
+
+      .waiting-text {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--text-secondary-color);
+          display: flex;
+          align-items: center;
+      }
+
+      .pulsing-dots span {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: var(--primary-color);
+          margin-left: 8px;
+          animation: pulse-dot 1.4s infinite ease-in-out both;
+      }
+      .pulsing-dots span:nth-child(1) { animation-delay: -0.32s; }
+      .pulsing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+      @keyframes pulse-dot {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+      }
+
+      .cancel-button {
+          padding: 15px 30px;
+          border: 1px solid #e74c3c;
+          background-color: rgba(231, 76, 60, 0.1);
+          color: #e74c3c;
+          border-radius: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          margin-top: 15px;
+      }
+      .cancel-button:hover {
+          background-color: #e74c3c;
+          color: #fff;
+          box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+      }
+
+      .play-button {
+        padding: 20px 50px;
+        border: none;
+        border-radius: 15px;
+        background: var(--primary-color);
+        color: #000;
+        font-size: 28px;
+        font-weight: 700;
+        font-family: 'Righteous', cursive;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        box-shadow: 0 5px 20px rgba(0, 242, 145, 0.3);
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .play-button:hover {
+        box-shadow: 0 0 25px var(--shadow-color);
+        transform: translateY(-3px) scale(1.05);
+      }
+
+      .play-button:active {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 0 10px var(--shadow-color);
+      }
+
+      .play-button[disabled] {
+          background-color: #555;
+          color: #999;
+          cursor: not-allowed;
+          box-shadow: none;
+          transform: none;
+      }
+
+      .play-button.glowing {
+        animation: glow-animation 1.5s infinite alternate;
+      }
+
+      @keyframes glow-animation {
+          from {
+              box-shadow: 0 0 15px var(--shadow-color);
+          }
+          to {
+              box-shadow: 0 0 35px var(--primary-color), 0 0 15px var(--shadow-color);
+          }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+        <div class="app-container">
+            <header class="app-header">
+                <div class="title-container">
+                    <div class="header-pool-ball-container">
+                        <div class="pool-ball ball-white"></div>
+                        <div class="pool-ball ball-black"></div>
+                    </div>
+                    <h1 class="app-title">BlackBall</h1>
+                </div>
+                <div class="user-profile">
+                    <div class="user-info">
+                        <span id="user-display-name">Cargando...</span>
+                        <div class="user-balance">
+                            <svg class="balance-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2.5C6.75 2.5 2.5 6.75 2.5 12s4.25 9.5 9.5 9.5 9.5-4.25 9.5-9.5S17.25 2.5 12 2.5ZM13.06 6.5h-2.12c-.52 0-1.01.26-1.32.69L7.5 10.5h3.06c.52 0-1.01-.26-1.32-.69L13.99 7.5h-3.06c-.3 0-.58-.1-.81-.27l.94-1.23Zm-4.25 8.19c.31.43.8.69 1.32.69h2.12c.52 0 1.01-.26 1.32-.69L16.5 13.5h-3.06c-.52 0-1.01.26-1.32.69L10.01 16.5h3.06c.3 0 .58.1.81.27l-.94 1.23Z" />
+                            </svg>
+                            <span>$1,250</span>
+                        </div>
+                    </div>
+                    <button id="logout-btn" title="Cerrar sesión">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 13v-2H7v-2h9V7l4 4-4 4Zm-5-1c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2Zm7-7H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h13c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm0 16H5V5h13v14Z"></path></svg>
+                    </button>
+                </div>
+            </header>
+            <main class="main-content">
+                <div class="game-carousel-container">
+                    <div id="waiting-screen">
+                        <div class="waiting-text">
+                            Esperando Oponente <span class="pulsing-dots"><span></span><span></span><span></span></span>
+                        </div>
+                        <button id="cancel-wait-btn" class="cancel-button">Cancelar</button>
+                    </div>
+                    <div class="game-carousel" id="game-carousel"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <!-- --- NUEVO: Pantalla de carga al encontrar partida --- -->
+    <div id="match-loading-overlay" class="modal-overlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <h3 id="match-loading-text">Cargando...</h3>
+        </div>
+    </div>
+    <!-- --- NUEVO: Modal para confirmar unirse a la partida --- -->
+    <div id="join-game-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>¿Unirte a la partida de <span id="modal-opponent-name" class="opponent-name"></span>?</h3>
+            <div class="modal-buttons">
+                <button id="modal-cancel-btn" class="cancel-button" style="background-color: #555; border-color: #777;">Cancelar</button>
+                <button id="modal-join-btn" class="play-button" style="font-size: 18px; padding: 15px 30px;">Unirse</button>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { onSessionStateChanged, onUserProfileUpdate, logout } from './auth.js';
+        // --- NUEVO: Importar Firebase para matchmaking ---
+        import { db, auth } from './auth.js';
+        import { collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const userDisplayName = document.getElementById('user-display-name');
+        const userBalanceSpan = document.querySelector('.user-balance span'); // NUEVO
+        const logoutBtn = document.getElementById('logout-btn');
+        const gameCarousel = document.getElementById('game-carousel');
+        const joinGameModal = document.getElementById('join-game-modal');
+        const modalOpponentName = document.getElementById('modal-opponent-name');
+        const modalJoinBtn = document.getElementById('modal-join-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const matchLoadingOverlay = document.getElementById('match-loading-overlay');
+        const matchLoadingText = document.getElementById('match-loading-text');
+        
+        onSessionStateChanged((user) => {
+            if (user) {
+                let username = user.email; // Fallback
+                // Escuchar cambios en el perfil del usuario
+                onUserProfileUpdate(user.uid, (userData) => {
+                    userDisplayName.textContent = userData.username || user.email;
+                    userBalanceSpan.textContent = `$${userData.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                });
+
+                logoutBtn.addEventListener('click', () => {
+                    logout().then(() => {
+                        // Cierre de sesión exitoso.
+                        window.location.href = 'login.html';
+                    }).catch((error) => {
+                        console.error('Error al cerrar sesión:', error);
+                    });
+                });
+
+                // --- Lógica de Matchmaking en tiempo real para el carrusel ---
+                const gamesRef = collection(db, "games");
+                const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"));
+
+                let userWaitingGameId = null;
+
+                const unsubscribe = onSnapshot(waitingGamesQuery, (querySnapshot) => {
+                    gameCarousel.innerHTML = ''; // Limpiar el carrusel
+                    let userIsWaiting = false;
+
+                    querySnapshot.forEach(docSnap => {
+                        const gameData = docSnap.data();
+                        const gameId = docSnap.id;
+
+                        if (gameData.player1.uid === user.uid) {
+                            userIsWaiting = true;
+                            userWaitingGameId = gameId;
+                        } else {
+                            const card = document.createElement('div');
+                            card.className = 'game-card waiting';
+                            card.dataset.gameId = gameId;
+                            card.innerHTML = `
+                                <span class="player-name-waiting">${gameData.player1.username}</span>
+                                <svg class="card-avatar" viewBox="0 0 36 36">
+                                    <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
+                                    <g class="avatar-icon" transform="translate(9, 9) scale(0.75)"><path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path></g>
+                                </svg>
+                                <div class="card-player-count">1/2</div>
+                            `;
+                            card.addEventListener('click', () => {
+                                if (gameData.player1.uid === user.uid) return;
+                                modalOpponentName.textContent = gameData.player1.username;
+                                joinGameModal.classList.add('visible');
+                                modalJoinBtn.onclick = async () => {
+                                    joinGameModal.classList.remove('visible');
+                                    showMatchLoading("¡Partida encontrada! Conectando...");
+                                    await updateDoc(doc(db, "games", gameId), {
+                                        player2: { uid: user.uid, username: userDisplayName.textContent },
+                                        status: "starting"
+                                    });
+                                    setTimeout(() => {
+                                        window.location.href = `../index.html?gameId=${gameId}`;
+                                    }, 1500);
+                                };
+                            });
+                            gameCarousel.appendChild(card);
+                        }
+                    });
+
+                    const createCard = document.createElement('div');
+                    createCard.className = 'game-card create-new';
+
+                    if (userIsWaiting) {
+                        createCard.classList.add('disabled');
+                        createCard.innerHTML = `
+                            <span class="player-name-waiting">Esperando...</span>
+                            <svg class="card-avatar" viewBox="0 0 36 36">
+                                <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915"></circle>
+                                <g class="avatar-icon" transform="translate(9, 9) scale(0.75)"><path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path></g>
+                            </svg>
+                            <button class="cancel-button" style="width:100%; font-size:16px; padding: 10px; margin-top: 10px;">Cancelar</button>
+                        `;
+                        createCard.querySelector('.cancel-button').addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            if (userWaitingGameId) {
+                                await deleteDoc(doc(db, "games", userWaitingGameId));
+                                userWaitingGameId = null;
+                            }
+                        });
+                    } else {
+                        createCard.innerHTML = `
+                            <div class="create-icon" style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">+</div>
+                            <button class="play-button" style="font-size: 18px; padding: 12px 25px; width: 100%;">Crear Partida</button>
+                        `;
+                        createCard.addEventListener('click', async () => {
+                            createCard.style.pointerEvents = 'none';
+                            
+                            const ballPositions = [];
+                            const RACK_SPACING_DIAMETER = 24;
+                            const TABLE_WIDTH = 1000;
+                            const TABLE_HEIGHT = 500;
+                            const startX = TABLE_WIDTH * 0.75;
+                            const startY = TABLE_HEIGHT / 2;
+                            const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+                            let ballIndex = 0;
+
+                            for (let i = 0; i < 5; i++) {
+                                for (let j = 0; j <= i; j++) {
+                                    const ballNumber = ballOrder[ballIndex++];
+                                    ballPositions.push({
+                                        number: ballNumber,
+                                        x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                                        y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                                        isActive: true
+                                    });
+                                }
+                            }
+                            ballPositions.push({ number: null, x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2, isActive: true });
+
+                            const newGame = await addDoc(gamesRef, {
+                                player1: { uid: user.uid, username: userDisplayName.textContent },
+                                player2: null,
+                                status: "waiting",
+                                createdAt: new Date(),
+                                currentPlayerUid: user.uid,
+                                balls: ballPositions,
+                                aimingState: { angle: 0 }
+                            });
+
+                            onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
+                                if (gameSnap.exists() && gameSnap.data().status === "starting") {
+                                    showMatchLoading("¡Oponente encontrado! Iniciando partida...");
+                                    setTimeout(() => {
+                                        window.location.href = `../index.html?gameId=${newGame.id}`;
+                                    }, 1500);
+                                }
+                            });
+                        });
+                    }
+                    gameCarousel.appendChild(createCard);
+                });
+
+                function showMatchLoading(message) {
+                    matchLoadingText.textContent = message;
+                    matchLoadingOverlay.classList.add('visible');
+                }
+
+                modalCancelBtn.addEventListener('click', () => {
+                    joinGameModal.classList.remove('visible');
+                });
+                joinGameModal.addEventListener('click', (e) => {
+                    if (e.target === joinGameModal) {
+                        joinGameModal.classList.remove('visible');
+                    }
+                });
+
+            } else {
+                // El usuario no ha iniciado sesión.
+                // Redirigir a la página de login.
+                console.log("Usuario no autenticado, redirigiendo al login.");
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
+  </body>
+</html>
+                    </div>
+                    <div class="game-carousel" id="game-carousel"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script type="module">
+        import { onSessionStateChanged, onUserProfileUpdate, logout } from './auth.js';
+        // --- NUEVO: Importar Firebase para matchmaking ---
+        import { db, auth, deleteDoc } from './auth.js';
+        import { collection, query, where, limit, getDocs, addDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const userDisplayName = document.getElementById('user-display-name');
+        const userBalanceSpan = document.querySelector('.user-balance span'); // NUEVO
+        const logoutBtn = document.getElementById('logout-btn');
+        const gameCarousel = document.getElementById('game-carousel');
+        const waitingScreen = document.getElementById('waiting-screen');
+        const cancelWaitBtn = document.getElementById('cancel-wait-btn');
+        
+        onSessionStateChanged((user) => {
+            if (user) {
+                let username = user.email; // Fallback username
+                // Escuchar cambios en el perfil del usuario
+                onUserProfileUpdate(user.uid, (userData) => {
+                    userDisplayName.textContent = userData.username || user.email;
+                    userBalanceSpan.textContent = `$${userData.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                });
+
+                logoutBtn.addEventListener('click', () => {
+                    logout().then(() => {
+                        // Cierre de sesión exitoso.
+                        window.location.href = 'login.html';
+                    }).catch((error) => {
+                        console.error('Error al cerrar sesión:', error);
+                    });
+                });
+
+                // --- Lógica de Matchmaking en tiempo real para el carrusel (MEJORADA) ---
+                const gamesRef = collection(db, "games");
+                const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting")); // CORRECCIÓN: Eliminado el limit(1)
+
+                let userWaitingGameId = null;
+
+                const unsubscribe = onSnapshot(waitingGamesQuery, (querySnapshot) => {
+                    gameCarousel.innerHTML = ''; // Limpiar el carrusel en cada actualización
+                    let userIsWaiting = false;
+
+                    // 1. Iterar sobre las partidas en espera
+                    querySnapshot.forEach(docSnap => {
+                        const gameData = docSnap.data();
+                        const gameId = docSnap.id;
+
+                        if (gameData.player1.uid === user.uid) {
+                            // Si yo soy el que está esperando, marco la bandera
+                            userIsWaiting = true;
+                            userWaitingGameId = gameId;
+                        } else {
+                            // Si es otro jugador, creo la tarjeta para unirme
+                            const card = document.createElement('div');
+                            card.className = 'game-card waiting';
+                            card.dataset.gameId = gameId;
+                            card.innerHTML = `
+                                <div class="card-player-info">
+                                    <span class="player-name-waiting">${gameData.player1.username}</span>
+                                    <span class="status-text">está esperando...</span>
+                                </div>
+                                <div class="card-player-count">1/2</div>
+                            `;
+                            card.addEventListener('click', async () => {
+                                await updateDoc(doc(db, "games", gameId), {
+                                    player2: { uid: user.uid, username: userDisplayName.textContent },
+                                    status: "starting"
+                                });
+                                window.location.href = `../index.html?gameId=${gameId}`;
+                            });
+                            gameCarousel.appendChild(card);
+                        }
+                    });
+
+                    if (userIsWaiting) {
+                        // Si el usuario está esperando, ocultar el lobby y mostrar la pantalla de espera
+                        gameCarousel.style.display = 'none';
+                        waitingScreen.style.display = 'flex';
+                    } else {
+                        // Si no, mostrar el lobby y ocultar la pantalla de espera
+                        gameCarousel.style.display = 'flex';
+                        waitingScreen.style.display = 'none';
+
+                        // Añadir la tarjeta para crear una nueva partida
+                        const createCard = document.createElement('div');
+                        createCard.className = 'game-card create-new';
+                        createCard.innerHTML = `
+                            <div class="create-icon">+</div>
+                            <span class="create-text">Crear Partida</span>
+                        `;
+                        createCard.addEventListener('click', async () => {
+                            createCard.style.pointerEvents = 'none';
+
+                            // --- NUEVO: Generar el estado inicial de las bolas ---
+                            const ballPositions = [];
+                            const RACK_SPACING_DIAMETER = 24;
+                            const TABLE_WIDTH = 1000;
+                            const TABLE_HEIGHT = 500;
+                            const startX = TABLE_WIDTH * 0.75;
+                            const startY = TABLE_HEIGHT / 2;
+                            const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+                            let ballIndex = 0;
+
+                            for (let i = 0; i < 5; i++) {
+                                for (let j = 0; j <= i; j++) {
+                                    const ballNumber = ballOrder[ballIndex++];
+                                    ballPositions.push({
+                                        number: ballNumber,
+                                        x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                                        y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                                        isActive: true
+                                    });
+                                }
+                            }
+                            // Añadir la bola blanca
+                            ballPositions.push({
+                                number: null,
+                                x: TABLE_WIDTH / 4,
+                                y: TABLE_HEIGHT / 2,
+                                isActive: true
+                            });
+
+                            // --- FIN NUEVO ---
+
+                            const newGame = await addDoc(gamesRef, {
+                                player1: { uid: user.uid, username: userDisplayName.textContent },
+                                player2: null,
+                                status: "waiting",
+                                createdAt: new Date(),
+                                currentPlayerUid: user.uid,
+                                balls: ballPositions, // Guardar las posiciones iniciales
+                                turn: 1
+                            });
+
+                            // --- MEJORA: Escuchar activamente la partida que acabamos de crear ---
+                            onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
+                                if (gameSnap.data()?.status === "starting") {
+                                    window.location.href = `../index.html?gameId=${newGame.id}`;
+                                }
+                            });
+                        });
+                        gameCarousel.appendChild(createCard);
+                    }
+                });
+
+                // Lógica para el botón de cancelar
+                cancelWaitBtn.addEventListener('click', async () => {
+                    if (userWaitingGameId) {
+                        await deleteDoc(doc(db, "games", userWaitingGameId));
+                        userWaitingGameId = null;
+                        // El onSnapshot se encargará de volver a mostrar el carrusel
+                    }
+                });
+
+            } else {
+                // El usuario no ha iniciado sesión.
+                // Redirigir a la página de login.
+                console.log("Usuario no autenticado, redirigiendo al login.");
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
+  </body>
+</html>
