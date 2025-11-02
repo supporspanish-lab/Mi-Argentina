@@ -1,8 +1,8 @@
 // Importar las funciones necesarias de los SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-// --- SOLUCIÓN: Importar las funciones de Firestore para usarlas en este archivo
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
 // --- SOLUCIÓN: Re-exportar las funciones para que otros módulos (como pool.js) puedan usarlas
 export { doc, setDoc, getDoc, onSnapshot, onAuthStateChanged, updateDoc, deleteDoc };
 
@@ -20,7 +20,7 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app); // Ahora 'getFirestore' está definido en este ámbito
+export const db = getFirestore(app);
 
 // --- Funciones de Autenticación ---
 
@@ -30,7 +30,8 @@ export async function registerWithEmail(username, email, password) {
     await setDoc(doc(db, "saldo", user.uid), {
         username: username,
         email: user.email,
-        balance: 0
+        balance: 0,
+        profileImageName: null // Initialize profile image name
     });
     return user;
 }
@@ -43,9 +44,10 @@ export async function loginWithEmail(email, password) {
 
     if (!docSnap.exists()) {
         await setDoc(userDocRef, {
-            username: user.displayName || user.email.split('@')[0], // Extract username from email if displayName is not set
+            username: user.displayName || user.email.split('@')[0],
             email: user.email,
-            balance: 0
+            balance: 0,
+            profileImageName: null
         });
     }
     return user;
@@ -61,28 +63,27 @@ export function onSessionStateChanged(callback) {
 
 export function onUserProfileUpdate(userId, callback) {
     const userDocRef = doc(db, "saldo", userId);
-    return onSnapshot(userDocRef, async (docSnap) => {
-                    if (docSnap.exists()) {
-                        const userData = docSnap.data();
-                        // Check if username is currently the email and update if necessary
-                        if (userData.username === userData.email) {
-                            const newUsername = userData.email.split('@')[0];
-                            await updateDoc(userDocRef, { username: newUsername });
-                            userData.username = newUsername; // Update local userData for immediate callback
-                        }
-                        callback(userData);
-                        console.log("User profile data received:", userData);
-                    } else {            // Si el perfil no existe, lo creamos.
+    return onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const userData = docSnap.data();
+            callback(userData);
+        } else {
             console.log("Perfil no encontrado en Firestore, creando uno nuevo...");
             setDoc(userDocRef, {
-                username: auth.currentUser.displayName || auth.currentUser.email.split('@')[0], // Extract username from email if displayName is not set
+                username: auth.currentUser.displayName || auth.currentUser.email.split('@')[0],
                 email: auth.currentUser.email,
-                balance: 0
+                balance: 0,
+                profileImageName: null
             }).catch(error => {
                 console.error("Error al crear el perfil de usuario:", error);
             });
         }
     });
+}
+
+export async function updateUserProfile(userId, data) {
+    const userDocRef = doc(db, "saldo", userId);
+    await updateDoc(userDocRef, data);
 }
 
 export function logout() {

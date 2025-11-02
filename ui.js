@@ -9,7 +9,7 @@ import { loadingManager } from './loadingManager.js'; // --- SOLUCIÓN: Importar
 import { initializeAiming, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
 import { initializeInputManager, isPointerDown, isPullingBack, isMovingCueBall, getCurrentShotAngle } from './inputManager.js';
 import { initializeSpinControls, wasDraggingSpin } from './spinControls.js'; // --- NUEVO: Importar el inicializador de los controles de efecto
-import { getPowerPercent } from './powerControls.js';
+
 
 // --- Referencias a elementos del DOM ---
 const powerBarContainer = document.getElementById('newPowerBarContainer');
@@ -62,41 +62,6 @@ export function initializeUI() {
             powerBarContainer.style.transform = 'translateY(-50%)';
             powerBarContainer.style.right = 'auto';
         }
-        const onPowerBarStart = (e) => {
-            if (isUIEditModeActive() || wasDraggingSpin()) {
-                return; // If in UI edit mode or dragging spin, do nothing and let other handlers take over
-            }
-            e.stopPropagation(); // Only stop propagation if we are handling power drag
-            import('./powerControls.js').then(({ startPowerDrag, dragPower }) => {
-                startPowerDrag();
-                dragPower(e.touches ? e.touches[0] : e); // Aplicar potencia inicial
-            });
-        };
-
-        const onPowerBarMove = (e) => {
-            if (isUIEditModeActive()) return;
-            import('./powerControls.js').then(({ isDraggingPower, dragPower }) => {
-                if (isDraggingPower()) {
-                    e.stopPropagation();
-                    dragPower(e.touches ? e.touches[0] : e);
-                }
-            });
-        };
-
-        const onPowerBarEnd = (e) => {
-            if (isUIEditModeActive()) return;
-            import('./powerControls.js').then(({ isDraggingPower, stopPowerDrag }) => {
-                if (isDraggingPower()) {
-                    e.stopPropagation();
-                    const power = stopPowerDrag();
-                    import('./shooting.js').then(({ shoot }) => shoot(power));
-                }
-            });
-        };
-
-        powerBarContainer.addEventListener('pointerdown', onPowerBarStart);
-        document.addEventListener('pointermove', onPowerBarMove);
-        document.addEventListener('pointerup', onPowerBarEnd);
     }
 
     // --- NUEVO: Lógica para el panel de opciones deslizable ---
@@ -744,4 +709,67 @@ function setupUIEditListeners() {
         updateCameraPositionForResponsiveness();
         saveUILayout(); // Guardar el zoom inmediatamente
     }, { passive: false });
+}
+
+export function updatePlayerInfoUI(player1Data, player2Data) {
+    const player1NameEl = document.getElementById('player1-name');
+    const player1AvatarImg = document.getElementById('player1-avatar-img');
+    const player1AvatarSvg = document.getElementById('player1-avatar-svg');
+    const player1AvatarSvgBg = player1AvatarSvg ? player1AvatarSvg.querySelector('.avatar-icon-bg') : null;
+    const player1AvatarSvgIcon = player1AvatarSvg ? player1AvatarSvg.querySelector('.avatar-icon') : null;
+
+    const player2NameEl = document.getElementById('player2-name');
+    const player2AvatarImg = document.getElementById('player2-avatar-img');
+    const player2AvatarSvg = document.getElementById('player2-avatar-svg');
+    const player2AvatarSvgBg = player2AvatarSvg ? player2AvatarSvg.querySelector('.avatar-icon-bg') : null;
+    const player2AvatarSvgIcon = player2AvatarSvg ? player2AvatarSvg.querySelector('.avatar-icon') : null;
+
+    if (player1Data) {
+        if (player1NameEl) player1NameEl.textContent = player1Data.username || 'Jugador 1';
+        if (player1AvatarImg && player1AvatarSvg) {
+            if (player1Data.profileImageName) {
+                player1AvatarImg.src = `./imajenes/Perfil/${player1Data.profileImageName}`;
+                player1AvatarImg.style.display = 'block';
+                player1AvatarImg.classList.add('fade-in'); // Add fade-in class
+                player1AvatarSvg.style.display = 'block'; // Keep SVG visible for timer
+                if (player1AvatarSvgBg) player1AvatarSvgBg.style.display = 'none'; // Hide SVG background
+                if (player1AvatarSvgIcon) player1AvatarSvgIcon.style.display = 'none'; // Hide SVG icon
+            } else {
+                player1AvatarImg.style.display = 'none';
+                player1AvatarImg.classList.remove('fade-in'); // Remove fade-in class
+                player1AvatarSvg.style.display = 'block';
+                if (player1AvatarSvgBg) player1AvatarSvgBg.style.display = ''; // Show SVG background
+                if (player1AvatarSvgIcon) player1AvatarSvgIcon.style.display = ''; // Show SVG icon
+            }
+        }
+    }
+
+    if (player2Data) {
+        if (player2NameEl) player2NameEl.textContent = player2Data.username || 'Jugador 2';
+        if (player2AvatarImg && player2AvatarSvg) {
+            if (player2Data.profileImageName) {
+                player2AvatarImg.src = `./imajenes/Perfil/${player2Data.profileImageName}`;
+                player2AvatarImg.style.display = 'block';
+                player2AvatarImg.classList.add('fade-in'); // Add fade-in class
+                player2AvatarSvg.style.display = 'block'; // Keep SVG visible for timer
+                if (player2AvatarSvgBg) player2AvatarSvgBg.style.display = 'none'; // Hide SVG background
+                if (player2AvatarSvgIcon) player2AvatarSvgIcon.style.display = 'none'; // Hide SVG icon
+            } else {
+                player2AvatarImg.style.display = 'none';
+                player2AvatarImg.classList.remove('fade-in'); // Remove fade-in class
+                player2AvatarSvg.style.display = 'block';
+                if (player2AvatarSvgBg) player2AvatarSvgBg.style.display = ''; // Show SVG background
+                if (player2AvatarSvgIcon) player2AvatarSvgIcon.style.display = ''; // Show SVG icon
+            }
+        }
+    } else {
+        if (player2NameEl) player2NameEl.textContent = 'Esperando...';
+        if (player2AvatarImg && player2AvatarSvg) {
+            player2AvatarImg.style.display = 'none';
+            player2AvatarImg.classList.remove('fade-in'); // Remove fade-in class
+            player2AvatarSvg.style.display = 'block';
+            if (player2AvatarSvgBg) player2AvatarSvgBg.style.display = ''; // Show SVG background
+            if (player2AvatarSvgIcon) player2AvatarSvgIcon.style.display = ''; // Show SVG icon
+        }
+    }
 }

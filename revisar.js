@@ -402,12 +402,40 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     const currentUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
     const bola8Entronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === 8);
     if (bola8Entronerada) {
-        if (faltaCometida) {
-            // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
-            setGameOver(true);
-            const currentPlayerUid = onlineGameData[`player${jugadorActual}`]?.uid;
-            showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 y cometiste una falta.`, currentPlayerUid);
-        } else {
+                        if (faltaCometida) {
+                            // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
+                            setGameOver(true);
+                            const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                            const betAmount = onlineGameData.betAmount || 0;
+                            const totalWinnings = betAmount * 2;
+        
+                            showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 y cometiste una falta.`, loserUid);
+        
+                            // Award winnings to the opponent
+                            if (winnerUid) {
+                                const winnerDocRef = doc(db, "saldo", winnerUid);
+                                const winnerSnap = await getDoc(winnerDocRef);
+                                if (winnerSnap.exists()) {
+                                    const currentBalance = winnerSnap.data().balance || 0;
+                                    await updateDoc(winnerDocRef, {
+                                        balance: currentBalance + totalWinnings
+                                    });
+                                    console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
+                                }
+                            }
+        
+                            // Update game status in Firestore
+                            if (gameRef) {
+                                await updateDoc(gameRef, {
+                                    status: "ended",
+                                    winner: winnerUid,
+                                    loser: loserUid,
+                                    endedAt: Date.now()
+                                });
+                            }
+                            window.location.href = 'login/home.html';
+                        } else {
             // No hay falta. Comprobar si el jugador tenía derecho a meter la 8.
             const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
             let jugadorTieneBolasRestantes = false;
@@ -418,16 +446,70 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                     return tipoBola === tipoBolaJugador;
                 });
             }
-            if (jugadorTieneBolasRestantes || !bolasAsignadasAlInicioTurno) {
-                // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
-                setGameOver(true);
-                const currentPlayerUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, currentPlayerUid);
-            } else {
+                                if (jugadorTieneBolasRestantes || !bolasAsignadasAlInicioTurno) {
+                                    // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
+                                    setGameOver(true);
+                                    const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                                    const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                                    const betAmount = onlineGameData.betAmount || 0;
+                                    const totalWinnings = betAmount * 2;
+            
+                                    showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, loserUid);
+            
+                                    // Award winnings to the opponent
+                                    if (winnerUid) {
+                                        const winnerDocRef = doc(db, "saldo", winnerUid);
+                                        const winnerSnap = await getDoc(winnerDocRef);
+                                        if (winnerSnap.exists()) {
+                                            const currentBalance = winnerSnap.data().balance || 0;
+                                            await updateDoc(winnerDocRef, {
+                                                balance: currentBalance + totalWinnings
+                                            });
+                                            console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
+                                        }
+                                    }
+            
+                                    // Update game status in Firestore
+                                    if (gameRef) {
+                                        await updateDoc(gameRef, {
+                                            status: "ended",
+                                            winner: winnerUid,
+                                            loser: loserUid,
+                                            endedAt: Date.now()
+                                        });
+                                    }
+                                    window.location.href = 'login/home.html';            
+                                } else {
                 // ¡El jugador ha ganado!
                 setGameOver(true);
-                const currentPlayerUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                showFoulMessage(`¡Felicidades, ${currentUsername} has ganado la partida!`, currentPlayerUid);
+                const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                const betAmount = onlineGameData.betAmount || 0;
+                const totalWinnings = betAmount * 2;
+
+                if (winnerUid) {
+                    const winnerDocRef = doc(db, "saldo", winnerUid);
+                    const winnerSnap = await getDoc(winnerDocRef);
+                    if (winnerSnap.exists()) {
+                        const currentBalance = winnerSnap.data().balance || 0;
+                        await updateDoc(winnerDocRef, {
+                            balance: currentBalance + totalWinnings
+                        });
+                        console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
+                    }
+                }
+
+                // Update game status in Firestore
+                if (gameRef) {
+                    await updateDoc(gameRef, {
+                        status: "ended",
+                        winner: winnerUid,
+                        loser: loserUid,
+                        endedAt: Date.now()
+                    });
+                }
+                window.location.href = 'login/home.html';
+                showFoulMessage(`¡Felicidades, ${currentUsername} has ganado la partida!`, winnerUid);
             }
         }
     }
@@ -471,7 +553,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
     // --- CORRECCIÓN: Lógica de Cliente Autoritativo para actualizar el servidor ---
     if (gameRef) {
-        const { updateDoc } = await import('./login/auth.js');        
+        const { doc, getDoc, updateDoc } = await import('./login/auth.js');        
         const finalGameState = getGameState();
 
         // --- CORRECCIÓN: Centralizar la lógica de cambio de turno aquí ---
@@ -518,7 +600,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             currentPlayerUid: nextPlayerUid,
             playerAssignments: playerAssignmentsAlInicioTurno,
             ballsAssigned: bolasAsignadasAlInicioTurno,
-            foulInfo: faltaCometida ? { reason: motivoFalta, ballInHand: faltaConBolaEnMano } : null,
+            foulInfo: faltaCometida ? { reason: motivoFalta, ballInHand: faltaConBolaEnMano, timestamp: Date.now() } : null,
             ballInHandFor: faltaConBolaEnMano ? nextPlayerUid : null,
             // --- NUEVO: Incluir la posición inicial de la bola blanca si hay "bola en mano" ---
             cueBallPosition: faltaConBolaEnMano ? { x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2 } : null,

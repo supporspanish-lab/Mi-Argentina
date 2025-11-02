@@ -37,7 +37,7 @@ export function shoot(powerPercent) {
     }
 
     // Amortiguar la potencia en tiros extremos para evitar inestabilidad.
-    const maxPower = 300 * 25; // --- AJUSTE: Reducido de 40 a 32 para bajar la fuerza máxima.
+    const maxPower = 100 * 25; // --- AJUSTE: Reducido de 40 a 32 para bajar la fuerza máxima.
     const SAFE_POWER_THRESHOLD = maxPower * 0.9;
     let power = shotPower * maxPower;
 
@@ -75,7 +75,7 @@ export function shoot(powerPercent) {
         // window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
 
         // --- Enviar los datos del tiro al servidor para el oponente ---
-        window.dispatchEvent(new CustomEvent('sendsingleplayer', { 
+        window.dispatchEvent(new CustomEvent('sendShot', { 
             detail: {
                 ...shotData,
                 gameState: gameState

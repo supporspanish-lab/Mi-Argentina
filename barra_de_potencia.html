@@ -3,20 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nueva Barra de Potencia</title>
+    <title>Barra de Potencia Vertical</title>
     <style>
         body {
             display: flex;
-            justify-content: flex-start;
+            justify-content: flex-start; /* Alinea el contenido a la izquierda */
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
+            padding-left: 50px; /* Añade un poco de espacio desde el borde izquierdo */
+            background-color: #2c3e50; /* Un fondo más oscuro para que resalte */
             font-family: sans-serif;
+        }
+        
+        /* --- MODIFICACIÓN: Wrapper principal para posicionar todo --- */
+        #powerBarWrapper {
+            position: relative; /* Para que el texto del porcentaje se posicione respecto a este */
+            /* padding-top: 30px; // Ya no es necesario */
+        }
+
+        /* --- NUEVO: Contenedor de recorte (Clipping Mask) --- */
+        #powerBarClippingContainer {
+            position: relative; /* Necesario para que los elementos absolutos internos se posicionen correctamente */
+            width: 40px; /* Mismo ancho que la barra */
+            height: 300px; /* Misma altura que la barra */
+            border-radius: 25px; /* Mismo radio para que el recorte sea redondeado */
+            overflow: hidden; /* ¡La magia está aquí! Oculta todo lo que se salga. */
         }
 
         #newPowerBarContainer {
-            width: 50px; /* Ancho de la barra */
+            width: 40px; /* Ancho de la barra */
             height: 300px; /* Altura total de la barra */
             /* --- NUEVO: Degradado de fondo con líneas --- */
             background: 
@@ -27,37 +43,40 @@
                     rgba(0, 0, 0, 0.3) 19px, rgba(0, 0, 0, 0.3) 20px /* 1px de línea oscura */
                 ),
                 /* Capa 1: Degradado de color de fondo */
-                linear-gradient(to top, #e74c3c, #ff8c00, #f1c40f); /* Rojo -> Naranja -> Amarillo */
+                linear-gradient(to top, #2ecc71, #f1c40f, #e74c3c); /* Verde -> Amarillo -> Rojo */
 
             border: 2px solid #333;
             border-radius: 25px;
-            position: relative;
-            overflow: hidden; /* Para que el relleno no se salga */
+            position: absolute; /* Se posiciona dentro del contenedor de recorte */
         }
 
         #newPowerBarHandle {
-            width: 150px; /* Altura original del taco, ahora será el ancho */
-            height: 40px; /* Ancho original del taco, ahora será la altura */
+            width: 280px; /* Altura visual del taco (después de rotar) */
+            height: 45px; /* Ancho visual del taco (después de rotar) */
             object-fit: contain;
             position: absolute;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(270deg); /* Centrar horizontal y verticalmente, y luego rotar */
-            top: 0%;
+            /* --- CORRECCIÓN: Posicionamiento relativo al contenedor de recorte --- */
+            left: -120px; /* Ajuste para centrar el taco sobre la barra (que está en la misma posición) */
+            transform: rotate(270deg); /* Solo rotar */
+            top: 0; /* La posición 'top' será controlada por JS */
             transform-origin: center center; /* Asegurar que la rotación sea desde el centro */
             cursor: grab;
-            transition: top 0.1s linear;
         }
     </style>
 </head>
 <body>
-    <div id="newPowerBarContainer">
-        <div id="newPowerBarHandle" style="background-image: url('imajenes/taco.png'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+    <div id="powerBarWrapper">
+        <!-- --- NUEVO: Contenedor de recorte que envuelve la barra y el taco --- -->
+        <div id="powerBarClippingContainer">
+            <div id="newPowerBarContainer"></div>
+            <!-- El taco ahora está DENTRO del contenedor de recorte -->
+            <div id="newPowerBarHandle" style="background-image: url('imajenes/taco.png'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+        </div>
     </div>
 
     <script>
         const newPowerBarContainer = document.getElementById('newPowerBarContainer');
         const newPowerBarHandle = document.getElementById('newPowerBarHandle');
-        // const powerDisplay = document.getElementById('powerDisplay'); // Ya no es necesario
 
         let isDragging = false;
         let powerPercent = 0;
@@ -69,7 +88,7 @@
             newPowerBarContainer.setPointerCapture(e.pointerId); // Capturar el puntero en el contenedor
             e.preventDefault(); // Prevenir el comportamiento por defecto del navegador
 
-            // --- CORRECCIÓN: Guardar la posición Y inicial y resetear la barra a 0% ---
+            // Guardar la posición Y inicial y resetear la barra a 0%
             dragStartY = e.clientY;
             powerPercent = 0;
             updatePowerBar(0); // Actualizar la UI a 0%
@@ -81,68 +100,64 @@
             const rect = newPowerBarContainer.getBoundingClientRect();
             const containerHeight = rect.height;
 
-            // Calcular el desplazamiento desde el inicio del arrastre
-            const dragDistance = dragStartY - e.clientY; 
+            // --- CORRECCIÓN: El arrastre ahora es de abajo hacia arriba para cargar potencia ---
+            const dragDistance = e.clientY - dragStartY;
 
-            // --- CORRECCIÓN: El 100% de potencia se alcanza al 80% del recorrido ---
-            // La potencia se calcula sobre la altura total, pero se limita a 0.8 (80%).
-            const newPowerPercent = Math.max(0, Math.min(dragDistance / containerHeight, 0.8));
+            // --- CORRECCIÓN: La potencia y la posición visual ahora se basan en el mismo cálculo ---
+            // Esto sincroniza perfectamente el movimiento del taco con el porcentaje.
+            // El recorrido total para llegar al 100% es la altura de la barra.
+            // --- CORRECCIÓN: Se limita el recorrido a 1.0 para que no pase del 100%.
+            const newPowerPercent = Math.max(0, Math.min(dragDistance / containerHeight, 1.0));
             
-            powerPercent = newPowerPercent;
-            updatePowerBar(powerPercent);
+            // Guardamos la potencia para el cálculo de disparo y la posición visual.
+            powerPercent = newPowerPercent; 
+            // --- CORRECCIÓN: Como ya no hay sobrerrecorrido, solo pasamos un valor.
+            // Ambos argumentos (display y posición) usarán el mismo porcentaje.
+            updatePowerBar(powerPercent, powerPercent);
         });
 
         document.addEventListener('pointerup', (e) => {
             if (isDragging) {
                 isDragging = false;
-                // Liberar la captura del puntero desde el contenedor
-                // Es importante hacer esto para que otros elementos de la UI vuelvan a funcionar.
-                // Usamos un try-catch por si el puntero ya se liberó por otras razones (ej. salir de la ventana).
                 try {
                     // --- CORRECCIÓN: Usar el 'e' del evento para obtener el pointerId ---
                     if (e.pointerId) newPowerBarContainer.releasePointerCapture(e.pointerId);
-                } catch (err) {
-                    // No hacer nada si hay un error, significa que la captura ya no existía.
-                }
-                console.log('Potencia final:', powerPercent);
+                } catch (err) { /* La captura del puntero ya no existía, no hay problema. */ }
+                
+                // --- CORRECCIÓN: Mostrar la potencia real de disparo (limitada a 100%) ---
+                console.log(`Disparo con potencia: ${Math.round(Math.min(powerPercent, 1) * 100)}%`);
 
-                // --- NUEVO: Animar la barra de vuelta a 0% ---
-                // La transición CSS se encargará de la animación visual.
-                updatePowerBar(0);
+                // Animar la barra de vuelta a 0%
+                newPowerBarHandle.style.transition = 'top 0.3s ease-out';
+                updatePowerBar(0, 0); // Resetear tanto la potencia como la posición visual
+                // Quitar la transición después de la animación para que el arrastre sea instantáneo
+                setTimeout(() => {
+                    newPowerBarHandle.style.transition = '';
+                }, 300);
             }
         });
 
-        // --- NUEVO: Función que actualiza la UI de la barra de potencia ---
-        function updatePowerBar(percent) {
-            // --- CORRECCIÓN: Obtener las dimensiones del contenedor DENTRO de la función ---
+        // Función que actualiza la UI de la barra de potencia
+        function updatePowerBar(powerPercent, visualPercent) {
+            // Si visualPercent no se proporciona, se usa powerPercent.
+            const displayPercent = visualPercent !== undefined ? visualPercent : powerPercent;
             const containerHeight = newPowerBarContainer.offsetHeight;
-            const handleHeight = newPowerBarHandle.offsetHeight;
-            const extraDragAmount = handleHeight * 1.5;
-            const visualMaxY = containerHeight + extraDragAmount;
 
-            // Calcular las posiciones 'top' basadas en el porcentaje de potencia (que va de 0 a 1)
-            // Ambas posiciones deben calcularse de la misma manera para que estén sincronizadas.
-            // La posición del relleno va de containerHeight (abajo) a 0 (arriba).
-            const logicalY = containerHeight * (1 - percent);
-            // La posición del taco debe seguir al relleno, pero con un desplazamiento adicional
-            // que se reduce a medida que la potencia aumenta, para que la punta siempre coincida.
-            const visualY = logicalY + extraDragAmount * (1 - percent);
+            // --- CORRECCIÓN: El taco empieza abajo y se mueve hacia arriba ---
+            // 1. La posición inicial (0%) es abajo del todo. 
+            //    Para que empiece más abajo, multiplica containerHeight por un número mayor (ej: 1.5).
+            const startPosition = containerHeight * 1.4;
+            // 2. A medida que se arrastra, el taco sube. El recorrido es la altura del contenedor.
+            const topPosition = startPosition - (displayPercent * containerHeight);
 
-            newPowerBarHandle.style.top = `${visualY}px`;
-            // powerDisplay.textContent = `${Math.round((percent / 0.8) * 100)}%`; // Ya no es necesario
+            // Actualizar la posición del taco
+            newPowerBarHandle.style.top = `${topPosition}px`;
         }
 
-
         // Inicializar la barra de potencia a 0
-        // --- CORRECCIÓN: Posicionar el relleno en la parte inferior al inicio ---
-        const initialContainerHeight = newPowerBarContainer.offsetHeight;
-        const initialHandleHeight = newPowerBarHandle.offsetHeight;
-        const initialExtraDrag = initialHandleHeight * 1.5; // Usar el mismo multiplicador que en el evento 'pointermove'
+        updatePowerBar(0, 0);
 
-        // --- CORRECCIÓN: Posicionar el taco en su punto más bajo posible, que es 0% de potencia.
-        // La posición inicial del taco es la del relleno (initialContainerHeight) más el extra.
-        newPowerBarHandle.style.top = `${initialContainerHeight + initialExtraDrag}px`;
-        // powerDisplay.textContent = '0%'; // Ya no es necesario
+
     </script>
 </body>
 </html>

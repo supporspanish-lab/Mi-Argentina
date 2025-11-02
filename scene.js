@@ -12,6 +12,7 @@ export const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window
 
 // --- NUEVO: Establecer un color de fondo oscuro para el entorno 3D ---
 scene.background = new THREE.Color('#051021'); // Un azul muy oscuro, casi negro
+document.body.style.backgroundColor = scene.background.getStyle();
 
 // --- Variables de Zoom ---
 export let zoomState = {
@@ -44,6 +45,7 @@ export const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: tru
 renderer.setSize(window.innerWidth, window.innerHeight);
 // --- SOLUCIÓN: Ajustar el renderizador a la densidad de píxeles del dispositivo ---
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limitar a 2 para no afectar el rendimiento en dispositivos de muy alta gama.
+renderer.setClearColor(scene.background.getHex());
 // --- MODIFICACIÓN: Reactivar las sombras ---
 renderer.shadowMap.enabled = true;
 
@@ -70,12 +72,12 @@ export function loadTableTexture() {
 }
 
 // Función para calcular la posición Z de la cámara para que la mesa se ajuste a la pantalla
-export function updateCameraPositionForResponsiveness() {
+export function updateCameraPositionForResponsiveness(width, height) {
     const effectiveWidth = TABLE_WIDTH / zoomState.level;
     const effectiveHeight = TABLE_HEIGHT / zoomState.level;
 
     // Usar el aspect ratio del área de juego disponible.
-    const aspect = window.innerWidth / window.innerHeight;
+    const aspect = width / height;
     const tableAspect = effectiveWidth / effectiveHeight;
 
     let cameraZ;
@@ -107,20 +109,162 @@ export function updateCameraPositionForResponsiveness() {
 }
 
 // Llamar al inicio para configurar la cámara
-updateCameraPositionForResponsiveness();
+updateCameraPositionForResponsiveness(window.innerWidth, window.innerHeight);
+
+
 
 // --- NUEVO: Manejo de redimensionamiento de la ventana para responsividad ---
-function onWindowResize() {
-    // Actualizar el aspect ratio de la cámara
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
 
-    // Actualizar el tamaño del renderizador
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+function isMobile() {
 
-    // Recalcular la posición de la cámara para que la mesa se ajuste
-    updateCameraPositionForResponsiveness();
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
 }
 
-window.addEventListener('resize', onWindowResize, false);
+
+
+function updateLayout() {
+
+
+
+    const topUiContainer = document.getElementById('top-ui-container');
+
+
+
+    const topUiHeight = topUiContainer ? topUiContainer.offsetHeight : 0;
+
+
+
+
+
+
+
+    let availableWidth = window.innerWidth;
+
+
+
+    let availableHeight = window.innerHeight - topUiHeight;
+
+
+
+    let topOffset = topUiHeight;
+
+
+
+
+
+
+
+    // Mover el canvas hacia abajo
+
+
+
+    renderer.domElement.style.position = 'absolute';
+
+
+
+    renderer.domElement.style.top = `${topOffset}px`;
+
+
+
+    renderer.domElement.style.left = '0px';
+
+
+
+
+
+
+
+    // Ajustar el tamaño del renderizador al espacio disponible
+
+
+
+    renderer.setSize(availableWidth, availableHeight);
+
+
+
+    camera.aspect = availableWidth / availableHeight;
+
+
+
+    camera.updateProjectionMatrix();
+
+
+
+
+
+
+
+    // Recalcular la posición de la cámara
+
+
+
+    updateCameraPositionForResponsiveness(availableWidth, availableHeight);
+
+
+
+}
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
+    function onWindowResize() {
+
+
+
+    
+
+
+
+        updateLayout();
+
+
+
+    
+
+
+
+    }
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
+    window.addEventListener('resize', onWindowResize, false);
+
+
+
+    
+
+
+
+    // Llamada inicial para configurar el layout
+
+
+
+    
+
+
+
+    updateLayout();

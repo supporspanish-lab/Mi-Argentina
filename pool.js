@@ -5,7 +5,7 @@ import { db, auth, onSnapshot, doc, onAuthStateChanged, updateDoc, getDoc } from
 import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
 import { scene, camera, renderer, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders, getSceneBalls, updateBallModelAndTexture } from './ballManager.js'; // --- SOLUCIÓN: Quitar updateSafeArea
-import { handleInput, initializeUI, updateUI, prepareUIResources, updateTurnTimerUI, updateActivePlayerUI } from './ui.js'; // --- SOLUCIÓN: Importar updateTurnTimerUI
+import { handleInput, initializeUI, updateUI, prepareUIResources, updateTurnTimerUI, updateActivePlayerUI, updatePlayerInfoUI } from './ui.js'; // --- SOLUCIÓN: Importar updateTurnTimerUI
 import { initAudio, loadSound, prepareAudio } from './audioManager.js';
 import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './fallPhysics.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
@@ -14,7 +14,8 @@ import { prepareAimingResources, updateAimingGuides, hideAimingGuides, cueMesh }
 import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData } from './gameState.js';
 import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
-import { getPowerPercent } from './powerControls.js';
+import { initializePowerBar, getPowerPercent } from './powerBar.js';
+import { shoot } from './shooting.js';
 
 let lastTime;
 
@@ -37,6 +38,7 @@ let serverAimAngle = null, smoothedAimAngle = null; // --- CORRECCIÓN: Variable
 let currentGameState = {}; // Guardará el estado del juego recibido
 let serverPowerPercent = 0; // --- NUEVO: Variable para la potencia recibida del servidor.
 let lastProcessedShotTimestamp = 0; // Para no aplicar el mismo tiro dos veces
+let lastFoulTimestamp = 0; // Para no mostrar el mismo mensaje de falta dos veces
 
 window.addEventListener('receiveaim', (event) => {
     const gameData = event.detail;
@@ -89,7 +91,9 @@ window.addEventListener('receiveaim', (event) => {
 
 
     // --- NUEVO: Lógica para recibir y aplicar información de falta ---
-    if (gameData.foulInfo) {
+    if (gameData.foulInfo && gameData.foulInfo.timestamp > lastFoulTimestamp) {
+        lastFoulTimestamp = gameData.foulInfo.timestamp;
+
         // Solo mostrar el mensaje de falta si no es mi turno y la falta es para el otro jugador
         // O si es mi turno y la falta es para mí (aunque mi cliente ya la habría mostrado)
         const myUid = auth.currentUser?.uid;
@@ -420,7 +424,7 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
 function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     if (areBallsMoving(balls)) return; // No hacer nada si las bolas ya se están moviendo
 
-    const maxPower = 300 * 25;
+    const maxPower = 100 * 25;
     const power = powerPercent * maxPower;
     const velocityFactor = 2.5;
 
@@ -462,6 +466,7 @@ window.applyLocalShot = applyServerShot;
 // --- NUEVO: Exponer funciones y variables globales para el control de disparo local ---
 window.getCurrentShotAngle = getCurrentShotAngle;
 window.getCurrentAimingSpin = () => currentGameState.aimingSpin || { x: 0, y: 0 }; // Asegurar que siempre devuelve un objeto válido
+window.shoot = shoot;
 
 
 // --- NUEVO: Función para marcar que un tiro ha comenzado ---
@@ -480,6 +485,7 @@ window.triggerScreenShake = (intensity, duration) => {
 // --- 4. Iniciar el juego --- (Lógica de inicialización refactorizada)
 function initGame() {
     initializeHandles(); // Inicializamos los puntos de los bordes
+    initializePowerBar(); // --- NUEVO: Inicializar la barra de potencia
 
     // --- MODIFICACIÓN: La inicialización de audio y UI se hace aquí, pero la carga se dispara después ---
     initAudio(camera);
@@ -518,7 +524,7 @@ function connectToGame(gameId) {
 
         // Escuchar los cambios en la partida en tiempo real.
         let previousTurnTimestamp = null; // Para detectar inicio/cambio de turno
-        const unsubscribe = onSnapshot(gameRef, (docSnap) => {
+        const unsubscribe = onSnapshot(gameRef, async (docSnap) => {
             if (!docSnap.exists()) {
                 console.error("La partida no existe o fue eliminada.");
                 if (unsubscribe) unsubscribe();
@@ -538,8 +544,6 @@ function connectToGame(gameId) {
             if (gameData.balls && !areBallsMoving(balls)) {
                 syncBallPositionsFromServer(gameData.balls, gameData, localUserId);
             }
-            const player1NameEl = document.getElementById('player1-name');
-            const player2NameEl = document.getElementById('player2-name');
 
             // Si el puesto de jugador 2 está libre y nosotros no somos el jugador 1, lo reclamamos.
             if (gameData.player2 === null && gameData.player1?.uid !== localUserId) {
@@ -549,6 +553,26 @@ function connectToGame(gameId) {
                 return; // Esperar al siguiente snapshot con la info actualizada.
             }
 
+            // --- FETCH PLAYER PROFILES ---
+            let player1Profile = null;
+            if (gameData.player1 && gameData.player1.uid) {
+                const p1Doc = await getDoc(doc(db, "saldo", gameData.player1.uid));
+                if (p1Doc.exists()) {
+                    player1Profile = p1Doc.data();
+                }
+            }
+
+            let player2Profile = null;
+            if (gameData.player2 && gameData.player2.uid) {
+                const p2Doc = await getDoc(doc(db, "saldo", gameData.player2.uid));
+                if (p2Doc.exists()) {
+                    player2Profile = p2Doc.data();
+                }
+            }
+
+            // Update the entire player UI (name + avatar)
+            updatePlayerInfoUI(player1Profile, player2Profile);
+
             // Determinar si somos el jugador 1 o 2.
             if (gameData.player1 && gameData.player1.uid === localUserId) {
                 localPlayerNumber = 1;
@@ -556,14 +580,6 @@ function connectToGame(gameId) {
                 localPlayerNumber = 2;
             } else {
                 localPlayerNumber = 0; // Somos espectadores
-            }
-
-            // Actualizar la UI con los nombres de la base de datos.
-            if (player1NameEl) {
-                player1NameEl.textContent = gameData.player1 ? gameData.player1.username : 'Jugador 1';
-            }
-            if (player2NameEl) {
-                player2NameEl.textContent = gameData.player2 ? gameData.player2.username : 'Esperando...';
             }
 
             // Actualizar el indicador de turno activo

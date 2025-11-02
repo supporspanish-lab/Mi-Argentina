@@ -33,7 +33,7 @@
             height: 100%;
             background-color: #0d203b;
             z-index: 200; /* Por encima de todo */
-            display: none;
+            display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -52,11 +52,13 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(90deg); }
         }
-        /* Mostrar la pantalla de bloqueo solo en modo vertical */
-        @media (orientation: portrait) {
-            #orientation-lock-screen {
-                display: flex;
-            }
+
+
+        #play-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
         }
 
         /* --- NUEVO: Estilos para la pantalla de carga --- */
@@ -233,7 +235,7 @@
             padding: 0.5vw; /* Padding responsivo más pequeño */
             border-radius: 8px;
             z-index: 10;
-            min-height: 30px; /* Altura mínima más pequeña */
+            min-height: 25px; /* Altura mínima más pequeña */
             max-width: 35vw; /* Ancho máximo más restrictivo */
             width: auto; /* Ancho automático para el contenido */
             align-items: center;
@@ -252,7 +254,16 @@
             stroke: #2ecc71; /* Borde verde vibrante para el temporizador */
         }
 
+        /* --- NUEVO: Estilos para la animación de aparición de avatares --- */
+        .player-avatar-img.fade-in {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
 
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
 
         /* --- NUEVO: Estilos para el icono de la bola entronerada en el contenedor del jugador --- */
         .player-ball-icon {
@@ -287,7 +298,7 @@
 
         #top-ui-container {
             position: absolute;
-            top: 2vh;
+            top: 0;
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
@@ -295,6 +306,9 @@
             justify-content: center;
             gap: 2vw; /* Espacio entre los contenedores de los jugadores */
             z-index: 10;
+            padding: 1vh 0;
+            min-height: 10vh; /* Altura mínima para asegurar que el contenido quepa */
+            box-sizing: border-box;
         }
 
         #player1PocketedContainer.editable-ui {
@@ -390,17 +404,23 @@
         }
 
         /* --- NUEVO: Estilos para los sliders en el panel de opciones --- */
+        #options-panel h3 {
+            margin-top: 0;
+            color: #3498db;
+            font-size: 1.8vw; /* Responsive font size */
+            margin-bottom: 1.5vh;
+        }
         #options-panel label {
             display: block;
-            margin-top: 20px;
-            margin-bottom: 5px;
-            font-size: 14px;
+            margin-top: 2vh;
+            margin-bottom: 0.5vh;
+            font-size: 1.2vw;
         }
         #options-panel input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
             width: 100%;
-            height: 8px;
+            height: 0.8vh; /* Responsive height */
             background: #555;
             border-radius: 5px;
             outline: none;
@@ -408,8 +428,8 @@
         #options-panel input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 2vw; /* Responsive width */
+            height: 2vw; /* Responsive height */
             background: #3498db;
             cursor: pointer;
             border-radius: 50%;
@@ -418,13 +438,13 @@
         /* --- NUEVO: Estilo para los botones dentro del panel de opciones --- */
         #options-panel button {
             width: 100%;
-            padding: 10px;
-            margin-top: 15px;
+            padding: 1vh 0.5vw;
+            margin-top: 1.5vh;
             background-color: #3498db;
             border: 1px solid #2980b9;
             border-radius: 5px;
             color: white;
-            font-size: 16px;
+            font-size: 1.5vw;
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.2s;
@@ -438,7 +458,7 @@
             position: fixed;
             top: 0; /* Pegado a la parte superior */
             left: 0; /* Pegado a la izquierda */
-            width: 300px; /* Ancho fijo para el panel */
+            width: 30vw; /* Ancho responsivo para el panel */
             max-width: 90vw; /* Ancho máximo en pantallas pequeñas */
             max-height: 80vh; /* --- CORRECCIÓN: Altura máxima para evitar que se salga de la pantalla --- */
             overflow-y: auto; /* --- NUEVO: Añadir scroll si el contenido es más alto --- */
@@ -450,7 +470,7 @@
             transform: translateY(-100%); /* Inicia oculto arriba */
             transition: transform 0.3s ease-in-out;
             z-index: 200;
-            padding: 50px 20px 20px 20px; /* Padding superior para no solaparse con el botón */
+            padding: 2vh 1vw 1vw 1vw; /* Padding responsivo */
             box-sizing: border-box; /* --- CORRECCIÓN: Asegurar que el padding no aumente el tamaño total --- */
             color: white;
             font-family: Arial, sans-serif;
@@ -464,8 +484,8 @@
             top: 0;
             left: 0; /* Pegado a la izquierda */
             transform: none; /* Sin transformación inicial */
-            width: 80px;
-            height: 30px;
+            width: 5vw; /* Responsive width */
+            height: 5vh; /* Responsive height */
             background-color: #3498db;
             border: none;
             border-bottom-right-radius: 10px;
@@ -474,12 +494,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0 0 5px 0; /* Pequeño ajuste para centrar el icono */
+            padding: 0.5vw; /* Responsive padding */
             transition: transform 0.3s ease-in-out;
         }
         #options-toggle-btn span {
             color: white;
-            font-size: 24px;
+            font-size: 2.5vw; /* Responsive font size */
         }
 
         @keyframes fall-from-top {
@@ -522,10 +542,26 @@
             pointer-events: auto; /* Reactivar puntero para el botón */
         }
 
-        /* --- NUEVO: Estilos para la nueva barra de potencia vertical --- */
+        /* --- MODIFICACIÓN: Wrapper principal para posicionar todo --- */
+        #powerBarWrapper {
+            position: absolute;
+            top: 50%;
+            left: 2vw;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+
+        /* --- NUEVO: Contenedor de recorte (Clipping Mask) --- */
+        #powerBarClippingContainer {
+            position: relative; /* Necesario para que los elementos absolutos internos se posicionen correctamente */
+            width: 3vw; /* Mismo ancho que la barra */
+            height: 40vh; /* Misma altura que la barra */
+            overflow: hidden; /* ¡La magia está aquí! Oculta todo lo que se salga. */
+        }
+
         #newPowerBarContainer {
-            width: 3vw; /* Ancho de la barra responsivo */
-            height: 40vh; /* Altura total de la barra responsiva */
+            width: 3vw; /* Ancho de la barra */
+            height: 40vh; /* Altura total de la barra */
             /* --- NUEVO: Degradado de fondo con líneas --- */
             background: 
                 /* Capa 2: Líneas horizontales repetidas */
@@ -535,25 +571,20 @@
                     rgba(0, 0, 0, 0.3) 19px, rgba(0, 0, 0, 0.3) 20px /* 1px de línea oscura */
                 ),
                 /* Capa 1: Degradado de color de fondo */
-                linear-gradient(to top, #e74c3c, #ff8c00, #f1c40f); /* Rojo -> Naranja -> Amarillo */
+                linear-gradient(to top, #2ecc71, #f1c40f, #e74c3c); /* Verde -> Amarillo -> Rojo */
 
             border: 2px solid #333;
-            border-radius: 25px;
-            position: absolute; /* Cambiado a absolute */
-            top: 2vh; /* Posición por defecto */
-            left: 2vw; /* Posición por defecto */
-            overflow: hidden; /* Para que el relleno no se salga */
-            z-index: 30; /* Alto z-index para que esté encima */
+            position: absolute; /* Se posiciona dentro del contenedor de recorte */
         }
 
         #newPowerBarHandle {
-            width: 150px; /* Altura original del taco, ahora será el ancho */
-            height: 40px; /* Ancho original del taco, ahora será la altura */
+            width: 35vh; /* Altura visual del taco (después de rotar) */
+            height: 4vw; /* Ancho visual del taco (después de rotar) */
             object-fit: contain;
             position: absolute;
             left: 50%;
-            transform: translate(-50%, -50%) rotate(270deg); /* Centrar horizontal y verticalmente, y luego rotar */
-            top: 0%;
+            transform: translateX(-50%) rotate(270deg);
+            top: 0; /* La posición 'top' será controlada por JS */
             transform-origin: center center; /* Asegurar que la rotación sea desde el centro */
             cursor: grab;
         }
@@ -654,6 +685,7 @@
             <path d="M18.5,6.5H14.5a1,1,0,0,1,0-2h6a1,1,0,0,1,1,1V11.5a1,1,0,0,1-2,0V7.53l-3.22,3.22a1,1,0,0,1-1.42-1.42Z"/><path d="M5.5,17.5h4a1,1,0,0,1,0,2h-6a1,1,0,0,1-1-1V12.5a1,1,0,0,1,2,0v3.97l3.22-3.22a1,1,0,0,1,1.42,1.42Z"/>
         </svg>
         <p>Por favor, rota tu dispositivo a modo horizontal para jugar.</p>
+        <button id="play-button">Jugar</button>
     </div>
     <!-- --- NUEVO: Pantalla de carga --- -->
     <div id="loading-screen">
@@ -663,13 +695,19 @@
         <div id="progress-text">0%</div>
     </div>
 
-    <div id="gameContainer">
-        <!-- --- MODIFICADO: Nueva barra de potencia vertical --- -->
-        <div id="newPowerBarContainer" class="editable-ui">
+    <div id="powerBarWrapper" class="editable-ui">
+        <!-- --- NUEVO: Contenedor de recorte que envuelve la barra y el taco --- -->
+        <div id="powerBarClippingContainer">
+            <div id="newPowerBarContainer"></div>
+            <!-- El taco ahora está DENTRO del contenedor de recorte -->
             <div id="newPowerBarHandle" style="background-image: url('imajenes/taco.png'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
-            <!-- --- NUEVO: Agarraderas para edición de UI --- -->
-            <div class="resize-handle tl"></div><div class="resize-handle br"></div>
         </div>
+        <div id="powerPercentageDisplay" style="color: white; text-align: center; margin-top: 10px; font-size: 1.5em; font-weight: bold;">0%</div>
+        <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+        <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+    </div>
+
+    <div id="gameContainer">
 
         <!-- --- NUEVO: Panel de opciones deslizable --- -->
         <div id="options-panel">
@@ -718,14 +756,17 @@
             <!-- Contenedor para las bolas del jugador 1 -->
             <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
                 <div id="player1-name" class="player-name">Jugador 1</div>
-                <svg class="player-avatar" viewBox="0 0 36 36">
-                    <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
-                    <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
-                    <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
-                    <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
-                        <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
-                    </g>
-                </svg>
+                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; margin-right: 0.5vw;">
+                    <svg id="player1-avatar-svg" class="player-avatar" viewBox="0 0 36 36" style="position: absolute; top: 0; left: 0; z-index: 2;">
+                        <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
+                        <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
+                        <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                        <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                            <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                        </g>
+                    </svg>
+                    <img id="player1-avatar-img" src="" class="player-avatar" style="display: none; position: absolute; top: 0; left: 0; border-radius: 50%; object-fit: cover; width: 100%; height: 100%; z-index: 1;">
+                </div>
                 <div class="pocketed-ball-placeholder"></div>
                 <div class="pocketed-ball-placeholder"></div>
                 <div class="pocketed-ball-placeholder"></div>
@@ -736,18 +777,27 @@
                 <!-- --- NUEVO: Agarraderas para edición de UI --- -->
                 <div class="resize-handle tl"></div><div class="resize-handle br"></div>
             </div>
+
+            <!-- Contenedor de Ganancias -->
+            <div id="winnings-container" class="editable-ui" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 8vw; max-width: 90px; background-color: rgba(0,0,0,0.6); border-radius: 8px; padding: 1vw; aspect-ratio: 1 / 1; box-sizing: border-box;">
+                <div id="winnings-image" style="width: 60%; height: 60%; background-image: url('imajenes/moneda/moneda.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 5px; margin-bottom: 0.5vw;"></div>
+                <div id="winnings-text" style="color: #FFD700; font-size: 1.2vw; font-weight: bold; text-shadow: 0 0 5px #000;">$0</div>
+            </div>
+
             <!-- Contenedor para las bolas del jugador 2 -->
             <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
-                <!-- SOLUCIÓN: Reemplazar el div del avatar con un SVG -->
                 <div id="player2-name" class="player-name">Jugador 2</div>
-                <svg class="player-avatar" viewBox="0 0 36 36">
-                    <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
-                    <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
-                    <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
-                    <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
-                        <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
-                    </g>
-                </svg>
+                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; margin-right: 0.5vw;">
+                    <svg id="player2-avatar-svg" class="player-avatar" viewBox="0 0 36 36" style="position: absolute; top: 0; left: 0; z-index: 2;">
+                        <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
+                        <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
+                        <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                        <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                            <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                        </g>
+                    </svg>
+                    <img id="player2-avatar-img" src="" class="player-avatar" style="display: none; position: absolute; top: 0; left: 0; border-radius: 50%; object-fit: cover; width: 100%; height: 100%; z-index: 1;">
+                </div>
                 <div class="pocketed-ball-placeholder"></div>
                 <div class="pocketed-ball-placeholder"></div>
                 <div class="pocketed-ball-placeholder"></div>
@@ -762,7 +812,6 @@
         <div id="pocketedInfo"></div>
         <div id="foulMessage">
             <span id="foulMessageText"></span>
-            <button id="playAgainBtn">Jugar de Nuevo</button>
         </div>
 
         <!-- --- CORRECCIÓN: Mover el selector de efecto fuera del contenedor flexbox --- -->
@@ -825,15 +874,27 @@
         // 1. Importar las funciones necesarias de Firestore y la autenticación.
         import { db, auth, onSnapshot, doc, updateDoc } from './login/auth.js';
 
-        // 2. Obtener el ID de la partida desde la URL.
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('gameId');
-
-        // --- CORRECCIÓN: Envolver la lógica en un 'if' para evitar el 'Illegal return statement' ---
-        if (!gameId) {
-            console.error("No se encontró gameId en la URL. La sincronización no funcionará.");
-        } else {
-            // 3. Función "throttle" para no sobrecargar Firestore.
+                    // 2. Obtener el ID de la partida desde la URL.
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const gameId = urlParams.get('gameId');
+                    const winningsText = document.getElementById('winnings-text');
+        
+                    // --- CORRECCIÓN: Envolver la lógica en un 'if' para evitar el 'Illegal return statement' ---
+                    if (!gameId) {
+                        console.error("No se encontró gameId en la URL. La sincronización no funcionará.");
+                    } else {
+                        // --- NUEVO: Escuchar cambios en el documento del juego para actualizar las ganancias ---
+                        onSnapshot(doc(db, "games", gameId), (docSnap) => {
+                            if (docSnap.exists()) {
+                                const gameData = docSnap.data();
+                                const betAmount = gameData.betAmount || 0;
+                                const totalWinnings = betAmount * 2; // Apuesta de ambos jugadores
+                                winningsText.textContent = `$${totalWinnings.toLocaleString()}`;
+                            } else {
+                                console.log("El documento del juego no existe.");
+                                winningsText.textContent = '$0'; // Resetear si el juego no existe
+                            }
+                        });            // 3. Función "throttle" para no sobrecargar Firestore.
             // Limita las actualizaciones a una cada 50ms como máximo.
             function throttle(func, limit) {
                 let inThrottle;
@@ -871,18 +932,27 @@
                 }
             }, 100); // Mismo límite para la potencia
 
+            let lastSentCueBallPosition = null; // Variable para almacenar la última posición enviada
+
             // --- NUEVO: Función para enviar la posición de la bola blanca durante "bola en mano" ---
-            const sendCueBallPositionUpdate = async (position) => {
-                if (gameId) {
-                    try {
-                        const gameRef = doc(db, "games", gameId);
-                        // Usamos un nuevo campo 'cueBallPosition'
-                        await updateDoc(gameRef, { cueBallPosition: position });
-                    } catch (error) {
-                        console.error("Error al sincronizar la posición de la bola blanca:", error);
+            const sendCueBallPositionUpdate = throttle(async (position) => {
+                // Convertir el objeto de posición a una cadena para una comparación sencilla
+                const currentPositionString = JSON.stringify(position);
+                const lastPositionString = JSON.stringify(lastSentCueBallPosition);
+
+                // Solo enviar la actualización si la posición ha cambiado
+                if (currentPositionString !== lastPositionString) {
+                    if (gameId) {
+                        try {
+                            const gameRef = doc(db, "games", gameId);
+                            await updateDoc(gameRef, { cueBallPosition: position });
+                            lastSentCueBallPosition = position; // Actualizar la última posición enviada
+                        } catch (error) {
+                            console.error("Error al sincronizar la posición de la bola blanca:", error);
+                        }
                     }
                 }
-            };
+            }, 1000); // Límite de 1000ms.
 
             // --- NUEVO: Función para enviar la actualización del efecto (spin) ---
             const sendSpinUpdate = throttle(async (spin) => {
@@ -963,7 +1033,7 @@
 
 
             // --- NUEVO: Listener para enviar los datos del tiro al servidor ---
-            window.addEventListener('sendsingleplayer', async (event) => {
+            window.addEventListener('sendShot', async (event) => {
                 if (gameId && event.detail) {
                     const { gameState: gameData, ...shotData } = event.detail; // Separar gameState del resto de los datos del tiro
                     const gameRef = doc(db, "games", gameId);
@@ -1027,7 +1097,8 @@
             let errorInfo = 'Error en una promesa no manejada.\n';
             if (reason instanceof Error) {
                 errorInfo += `Error: ${reason.message}\n\nPila de llamadas:\n${reason.stack}`;
-            } else {
+            }
+            else {
                 errorInfo += `Razón: ${JSON.stringify(reason, null, 2)}`;
             }
             showErrorModal(errorInfo);
@@ -1049,14 +1120,34 @@
         // --- NUEVO: Lógica para forzar la orientación horizontal ---
         window.addEventListener('load', () => {
             const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const playButton = document.getElementById('play-button');
+            const orientationLockScreen = document.getElementById('orientation-lock-screen');
+
             if (isMobile) {
-                // Intentar bloquear la orientación en horizontal solo en móviles
-                if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                    screen.orientation.lock('landscape').catch(error => {
-                        // El error es común si el usuario no interactúa primero,
-                        // la pantalla de aviso CSS actuará como fallback.
-                    });
-                }
+                playButton.addEventListener('click', () => {
+                    // Request fullscreen
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen();
+                    } else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
+                        document.documentElement.mozRequestFullScreen();
+                    } else if (document.documentElement.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                        document.documentElement.webkitRequestFullscreen();
+                    } else if (document.documentElement.msRequestFullscreen) { /* IE/Edge */
+                        document.documentElement.msRequestFullscreen();
+                    }
+
+                    // Lock orientation
+                    if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                        screen.orientation.lock('landscape').catch(error => {
+                            console.log('Orientation lock failed:', error);
+                        });
+                    }
+
+                    // Hide the orientation lock screen
+                    orientationLockScreen.style.display = 'none';
+                });
+            } else {
+                orientationLockScreen.style.display = 'none';
             }
 
             // Escuchar cambios de orientación para asegurar que la UI se actualice
@@ -1068,7 +1159,6 @@
     <script>
         const newPowerBarContainer = document.getElementById('newPowerBarContainer');
         const newPowerBarHandle = document.getElementById('newPowerBarHandle');
-        // const powerDisplay = document.getElementById('powerDisplay'); // Ya no es necesario
 
         let isDragging = false;
         let powerPercent = 0;
@@ -1080,7 +1170,7 @@
             newPowerBarContainer.setPointerCapture(e.pointerId); // Capturar el puntero en el contenedor
             e.preventDefault(); // Prevenir el comportamiento por defecto del navegador
 
-            // --- CORRECCIÓN: Guardar la posición Y inicial y resetear la barra a 0% ---
+            // Guardar la posición Y inicial y resetear la barra a 0%
             dragStartY = e.clientY;
             powerPercent = 0;
             updatePowerBar(0); // Actualizar la UI a 0%
@@ -1092,84 +1182,63 @@
             const rect = newPowerBarContainer.getBoundingClientRect();
             const containerHeight = rect.height;
 
-            // Calcular el desplazamiento desde el inicio del arrastre
-            const dragDistance = dragStartY - e.clientY; 
+            // --- CORRECCIÓN: El arrastre ahora es de abajo hacia arriba para cargar potencia ---
+            const dragDistance = e.clientY - dragStartY;
 
-            // --- CORRECCIÓN: El 100% de potencia se alcanza al 80% del recorrido ---
-            // La potencia se calcula sobre la altura total, pero se limita a 0.8 (80%).
-            const newPowerPercent = Math.max(0, Math.min(dragDistance / containerHeight, 0.8));
+            // --- CORRECCIÓN: La potencia y la posición visual ahora se basan en el mismo cálculo ---
+            // Esto sincroniza perfectamente el movimiento del taco con el porcentaje.
+            // El recorrido total para llegar al 100% es la altura de la barra.
+            // --- CORRECCIÓN: Se limita el recorrido a 1.0 para que no pase del 100%.
+            const newPowerPercent = Math.max(0, Math.min(dragDistance / containerHeight, 1.0));
             
-            powerPercent = newPowerPercent;
-            updatePowerBar(powerPercent);
-            // --- NUEVO: Despachar evento para actualizar la potencia en powerControls.js ---
-            window.dispatchEvent(new CustomEvent('dragpower', { detail: { powerPercent: powerPercent } }));
+            // Guardamos la potencia para el cálculo de disparo y la posición visual.
+            powerPercent = newPowerPercent; 
+            // --- CORRECCIÓN: Como ya no hay sobrerrecorrido, solo pasamos un valor.
+            // Ambos argumentos (display y posición) usarán el mismo porcentaje.
+            updatePowerBar(powerPercent, powerPercent);
         });
 
         document.addEventListener('pointerup', (e) => {
             if (isDragging) {
                 isDragging = false;
-                // Liberar la captura del puntero desde el contenedor
-                // Es importante hacer esto para que otros elementos de la UI vuelvan a funcionar.
-                // Usamos un try-catch por si el puntero ya se liberó por otras razones (ej. salir de la ventana).
                 try {
                     // --- CORRECCIÓN: Usar el 'e' del evento para obtener el pointerId ---
                     if (e.pointerId) newPowerBarContainer.releasePointerCapture(e.pointerId);
-                } catch (err) {
-                    // No hacer nada si hay un error, significa que la captura ya no existía.
-                }
+                } catch (err) { /* La captura del puntero ya no existía, no hay problema. */ }
+                
+                // --- CORRECCIÓN: Mostrar la potencia real de disparo (limitada a 100%) ---
+                console.log(`Disparo con potencia: ${Math.round(Math.min(powerPercent, 1) * 100)}%`);
 
-                // --- NUEVO: Animar la barra de vuelta a 0% ---
-                // La transición CSS se encargará de la animación visual.
-                updatePowerBar(0);
-                window.dispatchEvent(new CustomEvent('sendpower', { detail: { power: powerPercent } }));
-
-                // --- NUEVO: Disparar la bola blanca localmente ---
-                if (typeof window.applyLocalShot === 'function' && typeof window.getCurrentShotAngle === 'function' && typeof window.getCurrentAimingSpin === 'function') {
-                    const currentAngle = window.getCurrentShotAngle();
-                    const currentSpin = window.getCurrentAimingSpin();
-                    window.applyLocalShot(currentAngle, powerPercent, currentSpin, null);
-                } else {
-                    console.error("Funciones globales de disparo no disponibles.");
-                }
+                // Animar la barra de vuelta a 0%
+                newPowerBarHandle.style.transition = 'top 0.3s ease-out';
+                updatePowerBar(0, 0); // Resetear tanto la potencia como la posición visual
+                // Quitar la transición después de la animación para que el arrastre sea instantáneo
+                setTimeout(() => {
+                    newPowerBarHandle.style.transition = '';
+                }, 300);
             }
         });
 
-        // --- NUEVO: Función que actualiza la UI de la barra de potencia ---
-        function updatePowerBar(percent) {
-            // --- CORRECCIÓN: Obtener las dimensiones del contenedor DENTRO de la función ---
+        // Función que actualiza la UI de la barra de potencia
+        function updatePowerBar(powerPercent, visualPercent) {
+            // Si visualPercent no se proporciona, se usa powerPercent.
+            const displayPercent = visualPercent !== undefined ? visualPercent : powerPercent;
             const containerHeight = newPowerBarContainer.offsetHeight;
-            const handleHeight = newPowerBarHandle.offsetHeight;
-            const extraDragAmount = handleHeight * 1.5;
-            const visualMaxY = containerHeight + extraDragAmount;
 
-            // Calcular las posiciones 'top' basadas en el porcentaje de potencia (que va de 0 a 1)
-            // Ambas posiciones deben calcularse de la misma manera para que estén sincronizadas.
-            // La posición del relleno va de containerHeight (abajo) a 0 (arriba).
-            const logicalY = containerHeight * (1 - percent);
-            // La posición del taco debe seguir al relleno, pero con un desplazamiento adicional
-            // que se reduce a medida que la potencia aumenta, para que la punta siempre coincida.
-            const visualY = logicalY + extraDragAmount * (1 - percent);
+            // --- CORRECCIÓN: El taco empieza abajo y se mueve hacia arriba ---
+            // 1. La posición inicial (0%) es abajo del todo. 
+            //    Para que empiece más abajo, multiplica containerHeight por un número mayor (ej: 1.5).
+            const startPosition = containerHeight * 1.4;
+            // 2. A medida que se arrastra, el taco sube. El recorrido es la altura del contenedor.
+            const topPosition = startPosition - (displayPercent * containerHeight);
 
-            newPowerBarHandle.style.top = `${visualY}px`;
-            // powerDisplay.textContent = `${Math.round((percent / 0.8) * 100)}%`; // Ya no es necesario
+            // Actualizar la posición del taco
+            newPowerBarHandle.style.top = `${topPosition}px`;
         }
 
-        window.addEventListener('sendpower', (event) => {
-            if (event.detail && typeof event.detail.power !== 'undefined') {
-                updatePowerBar(event.detail.power);
-            }
-        });
-
-
         // Inicializar la barra de potencia a 0
-        // --- CORRECCIÓN: Posicionar el relleno en la parte inferior al inicio ---
-        const initialContainerHeight = newPowerBarContainer.offsetHeight;
-        const initialHandleHeight = newPowerBarHandle.offsetHeight;
-        const initialExtraDrag = initialHandleHeight * 1.5; // Usar el mismo multiplicador que en el evento 'pointermove'
+        updatePowerBar(0, 0);
 
-        // --- CORRECCIÓN: Posicionar el taco en su punto más bajo posible, que es 0% de potencia.
-        // La posición inicial del taco es la del relleno (initialContainerHeight) más el extra.
-        newPowerBarHandle.style.top = `${initialContainerHeight + initialExtraDrag}px`;
-        // powerDisplay.textContent = '0%'; // Ya no es necesario
+
     </script>
 </body></html>
