@@ -236,11 +236,10 @@
             border-radius: 8px;
             z-index: 10;
             min-height: 25px; /* Altura mínima más pequeña */
-            max-width: 35vw; /* Ancho máximo más restrictivo */
             width: auto; /* Ancho automático para el contenido */
             align-items: center;
             box-sizing: border-box;
-            flex-shrink: 1; /* Permite que el contenedor se encoja si es necesario */
+            /* flex-shrink y max-width eliminados para permitir que el contenedor crezca */
         }
         .player-avatar {
             width: 3.5vw; /* Tamaño responsivo aún más pequeño para el avatar */
@@ -270,7 +269,7 @@
             width: 2.5vw; /* Tamaño responsivo aún más pequeño para las bolas */
             height: 2.5vw; 
             border-radius: 50%;
-            /* flex-shrink: 0; */ /* Eliminado para permitir que se encoja */
+            flex-shrink: 0; /* No permitir que el icono se encoja */
             background-size: 115%;
             background-position: center;
             background-repeat: no-repeat;
@@ -917,7 +916,7 @@
                         console.error("Error al sincronizar el apuntado:", error);
                     }
                 }
-            }, 100); // Límite de 100ms.
+            }, 500); // Límite de 500ms.
 
             // --- NUEVO: Función para enviar la actualización de la potencia a Firestore ---
             const sendPowerUpdate = throttle(async (power) => {
@@ -930,7 +929,7 @@
                         console.error("Error al sincronizar la potencia:", error);
                     }
                 }
-            }, 100); // Mismo límite para la potencia
+            }, 500); // Mismo límite para la potencia
 
             let lastSentCueBallPosition = null; // Variable para almacenar la última posición enviada
 

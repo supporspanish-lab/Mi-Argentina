@@ -326,6 +326,13 @@ export function updateTurnTimerUI(player, percent) {
  */
 function toScreenPosition(object, camera) {
     const vector = new THREE.Vector3();
+
+    // Forzar la actualización de las matrices del objeto y sus ancestros
+    object.updateWorldMatrix(true, false);
+    // Forzar la actualización de las matrices de la cámara
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+
     // Obtener la posición mundial del objeto
     object.getWorldPosition(vector);
     // Proyectar la posición 3D en el espacio 2D de la cámara
@@ -728,7 +735,7 @@ export function updatePlayerInfoUI(player1Data, player2Data) {
         if (player1NameEl) player1NameEl.textContent = player1Data.username || 'Jugador 1';
         if (player1AvatarImg && player1AvatarSvg) {
             if (player1Data.profileImageName) {
-                player1AvatarImg.src = `./imajenes/Perfil/${player1Data.profileImageName}`;
+                player1AvatarImg.src = `./imajenes/perfil/${player1Data.profileImageName}`;
                 player1AvatarImg.style.display = 'block';
                 player1AvatarImg.classList.add('fade-in'); // Add fade-in class
                 player1AvatarSvg.style.display = 'block'; // Keep SVG visible for timer
@@ -748,7 +755,7 @@ export function updatePlayerInfoUI(player1Data, player2Data) {
         if (player2NameEl) player2NameEl.textContent = player2Data.username || 'Jugador 2';
         if (player2AvatarImg && player2AvatarSvg) {
             if (player2Data.profileImageName) {
-                player2AvatarImg.src = `./imajenes/Perfil/${player2Data.profileImageName}`;
+                player2AvatarImg.src = `./imajenes/perfil/${player2Data.profileImageName}`;
                 player2AvatarImg.style.display = 'block';
                 player2AvatarImg.classList.add('fade-in'); // Add fade-in class
                 player2AvatarSvg.style.display = 'block'; // Keep SVG visible for timer

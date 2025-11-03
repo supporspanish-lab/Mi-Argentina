@@ -909,7 +909,7 @@
                     <div class="user-info">
                         <span id="user-display-name">Cargando...</span>
                         <div class="user-balance">
-                            <span>$1,250</span>
+                            <span>$0,00</span>
                         </div>
                     </div>
                     <div class="menu-container">
@@ -1287,222 +1287,258 @@
                 purgeStaleGames();
 
                 let userWaitingGameId = null;
-                const unsubscribe = onSnapshot(waitingGamesQuery, (querySnapshot) => {
-                    gameCarousel.innerHTML = '';
-                    let userIsWaiting = false;
-                    const now = new Date();
+                let pollingIntervalId = null; // Variable para almacenar el ID del intervalo
 
-                    querySnapshot.forEach(docSnap => {
-                        const gameData = docSnap.data();
-                        const gameId = docSnap.id;
+                const fetchWaitingGames = async () => {
+                    try {
+                        const querySnapshot = await getDocs(waitingGamesQuery);
+                        gameCarousel.innerHTML = '';
+                        let userIsWaiting = false;
+                        const now = new Date();
 
-                        if (gameData.player1.uid === user.uid) {
-                            userIsWaiting = true;
-                            userWaitingGameId = gameId;
+                        querySnapshot.forEach(docSnap => {
+                            const gameData = docSnap.data();
+                            const gameId = docSnap.id;
+
+                            if (gameData.player1.uid === user.uid) {
+                                userIsWaiting = true;
+                                userWaitingGameId = gameId;
+                            } else {
+                                const card = document.createElement('div');
+                                card.className = 'game-card waiting';
+                                card.dataset.gameId = gameId;
+                                card.innerHTML = `
+                                    <div class="card-player-info">
+                                        <span class="player-name-waiting">${gameData.player1.username}</span>
+                                        <span class="status-text">está esperando...</span>
+                                    </div>
+                                    <!-- NUEVO: Mostrar monto de la apuesta -->
+                                    ${gameData.betAmount > 0 ? `
+                                    <div class="card-bet-amount">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm1.5-3.845V11h-3v-1.034c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825V12.5h3v-1.033c-.967-.125-1.51-.28-1.51-.795 0-.515.543-.69 1.51-.825V8.5h-3V7.5h3v1.033c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825z"/></svg>
+                                        <span>$${gameData.betAmount.toLocaleString()}</span>
+                                    </div>
+                                    ` : ''}
+                                    <div class="card-player-count">1/2</div>
+                                `;
+                                card.addEventListener('click', async () => {
+                                    // --- NUEVO: Validar saldo del jugador 2 antes de unirse ---
+                                    if (currentUserProfile && gameData.betAmount > currentUserProfile.balance) {
+                                        alert('No tienes saldo suficiente para unirte a esta partida.');
+                                        return;
+                                    }
+
+                                    const random = Math.random();
+                                    const player1Uid = gameData.player1.uid;
+                                    const player2Uid = user.uid;
+                                    const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
+
+                                    // --- NUEVO: Descontar saldo del jugador 2 ---
+                                    const player2DocRef = doc(db, "saldo", user.uid);
+                                    const player2Snap = await getDoc(player2DocRef);
+                                    if (player2Snap.exists()) {
+                                        const currentBalance = player2Snap.data().balance || 0;
+                                        await updateDoc(player2DocRef, {
+                                            balance: currentBalance - gameData.betAmount
+                                        });
+                                        console.log(`Deducted ${gameData.betAmount} from ${user.uid}. New balance: ${currentBalance - gameData.betAmount}`);
+                                    }
+
+                                    await updateDoc(doc(db, "games", gameId), {
+                                        player2: { uid: player2Uid, username: userDisplayName.textContent },
+                                        status: "starting",
+                                        currentPlayerUid: startingPlayerUid,
+                                        turn: 1,
+                                        // --- NUEVO: Descontar saldo del jugador 2 ---
+                                        player2BalanceTransaction: {
+                                            amount: -gameData.betAmount,
+                                            type: 'bet',
+                                            gameId: gameId,
+                                            timestamp: new Date()
+                                        }
+                                    }).then(() => { window.location.href = `../index.html?gameId=${gameId}`; });
+                                });
+                                gameCarousel.appendChild(card);
+                            }
+                        });
+
+                        if (userIsWaiting) {
+                            gameCarousel.style.display = 'none';
+                            waitingScreen.style.display = 'flex';
                         } else {
-                            const card = document.createElement('div');
-                            card.className = 'game-card waiting';
-                            card.dataset.gameId = gameId;
-                            card.innerHTML = `
-                                <div class="card-player-info">
-                                    <span class="player-name-waiting">${gameData.player1.username}</span>
-                                    <span class="status-text">está esperando...</span>
-                                </div>
-                                <!-- NUEVO: Mostrar monto de la apuesta -->
-                                ${gameData.betAmount > 0 ? `
-                                <div class="card-bet-amount">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm1.5-3.845V11h-3v-1.034c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825V12.5h3v-1.033c-.967-.125-1.51-.28-1.51-.795 0-.515.543-.69 1.51-.825V8.5h-3V7.5h3v1.033c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825z"/></svg>
-                                    <span>$${gameData.betAmount.toLocaleString()}</span>
-                                </div>
-                                ` : ''}
-                                <div class="card-player-count">1/2</div>
+                            gameCarousel.style.display = 'flex';
+                            waitingScreen.style.display = 'none';
+
+                            const createCard = document.createElement('div');
+                            createCard.className = 'game-card create-new';
+                            createCard.innerHTML = `
+                                <div class="create-icon">+</div>
+                                <span class="create-text">Crear Partida</span>
                             `;
-                            card.addEventListener('click', async () => {
-                                // --- NUEVO: Validar saldo del jugador 2 antes de unirse ---
-                                if (currentUserProfile && gameData.betAmount > currentUserProfile.balance) {
-                                    alert('No tienes saldo suficiente para unirte a esta partida.');
+                            createCard.addEventListener('click', async () => {
+                                // --- MODIFICADO: Abrir el modal de apuesta en lugar de crear la partida directamente ---
+                                betAmountInput.value = '1000'; // Valor por defecto
+                                betErrorMessage.textContent = '';
+                                betModal.classList.add('visible');
+                            });
+                            // --- NUEVO: Lógica del botón de confirmar apuesta ---
+                            confirmBetBtn.onclick = async () => {
+                                const betAmount = parseFloat(betAmountInput.value);
+
+                                // Validaciones
+                                if (isNaN(betAmount) || betAmount < 1000) {
+                                    betErrorMessage.textContent = 'La apuesta mínima es de $1,000.';
+                                    return;
+                                }
+                                if (currentUserProfile && betAmount > currentUserProfile.balance) {
+                                    betErrorMessage.textContent = 'No tienes saldo suficiente para esta apuesta.';
                                     return;
                                 }
 
-                                const random = Math.random();
-                                const player1Uid = gameData.player1.uid;
-                                const player2Uid = user.uid;
-                                const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
+                                betErrorMessage.textContent = '';
+                                confirmBetBtn.disabled = true;
+                                confirmBetBtn.textContent = 'Creando...';
 
-                                // --- NUEVO: Descontar saldo del jugador 2 ---
-                                const player2DocRef = doc(db, "saldo", user.uid);
-                                const player2Snap = await getDoc(player2DocRef);
-                                if (player2Snap.exists()) {
-                                    const currentBalance = player2Snap.data().balance || 0;
-                                    await updateDoc(player2DocRef, {
-                                        balance: currentBalance - gameData.betAmount
-                                    });
-                                    console.log(`Deducted ${gameData.betAmount} from ${user.uid}. New balance: ${currentBalance - gameData.betAmount}`);
-                                }
+                                // --- Lógica de creación de partida (movida aquí) ---
+                                const gamesRef = collection(db, "games");
+                                const ballPositions = [];
+                                const RACK_SPACING_DIAMETER = 24;
+                                const TABLE_WIDTH = 1000;
+                                const TABLE_HEIGHT = 500;
+                                const startX = TABLE_WIDTH * 0.70;
+                                const startY = TABLE_HEIGHT / 2;
+                                const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+                                let ballIndex = 0;
 
-                                await updateDoc(doc(db, "games", gameId), {
-                                    player2: { uid: player2Uid, username: userDisplayName.textContent },
-                                    status: "starting",
-                                    currentPlayerUid: startingPlayerUid,
-                                    turn: 1,
-                                    // --- NUEVO: Descontar saldo del jugador 2 ---
-                                    player2BalanceTransaction: {
-                                        amount: -gameData.betAmount,
-                                        type: 'bet',
-                                        gameId: gameId,
-                                        timestamp: new Date()
+                                for (let i = 0; i < 5; i++) {
+                                    for (let j = 0; j <= i; j++) {
+                                        const ballNumber = ballOrder[ballIndex++];
+                                        ballPositions.push({
+                                            number: ballNumber,
+                                            x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                                            y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                                            isActive: true
+                                        });
                                     }
-                                }).then(() => { window.location.href = `../index.html?gameId=${gameId}`; });
+                                }
+                                ballPositions.push({
+                                    number: null,
+                                    x: TABLE_WIDTH / 4,
+                                    y: TABLE_HEIGHT / 2,
+                                    isActive: true
+                                });
+
+                                // --- NUEVO: Descontar el saldo del jugador 1 ---
+                                const userDocRef = doc(db, "saldo", user.uid);
+                                const newBalance = currentUserProfile.balance - betAmount;
+                                await updateDoc(userDocRef, {
+                                    balance: newBalance
+                                });
+                                betModal.classList.remove('visible'); // Cerrar modal
+
+                                const newGame = await addDoc(collection(db, "games"), {
+                                    player1: { uid: user.uid, username: userDisplayName.textContent },
+                                    player2: null,
+                                    status: "waiting",
+                                    createdAt: new Date(),
+                                    currentPlayerUid: null,
+                                    balls: ballPositions,
+                                    turn: 1,
+                                    betAmount: betAmount // --- CORREGIDO: Guardar la apuesta
+                                });
+
+                                onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
+                                    if (gameSnap.data()?.status === "starting") {
+                                        window.location.href = `../index.html?gameId=${newGame.id}`;
+                                    }
+                                });
+                            };
+                            gameCarousel.appendChild(createCard);
+
+                            const createTestGameCard = document.createElement('div');
+                            createTestGameCard.className = 'game-card create-new';
+                            createTestGameCard.innerHTML = `
+                                <div class="create-icon">&#9881;</div>
+                                <span class="create-text">Jugar 1 vs 1 (Test)</span>
+                            `;
+                            createTestGameCard.addEventListener('click', async () => {
+                                createTestGameCard.style.pointerEvents = 'none';
+
+                                const ballPositions = [];
+                                const RACK_SPACING_DIAMETER = 24;
+                                const TABLE_WIDTH = 1000;
+                                const TABLE_HEIGHT = 500;
+                                const startX = TABLE_WIDTH * 0.70;
+                                const startY = TABLE_HEIGHT / 2;
+                                const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+                                let ballIndex = 0;
+
+                                for (let i = 0; i < 5; i++) {
+                                    for (let j = 0; j <= i; j++) {
+                                        const ballNumber = ballOrder[ballIndex++];
+                                        ballPositions.push({
+                                            number: ballNumber,
+                                            x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                                            y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                                            isActive: true
+                                        });
+                                    }
+                                }
+                                ballPositions.push({
+                                    number: null,
+                                    x: TABLE_WIDTH / 4,
+                                    y: TABLE_HEIGHT / 2,
+                                    isActive: true
+                                });
+
+                                const newGame = await addDoc(gamesRef, {
+                                    player1: { uid: user.uid, username: userDisplayName.textContent },
+                                    player2: { uid: user.uid, username: userDisplayName.textContent + " (P2)" },
+                                    status: "starting",
+                                    createdAt: new Date(),
+                                    betAmount: 0, // Partida de prueba sin apuesta
+                                    currentPlayerUid: user.uid,
+                                    balls: ballPositions,
+                                    turn: 1
+                                });
+
+                                window.location.href = `../index.html?gameId=${newGame.id}`;
                             });
-                            gameCarousel.appendChild(card);
+                            gameCarousel.appendChild(createTestGameCard);
                         }
-                    });
-
-                    if (userIsWaiting) {
-                        gameCarousel.style.display = 'none';
-                        waitingScreen.style.display = 'flex';
-                    } else {
-                        gameCarousel.style.display = 'flex';
-                        waitingScreen.style.display = 'none';
-
-                        const createCard = document.createElement('div');
-                        createCard.className = 'game-card create-new';
-                        createCard.innerHTML = `
-                            <div class="create-icon">+</div>
-                            <span class="create-text">Crear Partida</span>
-                        `;
-                        createCard.addEventListener('click', async () => {
-                            // --- MODIFICADO: Abrir el modal de apuesta en lugar de crear la partida directamente ---
-                            betAmountInput.value = '1000'; // Valor por defecto
-                            betErrorMessage.textContent = '';
-                            betModal.classList.add('visible');
-                        });
-                        // --- NUEVO: Lógica del botón de confirmar apuesta ---
-                        confirmBetBtn.onclick = async () => {
-                            const betAmount = parseFloat(betAmountInput.value);
-
-                            // Validaciones
-                            if (isNaN(betAmount) || betAmount < 1000) {
-                                betErrorMessage.textContent = 'La apuesta mínima es de $1,000.';
-                                return;
-                            }
-                            if (currentUserProfile && betAmount > currentUserProfile.balance) {
-                                betErrorMessage.textContent = 'No tienes saldo suficiente para esta apuesta.';
-                                return;
-                            }
-
-                            betErrorMessage.textContent = '';
-                            confirmBetBtn.disabled = true;
-                            confirmBetBtn.textContent = 'Creando...';
-
-                            // --- Lógica de creación de partida (movida aquí) ---
-                            const gamesRef = collection(db, "games");
-                            const ballPositions = [];
-                            const RACK_SPACING_DIAMETER = 24;
-                            const TABLE_WIDTH = 1000;
-                            const TABLE_HEIGHT = 500;
-                            const startX = TABLE_WIDTH * 0.75;
-                            const startY = TABLE_HEIGHT / 2;
-                            const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
-                            let ballIndex = 0;
-
-                            for (let i = 0; i < 5; i++) {
-                                for (let j = 0; j <= i; j++) {
-                                    const ballNumber = ballOrder[ballIndex++];
-                                    ballPositions.push({
-                                        number: ballNumber,
-                                        x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
-                                        y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
-                                        isActive: true
-                                    });
-                                }
-                            }
-                            ballPositions.push({
-                                number: null,
-                                x: TABLE_WIDTH / 4,
-                                y: TABLE_HEIGHT / 2,
-                                isActive: true
-                            });
-
-                            // --- NUEVO: Descontar el saldo del jugador 1 ---
-                            const userDocRef = doc(db, "saldo", user.uid);
-                            const newBalance = currentUserProfile.balance - betAmount;
-                            await updateDoc(userDocRef, {
-                                balance: newBalance
-                            });
-                            betModal.classList.remove('visible'); // Cerrar modal
-
-                            const newGame = await addDoc(collection(db, "games"), {
-                                player1: { uid: user.uid, username: userDisplayName.textContent },
-                                player2: null,
-                                status: "waiting",
-                                createdAt: new Date(),
-                                currentPlayerUid: null,
-                                balls: ballPositions,
-                                turn: 1,
-                                betAmount: betAmount // --- CORREGIDO: Guardar la apuesta
-                            });
-
-                            onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
-                                if (gameSnap.data()?.status === "starting") {
-                                    window.location.href = `../index.html?gameId=${newGame.id}`;
-                                }
-                            });
-                        };
-                        gameCarousel.appendChild(createCard);
-
-                        const createTestGameCard = document.createElement('div');
-                        createTestGameCard.className = 'game-card create-new';
-                        createTestGameCard.innerHTML = `
-                            <div class="create-icon">&#9881;</div>
-                            <span class="create-text">Jugar 1 vs 1 (Test)</span>
-                        `;
-                        createTestGameCard.addEventListener('click', async () => {
-                            createTestGameCard.style.pointerEvents = 'none';
-
-                            const ballPositions = [];
-                            const RACK_SPACING_DIAMETER = 24;
-                            const TABLE_WIDTH = 1000;
-                            const TABLE_HEIGHT = 500;
-                            const startX = TABLE_WIDTH * 0.75;
-                            const startY = TABLE_HEIGHT / 2;
-                            const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
-                            let ballIndex = 0;
-
-                            for (let i = 0; i < 5; i++) {
-                                for (let j = 0; j <= i; j++) {
-                                    const ballNumber = ballOrder[ballIndex++];
-                                    ballPositions.push({
-                                        number: ballNumber,
-                                        x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
-                                        y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
-                                        isActive: true
-                                    });
-                                }
-                            }
-                            ballPositions.push({
-                                number: null,
-                                x: TABLE_WIDTH / 4,
-                                y: TABLE_HEIGHT / 2,
-                                isActive: true
-                            });
-
-                            const newGame = await addDoc(gamesRef, {
-                                player1: { uid: user.uid, username: userDisplayName.textContent },
-                                player2: { uid: user.uid, username: userDisplayName.textContent + " (P2)" },
-                                status: "starting",
-                                createdAt: new Date(),
-                                betAmount: 0, // Partida de prueba sin apuesta
-                                currentPlayerUid: user.uid,
-                                balls: ballPositions,
-                                turn: 1
-                            });
-
-                            window.location.href = `../index.html?gameId=${newGame.id}`;
-                        });
-                        gameCarousel.appendChild(createTestGameCard);
+                    } catch (error) {
+                        console.error("Error fetching waiting games:", error);
                     }
+                };
+
+                // Iniciar el polling
+                pollingIntervalId = setInterval(fetchWaitingGames, 5000); // Polling cada 5 segundos
+
+                // Limpiar el intervalo cuando el usuario cierra sesión o abandona la página
+                const stopPolling = () => {
+                    if (pollingIntervalId) {
+                        clearInterval(pollingIntervalId);
+                        pollingIntervalId = null;
+                    }
+                };
+
+                logoutBtn.addEventListener('click', async () => {
+                    stopPolling(); // Detener el polling al cerrar sesión
+                    await cleanupWaitingGame();
+                    logout().then(() => {
+                        window.location.href = 'login.html';
+                    }).catch((error) => {
+                        console.error('Error al cerrar sesión:', error);
+                    });
                 });
+
+                window.addEventListener('beforeunload', async (event) => {
+                    stopPolling(); // Detener el polling al abandonar la página
+                    await cleanupWaitingGame();
+                });
+
+                // Llamar a fetchWaitingGames una vez al inicio para cargar los juegos
+                fetchWaitingGames();
 
                 cancelWaitBtn.addEventListener('click', async () => {
                     await cleanupWaitingGame();

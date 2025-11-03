@@ -4,6 +4,7 @@ import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
+import { db, doc, getDoc, updateDoc } from './login/auth.js';
 
 /**
  * Función de prueba para revisar el estado antes de mostrar la UI.
@@ -27,6 +28,11 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             const playerAssignmentsAntesDelTurno = { ...playerAssignmentsAlInicioTurno }; // Guardar las asignaciones iniciales.
 
             let acabaDeAsignar = false; // --- FIX: Bandera para saber si la asignación ocurrió en ESTE turno.
+
+            // --- NUEVO: Detección de Faltas ---
+            let faltaCometida = false; // Falta que solo cambia el turno
+            let faltaConBolaEnMano = false; // Falta que da "bola en mano" al oponente
+            let motivoFalta = ""; // --- NUEVO: Variable para almacenar la razón de la falta
 
         
 
@@ -72,13 +78,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-            // --- NUEVO: Detección de Faltas ---
 
-            let faltaCometida = false; // Falta que solo cambia el turno
-
-            let faltaConBolaEnMano = false; // Falta que da "bola en mano" al oponente
-
-            let motivoFalta = ""; // --- NUEVO: Variable para almacenar la razón de la falta
 
         
 
@@ -160,6 +160,12 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
                         if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
 
+                        // La bola aparece en la zona de saque inicial.
+
+                        cueBall.mesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, BALL_RADIUS);
+
+                        if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
+
                     }
 
                 }
@@ -188,21 +194,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-            // --- NUEVO: Falta por no entronar bola para asignar en mesa abierta ---
 
-            const bolaDeColorEntronerada = bolasEntroneradasEsteTurno.some(b => b.number !== null && b.number !== 8);
-
-            if (!bolasAsignadasAntesDelTurno && primeraBolaGolpeadaEsteTurno && !bolaDeColorEntronerada && !faltaCometida) {
-
-                faltaCometida = true;
-
-                faltaConBolaEnMano = true;
-
-                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
-
-                motivoFalta = `${currentUsernameForFoul} no entronó una bola en mesa abierta. Bola en mano para el oponente.`;
-
-            }
 
         
 
@@ -224,11 +216,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
             });
 
-        
-
             // --- NUEVO: Falta por no entronar una bola válida ---
 
-            if (bolasAsignadasAlInicioTurno && primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida) {
+            if (primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida) {
 
                 console.log("No se ha entronado una bola válida.");
 
@@ -241,6 +231,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                 motivoFalta = `${currentUsernameForFoul} no metió una bola válida. Bola en mano para el oponente.`;
 
             }
+
+        
+
 
         
 
@@ -553,7 +546,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
     // --- CORRECCIÓN: Lógica de Cliente Autoritativo para actualizar el servidor ---
     if (gameRef) {
-        const { doc, getDoc, updateDoc } = await import('./login/auth.js');        
+        
         const finalGameState = getGameState();
 
         // --- CORRECCIÓN: Centralizar la lógica de cambio de turno aquí ---
