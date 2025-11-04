@@ -6,7 +6,11 @@
     <title>BlackBall - Panel de Administración</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- SOLUCIÓN: Evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- NUEVO: SDK de PocketBase -->
+    <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
     <style>
         :root {
             --primary-color: #00f291;
@@ -254,6 +258,18 @@
             </table>
         </div>
 
+        <!-- NUEVO: Sección de Administración de PocketBase -->
+        <div class="section-container">
+            <h2>Gestión de PocketBase</h2>
+            <p style="color: var(--text-secondary-color); margin-bottom: 15px;">
+                Usa esta herramienta solo para la configuración inicial del servidor.
+            </p>
+            <button id="create-pb-collection-btn" class="action-button" style="background-color: orange; color: #000; padding: 10px 15px; font-size: 14px;">
+                Crear Colección 'online_users'
+            </button>
+            <p id="pb-status-message" style="margin-top: 15px; font-weight: bold;"></p>
+        </div>
+
         <button class="back-button" onclick="window.history.back();">Volver</button>
     </div>
 
@@ -420,6 +436,83 @@
                     window.location.href = 'login.html';
                 }
             });
+        });
+
+        // --- NUEVO: Lógica para crear colección en PocketBase ---
+        const createPbCollectionBtn = document.getElementById('create-pb-collection-btn');
+        const pbStatusMessage = document.getElementById('pb-status-message');
+
+        createPbCollectionBtn.addEventListener('click', async () => {
+            pbStatusMessage.textContent = '';
+            pbStatusMessage.style.color = 'var(--text-color)';
+
+            const adminEmail = prompt("Introduce el email de administrador de PocketBase:");
+            if (!adminEmail) return;
+
+            const adminPassword = prompt("Introduce la contraseña de administrador de PocketBase:");
+            if (!adminPassword) return;
+
+            pbStatusMessage.textContent = 'Conectando con PocketBase...';
+
+            // IMPORTANTE: La URL debe ser la de tu servidor de PocketBase
+            const pb = new PocketBase('https://mi-servidor-h33w.onrender.com');
+
+            try {
+                // 1. Autenticar como administrador
+                await pb.admins.authWithPassword(adminEmail, adminPassword);
+                pbStatusMessage.textContent = 'Autenticado como admin. Creando colección...';
+
+                // 2. Definir el esquema y las reglas de la colección
+                const collectionSchema = [
+                    {
+                        "name": "userId",
+                        "type": "text",
+                        "required": true,
+                        "options": {}
+                    }
+                ];
+                const collectionRules = {
+                    "listRule": "@request.auth.id != \"\"",
+                    "viewRule": "@request.auth.id != \"\"",
+                    "createRule": "@request.auth.id = @request.data.userId",
+                    "updateRule": "@request.auth.id = userId",
+                    "deleteRule": "@request.auth.id = userId"
+                };
+
+                // 3. Crear la colección
+                await pb.collections.create({
+                    "name": "online_users",
+                    "type": "base",
+                    "schema": collectionSchema,
+                    ...collectionRules
+                });
+
+                pbStatusMessage.style.color = 'var(--primary-color)';
+                pbStatusMessage.textContent = "¡Éxito! La colección 'online_users' ha sido creada correctamente.";
+
+            } catch (error) {
+                pbStatusMessage.style.color = 'var(--red-color)';
+                // --- MODIFICADO: Comprobar si el error es porque la colección ya existe (más robusto) ---
+                if (error.status === 400 && error.data?.data?.name?.message?.includes("already exists")) {
+                    // Este error específico significa que la colección ya existe
+                    pbStatusMessage.textContent = "Información: La colección 'online_users' ya existe.";
+                } else {
+                    console.error("Error al crear la colección en PocketBase:", error);
+                    pbStatusMessage.textContent = `Error: ${error.data?.message || error.message}`;
+                }
+            } finally {
+                // 4. MUY IMPORTANTE: Cerrar la sesión de administrador inmediatamente (usando la nueva propiedad 'isSuperuser')
+                if (pb.authStore.isSuperuser) {
+                    pb.authStore.clear();
+                }
+            }
+        });
+    </script>
+</body>
+</html>         if (pb.authStore.isSuperuser) {
+                    pb.authStore.clear();
+                }
+            }
         });
     </script>
 </body>
