@@ -1253,8 +1253,8 @@
         }
 
         function showBalanceUpdateNotification(newBalance, oldBalance) {
-            if (!('Notification' in window) || Notification.permission !== 'granted') {
-                return; // No hacer nada si no hay permiso
+            if (!('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) {
+                return; // No hacer nada si no hay permiso o no hay service worker
             }
 
             const amountChange = newBalance - oldBalance;
@@ -1267,7 +1267,11 @@
                 icon: '../imajenes/pwa.png' // Puedes usar un ícono genérico o el del perfil
             };
 
-            new Notification(title, options);
+            navigator.serviceWorker.getRegistration().then(registration => {
+                if (registration) {
+                    registration.showNotification(title, options);
+                }
+            });
         }
 
         // --- NUEVO: Función para animar el cambio de saldo ---

@@ -122,18 +122,27 @@ window.addEventListener('receiveaim', (event) => {
 
     // --- NUEVO: Lógica para recibir el estado de "bola en mano" y la posición ---
     const myUid = auth.currentUser?.uid;
-    if (gameData.cueBallPosition && cueBall && cueBall.mesh && gameData.ballInHandFor !== myUid) {
-        cueBall.mesh.position.x = gameData.cueBallPosition.x;
-        cueBall.mesh.position.y = gameData.cueBallPosition.y;
-        if (cueBall.shadowMesh) {
-            cueBall.shadowMesh.position.set(gameData.cueBallPosition.x, gameData.cueBallPosition.y, 0.1);
+    if (gameData.cueBallPosition && cueBall && cueBall.mesh) {
+        // Si el servidor indica una posición para la bola blanca, la aplicamos.
+        // La comprobación de isMovingCueBall() (en inputManager) evitará que esto sobreescriba la posición
+        // mientras el jugador arrastra la bola.
+        if (!isMovingCueBall()) {
+            cueBall.mesh.position.x = gameData.cueBallPosition.x;
+            cueBall.mesh.position.y = gameData.cueBallPosition.y;
+            if (cueBall.shadowMesh) {
+                cueBall.shadowMesh.position.set(gameData.cueBallPosition.x, gameData.cueBallPosition.y, 0.1);
+            }
         }
-    } else if (gameData.cueBallPosition && gameData.ballInHandFor === myUid) {
-        // Not applying server cue ball position because local player has ball in hand.
-    } else if (!gameData.cueBallPosition) {
-        // No cueBallPosition in gameData.
-    } else {
-        // Conditions for applying server cue ball position not met.
+
+        // Si el servidor indica que YO tengo bola en mano, me aseguro de que la bola esté activa y visible.
+        if (gameData.ballInHandFor === myUid) {
+            cueBall.isPocketed = false;
+            cueBall.pocketedState = null;
+            cueBall.isActive = true;
+            cueBall.mesh.visible = true;
+            if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
+            setPlacingCueBall(true); // Asegurarse de que el estado de colocación esté activo.
+        }
     }
 
 });
@@ -195,33 +204,38 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
                         if (!alreadyPocketed) {
                             addPocketedBall(ball);
                             if (gameRef && isMyTurn) {
-                                const gameState = getOnlineGameData();
+                                const gameState = getGameState();
                                 const ballStates = gameState.balls || [];
                                 const ballToUpdate = ballStates.find(b => b.number === ball.number);
                                 if (ballToUpdate) {
                                     ballToUpdate.isActive = false;
-                                    if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
-                                        const { assignPlayerTypes } = await import('./gameState.js');
-                                        const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-                                        const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
-                                        const { playerAssignments: newPlayerAssignments, ballsAssigned: newBallsAssigned } = assignPlayerTypes(
-                                            currentPlayerNumber,
-                                            type,
-                                            gameState.playerAssignments,
-                                            gameState.ballsAssigned
-                                        );
-                                        gameState.ballsAssigned = newBallsAssigned;
-                                        gameState.playerAssignments = newPlayerAssignments;
-                                        if (gameRef) {
-                                            await updateDoc(gameRef, {
-                                                ballsAssigned: newBallsAssigned,
-                                                playerAssignments: newPlayerAssignments
-                                            });
+                                    
+                                    // --- SOLUCIÓN: Añadir una guarda para asegurar que el estado del juego y las asignaciones de jugador existan ---
+                                    // Esto previene un error de carrera si los datos de Firestore aún no han llegado cuando se entronera una bola.
+                                    if (gameState && gameState.playerAssignments) {
+                                        if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
+                                            const { assignPlayerTypes } = await import('./gameState.js');
+                                            const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                                            const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
+                                            const { playerAssignments: newPlayerAssignments, ballsAssigned: newBallsAssigned } = assignPlayerTypes(
+                                                currentPlayerNumber,
+                                                type,
+                                                gameState.playerAssignments,
+                                                gameState.ballsAssigned
+                                            );
+                                            gameState.ballsAssigned = newBallsAssigned;
+                                            gameState.playerAssignments = newPlayerAssignments;
+                                            if (gameRef) {
+                                                await updateDoc(gameRef, {
+                                                    ballsAssigned: newBallsAssigned,
+                                                    playerAssignments: newPlayerAssignments
+                                                });
+                                            }
                                         }
+                                        const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
+                                        const playerType = gameState.playerAssignments[currentPlayerNumber] || 'no asignado';
+                                        window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
                                     }
-                                    const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
-                                    const playerType = gameState.playerAssignments[currentPlayerNumber] || 'no asignado';
-                                    window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
                                 }
                             }
                         }

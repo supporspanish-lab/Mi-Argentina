@@ -37,7 +37,7 @@ export function shoot(powerPercent) {
     }
 
     // Amortiguar la potencia en tiros extremos para evitar inestabilidad.
-    const maxPower = 100 * 25; // --- AJUSTE: Reducido de 40 a 32 para bajar la fuerza máxima.
+    const maxPower = 100 * 37.5; // --- AJUSTE: Aumentado de 25 a 37.5 para subir la fuerza máxima.
     const SAFE_POWER_THRESHOLD = maxPower * 0.9;
     let power = shotPower * maxPower;
 

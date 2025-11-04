@@ -37,6 +37,7 @@ export function startShot() {
     if (gameOver) return; // No permitir tiros si el juego ha terminado
     shotInProgress = true;
     shotStartTime = performance.now(); // --- NUEVO: Registrar el tiempo de inicio
+    pocketedThisTurn = []; // Reiniciar las bolas entroneradas para el nuevo tiro
     firstBallHitThisTurn = null; // --- NUEVO: Reiniciar en cada tiro
     isTurnTimerActiveState = false; // --- SOLUCIÓN: Detener el temporizador cuando se realiza un tiro
 }

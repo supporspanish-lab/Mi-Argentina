@@ -70,7 +70,11 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
     // --- NUEVO: Bypassar el Service Worker para las peticiones de Firebase ---
     const requestUrl = new URL(event.request.url);
-    if (requestUrl.hostname.includes('googleapis.com') || requestUrl.hostname.includes('firebase')) {
+    // --- MODIFICADO: Añadir PocketBase (onrender.com) y Google a la lista de exclusiones ---
+    if (requestUrl.hostname.includes('googleapis.com') || 
+        requestUrl.hostname.includes('firebase') ||
+        requestUrl.hostname.includes('google.com') || // Para evitar errores con cleardot.gif, etc.
+        requestUrl.hostname.includes('onrender.com')) {
         return fetch(event.request); // Ir directamente a la red para Firebase
     }
 
@@ -98,10 +102,9 @@ self.addEventListener('fetch', (event) => {
         }).catch(() => {
             // Si la petición a la red falla, buscamos en la caché.
             return caches.match(event.request).then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse; // Devolver la versión en caché si existe.
-                }
-                // Si no está ni en la red ni en la caché, la petición fallará.
+                // Si está en caché, la devolvemos. Si no, la promesa se resuelve a 'undefined'
+                // y el navegador manejará el error de red como lo haría normalmente.
+                return cachedResponse;
             });
         })
     );
