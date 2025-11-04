@@ -1298,7 +1298,7 @@
                 });
                 
                 const gamesRef = collection(db, "games");
-                const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"));
+                const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"), where("player2", "==", null));
                 const STALE_GAME_MINUTES = 10;
 
                 const purgeStaleGames = async () => {
@@ -1357,7 +1357,18 @@
                                     ` : ''}
                                     <div class="card-player-count">1/2</div>
                                 `;
+                                // --- MEJORA DE SEGURIDAD ---
                                 card.addEventListener('click', async () => {
+                                    // Volver a verificar el estado de la partida antes de unirse
+                                    const gameDocRef = doc(db, "games", gameId);
+                                    const gameSnap = await getDoc(gameDocRef);
+
+                                    if (!gameSnap.exists() || gameSnap.data().status !== 'waiting') {
+                                        alert('Esta partida ya no está disponible o alguien más se unió primero.');
+                                        // Opcional: podrías refrescar la lista de partidas aquí
+                                        return;
+                                    }
+
                                     // --- NUEVO: Validar saldo del jugador 2 antes de unirse ---
                                     if (currentUserProfile && gameData.betAmount > currentUserProfile.balance) {
                                         alert('No tienes saldo suficiente para unirte a esta partida.');
