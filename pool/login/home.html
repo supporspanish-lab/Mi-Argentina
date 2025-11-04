@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- SOLUCIÓN: Evita el error 404 de favicon.ico en la consola -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="manifest" href="../manifest.json">
     <style>
       :root {
         --primary-color: #00f291;
@@ -1208,22 +1209,27 @@
                             const gameSnap = await getDoc(gameDocRef);
                             if (gameSnap.exists()) {
                                 const gameData = gameSnap.data();
-                                const betAmount = gameData.betAmount || 0;
+                                // Only refund and delete if the game is still in 'waiting' status
+                                if (gameData.status === "waiting") {
+                                    const betAmount = gameData.betAmount || 0;
 
-                                // Refund the bet amount to the creator (Player 1)
-                                const userDocRef = doc(db, "saldo", currentUser.uid);
-                                const userSnap = await getDoc(userDocRef);
-                                if (userSnap.exists()) {
-                                    const currentBalance = userSnap.data().balance || 0;
-                                    await updateDoc(userDocRef, {
-                                        balance: currentBalance + betAmount
-                                    });
-                                    console.log(`Refunded ${betAmount} to ${currentUser.uid}. New balance: ${currentBalance + betAmount}`);
+                                    // Refund the bet amount to the creator (Player 1)
+                                    const userDocRef = doc(db, "saldo", currentUser.uid);
+                                    const userSnap = await getDoc(userDocRef);
+                                    if (userSnap.exists()) {
+                                        const currentBalance = userSnap.data().balance || 0;
+                                        await updateDoc(userDocRef, {
+                                            balance: currentBalance + betAmount
+                                        });
+                                        console.log(`Refunded ${betAmount} to ${currentUser.uid}. New balance: ${currentBalance + betAmount}`);
+                                    }
+
+                                    // Delete the game document
+                                    await deleteDoc(gameDocRef);
+                                    console.log(`Game ${userWaitingGameId} deleted and bet refunded.`);
+                                } else {
+                                    console.log(`Game ${userWaitingGameId} is not in 'waiting' status (${gameData.status}), no refund or deletion.`);
                                 }
-
-                                // Delete the game document
-                                await deleteDoc(gameDocRef);
-                                console.log(`Game ${userWaitingGameId} deleted and bet refunded.`);
                             }
                         } catch (error) {
                             console.error("Error cleaning up waiting game:", error);
@@ -1334,14 +1340,22 @@
                                     const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
 
                                     // --- NUEVO: Descontar saldo del jugador 2 ---
-                                    const player2DocRef = doc(db, "saldo", user.uid);
-                                    const player2Snap = await getDoc(player2DocRef);
-                                    if (player2Snap.exists()) {
-                                        const currentBalance = player2Snap.data().balance || 0;
-                                        await updateDoc(player2DocRef, {
-                                            balance: currentBalance - gameData.betAmount
-                                        });
-                                        console.log(`Deducted ${gameData.betAmount} from ${user.uid}. New balance: ${currentBalance - gameData.betAmount}`);
+                                    try {
+                                        const player2DocRef = doc(db, "saldo", user.uid);
+                                        const player2Snap = await getDoc(player2DocRef);
+                                        if (player2Snap.exists()) {
+                                            const currentBalance = player2Snap.data().balance || 0;
+                                            await updateDoc(player2DocRef, {
+                                                balance: currentBalance - gameData.betAmount
+                                            });
+                                            console.log(`Deducted ${gameData.betAmount} from Player 2 (${user.uid}). New balance: ${currentBalance - gameData.betAmount}`);
+                                        } else {
+                                            throw new Error("Player 2 balance document not found.");
+                                        }
+                                    } catch (error) {
+                                        console.error("Error deducting balance for Player 2:", error);
+                                        alert("Error al procesar la apuesta. No se pudo descontar el saldo.");
+                                        return; // No unirse a la partida si falla la deducción
                                     }
 
                                     await updateDoc(doc(db, "games", gameId), {
@@ -1405,7 +1419,7 @@
                                 const RACK_SPACING_DIAMETER = 24;
                                 const TABLE_WIDTH = 1000;
                                 const TABLE_HEIGHT = 500;
-                                const startX = TABLE_WIDTH * 0.70;
+                                const startX = TABLE_WIDTH * 0.80;
                                 const startY = TABLE_HEIGHT / 2;
                                 const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
                                 let ballIndex = 0;
@@ -1429,11 +1443,20 @@
                                 });
 
                                 // --- NUEVO: Descontar el saldo del jugador 1 ---
-                                const userDocRef = doc(db, "saldo", user.uid);
-                                const newBalance = currentUserProfile.balance - betAmount;
-                                await updateDoc(userDocRef, {
-                                    balance: newBalance
-                                });
+                                try {
+                                    const userDocRef = doc(db, "saldo", user.uid);
+                                    const newBalance = currentUserProfile.balance - betAmount;
+                                    await updateDoc(userDocRef, {
+                                        balance: newBalance
+                                    });
+                                    console.log(`Deducted ${betAmount} from Player 1 (${user.uid}). New balance: ${newBalance}`);
+                                } catch (error) {
+                                    console.error("Error deducting balance for Player 1:", error);
+                                    betErrorMessage.textContent = 'Error al procesar la apuesta. Inténtalo de nuevo.';
+                                    confirmBetBtn.disabled = false;
+                                    confirmBetBtn.textContent = 'Apostar y Crear';
+                                    return; // Detener la creación de la partida si la deducción falla
+                                }
                                 betModal.classList.remove('visible'); // Cerrar modal
 
                                 const newGame = await addDoc(collection(db, "games"), {
@@ -1455,56 +1478,7 @@
                             };
                             gameCarousel.appendChild(createCard);
 
-                            const createTestGameCard = document.createElement('div');
-                            createTestGameCard.className = 'game-card create-new';
-                            createTestGameCard.innerHTML = `
-                                <div class="create-icon">&#9881;</div>
-                                <span class="create-text">Jugar 1 vs 1 (Test)</span>
-                            `;
-                            createTestGameCard.addEventListener('click', async () => {
-                                createTestGameCard.style.pointerEvents = 'none';
 
-                                const ballPositions = [];
-                                const RACK_SPACING_DIAMETER = 24;
-                                const TABLE_WIDTH = 1000;
-                                const TABLE_HEIGHT = 500;
-                                const startX = TABLE_WIDTH * 0.70;
-                                const startY = TABLE_HEIGHT / 2;
-                                const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
-                                let ballIndex = 0;
-
-                                for (let i = 0; i < 5; i++) {
-                                    for (let j = 0; j <= i; j++) {
-                                        const ballNumber = ballOrder[ballIndex++];
-                                        ballPositions.push({
-                                            number: ballNumber,
-                                            x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
-                                            y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
-                                            isActive: true
-                                        });
-                                    }
-                                }
-                                ballPositions.push({
-                                    number: null,
-                                    x: TABLE_WIDTH / 4,
-                                    y: TABLE_HEIGHT / 2,
-                                    isActive: true
-                                });
-
-                                const newGame = await addDoc(gamesRef, {
-                                    player1: { uid: user.uid, username: userDisplayName.textContent },
-                                    player2: { uid: user.uid, username: userDisplayName.textContent + " (P2)" },
-                                    status: "starting",
-                                    createdAt: new Date(),
-                                    betAmount: 0, // Partida de prueba sin apuesta
-                                    currentPlayerUid: user.uid,
-                                    balls: ballPositions,
-                                    turn: 1
-                                });
-
-                                window.location.href = `../index.html?gameId=${newGame.id}`;
-                            });
-                            gameCarousel.appendChild(createTestGameCard);
                         }
                     } catch (error) {
                         console.error("Error fetching waiting games:", error);
@@ -1558,56 +1532,26 @@
     </script>
   </body>
   <script>
-    // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
-    // Esta función establece la altura del contenedor principal a la altura
-    // de la ventana interna en el momento de la carga. Esto previene que el
-    // layout "salte" cuando la barra de direcciones del navegador móvil
-    // aparece o desaparece.
-    function setAppHeight() {
-      const appContainer = document.querySelector('.app-container');
-      if (!appContainer) return;
-    
-      const setHeight = () => {
-        const vh = window.innerHeight;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-        appContainer.style.height = `${window.innerHeight}px`;
-      };
-    
-      setHeight();
-    
-      let resizeTimeout;
-      window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(setHeight, 100);
-      });
-    }
-    window.addEventListener('load', setAppHeight);
-  </script>
-</html>
-                    }
-                });
-
-                cancelWaitBtn.addEventListener('click', async () => {
-                    if (userWaitingGameId) {
-                        await deleteDoc(doc(db, "games", userWaitingGameId));
-                        userWaitingGameId = null;
-                    }
-                });
-
-                window.addEventListener('beforeunload', async (event) => {
-                    await cleanupWaitingGame();
-                });
-
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
-        } catch (error) {
-            console.error("Error in onSessionStateChanged setup:", error);
+    // Attempt to lock screen orientation to landscape for mobile devices
+    function lockOrientation() {
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape')
+                .then(() => console.log('Screen orientation locked to landscape.'))
+                .catch((err) => console.warn('Failed to lock screen orientation:', err));
+        } else if (screen.mozOrientation && screen.mozOrientation.lock) { // Firefox specific
+            screen.mozOrientation.lock('landscape');
+        } else if (screen.msOrientation && screen.msOrientation.lock) { // IE/Edge specific
+            screen.msOrientation.lock('landscape');
+        } else {
+            console.warn('Screen orientation locking not supported by this browser.');
         }
-    </script>
-  </body>
-  <script>
+    }
+
+    // Call lockOrientation when the page loads
+    window.addEventListener('load', lockOrientation);
+    // Also try to lock on orientation change, in case it was unlocked
+    window.addEventListener('orientationchange', lockOrientation);
+
     // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
     // Esta función establece la altura del contenedor principal a la altura
     // de la ventana interna en el momento de la carga. Esto previene que el

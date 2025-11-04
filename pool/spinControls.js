@@ -27,7 +27,7 @@ export function initializeSpinControls() {
         window.dispatchEvent(new CustomEvent('setspinmodal', { detail: { visible: true } }));
     };
     miniSpinSelector.addEventListener('mousedown', handleMiniSelectorInteraction);
-    miniSpinSelector.addEventListener('touchstart', handleMiniSelectorInteraction, { passive: true });
+    miniSpinSelector.addEventListener('touchstart', handleMiniSelectorInteraction, { passive: false });
 
     // --- CORRECCIÓN: Cerrar el modal si se hace clic fuera de él ---
     spinModalOverlay.addEventListener('mousedown', (e) => {

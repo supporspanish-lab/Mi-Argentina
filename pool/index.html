@@ -6,6 +6,7 @@
     <title>Juego de BlackBal con Canvas</title>
     <!-- NUEVO: Evita el error 404 de favicon.ico en la consola -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="manifest" href="manifest.json">
     <style>
         /* Reinicio CSS para asegurar que el HTML y el Body ocupen el 100% */
         html, body {
@@ -346,6 +347,7 @@
             /* --- NUEVO: Posición por defecto --- */
             top: 2vh;
             right: 2vw;
+            z-index: 11; /* --- NUEVO: Para que esté por encima de los marcadores de jugador --- */
         }
 
         /* --- NUEVO: Animación de pulso para los indicadores --- */
@@ -675,6 +677,16 @@
             flex-grow: 1;
             margin-bottom: 15px;
         }
+
+        @media (max-width: 700px) {
+            .pocketed-balls-container {
+                align-items: center;
+                gap: 1vw;
+            }
+            .player-avatar-wrapper {
+                margin-right: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -755,7 +767,7 @@
             <!-- Contenedor para las bolas del jugador 1 -->
             <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
                 <div id="player1-name" class="player-name">Jugador 1</div>
-                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; margin-right: 0.5vw;">
+                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; min-width: 24px; min-height: 24px; margin-right: 0.5vw;">
                     <svg id="player1-avatar-svg" class="player-avatar" viewBox="0 0 36 36" style="position: absolute; top: 0; left: 0; z-index: 2;">
                         <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
                         <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
@@ -786,7 +798,7 @@
             <!-- Contenedor para las bolas del jugador 2 -->
             <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
                 <div id="player2-name" class="player-name">Jugador 2</div>
-                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; margin-right: 0.5vw;">
+                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; min-width: 24px; min-height: 24px; margin-right: 0.5vw;">
                     <svg id="player2-avatar-svg" class="player-avatar" viewBox="0 0 36 36" style="position: absolute; top: 0; left: 0; z-index: 2;">
                         <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
                         <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
@@ -892,6 +904,7 @@
                             } else {
                                 console.log("El documento del juego no existe.");
                                 winningsText.textContent = '$0'; // Resetear si el juego no existe
+                                window.location.reload(); // Recargar la página
                             }
                         });            // 3. Función "throttle" para no sobrecargar Firestore.
             // Limita las actualizaciones a una cada 50ms como máximo.
@@ -1122,7 +1135,27 @@
             const playButton = document.getElementById('play-button');
             const orientationLockScreen = document.getElementById('orientation-lock-screen');
 
+            // Generic function to lock orientation
+            function lockOrientation() {
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape')
+                        .then(() => console.log('Screen orientation locked to landscape.'))
+                        .catch((err) => console.warn('Failed to lock screen orientation:', err));
+                } else if (screen.mozOrientation && screen.mozOrientation.lock) { // Firefox specific
+                    screen.mozOrientation.lock('landscape');
+                } else if (screen.msOrientation && screen.msOrientation.lock) { // IE/Edge specific
+                    screen.msOrientation.lock('landscape');
+                } else {
+                    console.warn('Screen orientation locking not supported by this browser.');
+                }
+            }
+
             if (isMobile) {
+                // Attempt to lock on load
+                lockOrientation();
+                // Attempt to lock on orientation change
+                window.addEventListener('orientationchange', lockOrientation);
+
                 playButton.addEventListener('click', () => {
                     // Request fullscreen
                     if (document.documentElement.requestFullscreen) {
@@ -1135,12 +1168,8 @@
                         document.documentElement.msRequestFullscreen();
                     }
 
-                    // Lock orientation
-                    if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                        screen.orientation.lock('landscape').catch(error => {
-                            console.log('Orientation lock failed:', error);
-                        });
-                    }
+                    // Lock orientation again after fullscreen request
+                    lockOrientation();
 
                     // Hide the orientation lock screen
                     orientationLockScreen.style.display = 'none';

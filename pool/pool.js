@@ -528,10 +528,15 @@ function connectToGame(gameId) {
             if (!docSnap.exists()) {
                 console.error("La partida no existe o fue eliminada.");
                 if (unsubscribe) unsubscribe();
+                window.location.reload(); // Recargar la página
                 return;
             }
 
             const gameData = docSnap.data() || {};
+            if (gameData.juegoTerminado) {
+                window.location.href = 'login/home.html';
+                return;
+            }
             setOnlineGameData(gameData);
 
             // --- NUEVO: Asegurar que el username del jugador 1 esté correctamente establecido ---

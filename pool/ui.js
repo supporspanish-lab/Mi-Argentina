@@ -251,8 +251,8 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
             // Actualizar la posición del indicador en cada frame mientras está visible
             if (moveIndicator.style.display === 'block') {
                 const screenPos = toScreenPosition(cueBall.mesh, camera);
-                moveIndicator.style.left = `${screenPos.x}px`;
-                moveIndicator.style.top = `${screenPos.y}px`;
+                moveIndicator.style.left = `${screenPos.x - moveIndicator.offsetWidth / 2}px`;
+                moveIndicator.style.top = `${screenPos.y - moveIndicator.offsetHeight / 2}px`;
             }
         } else {
             // Si ya no es "bola en mano", resetear la bandera de animación para la próxima vez.

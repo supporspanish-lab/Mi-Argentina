@@ -220,7 +220,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
             if (primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida) {
 
-                console.log("No se ha entronado una bola válida.");
+                console.log("DEBUG: Falta por no entronar bola válida detectada.");
+                console.log(`DEBUG: primeraBolaGolpeadaEsteTurno: ${primeraBolaGolpeadaEsteTurno}, jugadorEntroneroSuBola: ${jugadorEntroneroSuBola}, faltaCometida (antes): ${faltaCometida}`);
 
                 faltaCometida = true;
 
@@ -399,7 +400,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                             // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
                             setGameOver(true);
                             const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
                             const betAmount = onlineGameData.betAmount || 0;
                             const totalWinnings = betAmount * 2;
         
@@ -424,10 +424,10 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                     status: "ended",
                                     winner: winnerUid,
                                     loser: loserUid,
-                                    endedAt: Date.now()
+                                    endedAt: Date.now(),
+                                    juegoTerminado: true
                                 });
                             }
-                            window.location.href = 'login/home.html';
                         } else {
             // No hay falta. Comprobar si el jugador tenía derecho a meter la 8.
             const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
@@ -442,10 +442,10 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                 if (jugadorTieneBolasRestantes || !bolasAsignadasAlInicioTurno) {
                                     // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
                                     setGameOver(true);
-                                    const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                                    const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
-                                    const betAmount = onlineGameData.betAmount || 0;
-                                    const totalWinnings = betAmount * 2;
+                            const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                            const betAmount = onlineGameData.betAmount || 0;
+                            const totalWinnings = betAmount * 2;
             
                                     showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, loserUid);
             
@@ -468,10 +468,10 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                             status: "ended",
                                             winner: winnerUid,
                                             loser: loserUid,
-                                            endedAt: Date.now()
+                                            endedAt: Date.now(),
+                                            juegoTerminado: true
                                         });
-                                    }
-                                    window.location.href = 'login/home.html';            
+                                    }            
                                 } else {
                 // ¡El jugador ha ganado!
                 setGameOver(true);
@@ -498,10 +498,10 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                         status: "ended",
                         winner: winnerUid,
                         loser: loserUid,
-                        endedAt: Date.now()
+                        endedAt: Date.now(),
+                        juegoTerminado: true
                     });
                 }
-                window.location.href = 'login/home.html';
                 showFoulMessage(`¡Felicidades, ${currentUsername} has ganado la partida!`, winnerUid);
             }
         }
@@ -550,6 +550,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         const finalGameState = getGameState();
 
         // --- CORRECCIÓN: Centralizar la lógica de cambio de turno aquí ---
+        console.log(`DEBUG: Antes de shouldSwitchTurn - faltaCometida: ${faltaCometida}, jugadorEntroneroSuBola: ${jugadorEntroneroSuBola}`);
         let shouldSwitchTurn = false;
         if (faltaCometida || !jugadorEntroneroSuBola) {
             shouldSwitchTurn = true;
@@ -596,7 +597,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             foulInfo: faltaCometida ? { reason: motivoFalta, ballInHand: faltaConBolaEnMano, timestamp: Date.now() } : null,
             ballInHandFor: faltaConBolaEnMano ? nextPlayerUid : null,
             // --- NUEVO: Incluir la posición inicial de la bola blanca si hay "bola en mano" ---
-            cueBallPosition: faltaConBolaEnMano ? { x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2 } : null,
+            cueBallPosition: bolaBlancaEntronerada ? { x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2 } : null,
 
             turnTimestamp: Date.now() // Marcar el momento de la actualización del turno
         };

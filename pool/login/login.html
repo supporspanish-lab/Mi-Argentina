@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --primary-color: #00f291;
@@ -551,6 +552,8 @@
                     } else {
                         await loginWithEmail(email, password);
                     }
+                    const loginSound = new Audio('../audio/login.mp3');
+                    loginSound.play().catch(e => console.error("Error al reproducir el sonido de login:", e));
                     triggerDisintegration(); // Redirigir a home.html
                 } catch (error) {
                     console.error("Error de autenticación:", error);
@@ -636,6 +639,19 @@
                 usernameGroup.style.display = 'none'; // Ocultar campo de nombre de usuario
             });
         });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registrado con éxito:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Fallo el registro de ServiceWorker:', error);
+                    });
+            });
+        }
     </script>
 </body>
 </html>

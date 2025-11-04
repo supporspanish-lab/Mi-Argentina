@@ -85,8 +85,11 @@ self.addEventListener('fetch', (event) => {
             // Las respuestas a dominios externos (como unpkg.com) pueden ser "opacas" y no se pueden guardar con cache.put().
             if (event.request.url.startsWith(self.location.origin)) {
                 return caches.open(CACHE_NAME).then((cache) => {
-                    // Clonamos la respuesta porque solo se puede consumir una vez.
-                    cache.put(event.request, networkResponse.clone());
+                    // Solo guardar en caché respuestas válidas (status 200) y no parciales (status 206)
+                    // y que no sean opacas (type 'opaque' o 'cors' para recursos de terceros)
+                    if (networkResponse.ok && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                        cache.put(event.request, networkResponse.clone());
+                    }
                     return networkResponse;
                 });
             } else {

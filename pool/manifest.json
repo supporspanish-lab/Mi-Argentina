@@ -1,0 +1,22 @@
+{
+  "name": "BlackBall Pool",
+  "short_name": "BlackBall",
+  "start_url": "login/login.html",
+  "scope": "/",
+  "display": "fullscreen",
+  "background_color": "#1a1a1a",
+  "theme_color": "#00f291",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "imajenes/moneda/moneda.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "imajenes/moneda/moneda.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
