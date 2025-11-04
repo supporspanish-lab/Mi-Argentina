@@ -597,6 +597,23 @@
         color: var(--primary-color);
       }
 
+      /* --- NUEVO: Animación de resplandor para el botón de música --- */
+      @keyframes white-glow {
+        from {
+          box-shadow: 0 0 7px rgba(255, 255, 255, 0.2), 0 0 10px rgba(255, 255, 255, 0.1);
+          color: #f0f0f0;
+        }
+        to {
+          box-shadow: 0 0 16px rgba(255, 255, 255, 0.7), 0 0 24px rgba(255, 255, 255, 0.5);
+          color: #ffffff;
+        }
+      }
+
+      .music-on-glow {
+        animation: white-glow 3s infinite alternate ease-in-out;
+        border: 1px solid rgba(255, 255, 255, 0.3); /* Un borde sutil para realzar el efecto */
+      }
+
       .user-menu {
         position: absolute;
         top: 100%; /* Position below the toggle button */
@@ -645,6 +662,12 @@
         background-color: rgba(231, 76, 60, 0.1);
       }
 
+      /* --- NUEVO: Contenedor para los controles del lado derecho de la cabecera --- */
+      .header-right-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* Espacio entre el botón de música y el perfil */
+      }
       /* Estilos para modales generales */
       .modal-overlay {
         position: fixed;
@@ -898,30 +921,37 @@
                     </div>
                     <h1 class="app-title">BlackBall</h1>
                 </div>
-                <div class="user-profile">
-                    <div class="profile-picture-container">
-                        <!-- SOLUCIÓN: Añadir un elemento <img> para la foto de perfil, inicialmente oculto -->
-                        <img id="profile-picture-img" src="" alt="Foto de perfil" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-                        <!-- El SVG se mostrará si no hay imagen seleccionada -->
-                        <svg id="profile-picture-svg" class="user-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                        </svg>
-                    </div>
-                    <div class="user-info">
-                        <span id="user-display-name">Cargando...</span>
-                        <div class="user-balance">
-                            <span>$0,00</span>
+                <div class="header-right-controls">
+                    <button id="mute-music-btn" class="menu-toggle-btn" title="Silenciar Música">
+                        <svg id="mute-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8.83v6.34L17.17 12 14 8.83zM12 4L7.17 9H4c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h3.17L12 20V4zm-2 1.17L5.83 10H4v4h1.83L10 18.83V5.17z"/></svg>
+                        <svg id="unmute-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4L7.17 9H4c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h3.17L12 20V4zm-2 1.17L5.83 10H4v4h1.83L10 18.83V5.17zM18.5 12l1.5-1.5-1.5-1.5-1.5 1.5-1.5-1.5-1.5 1.5 1.5 1.5-1.5 1.5 1.5 1.5 1.5-1.5 1.5 1.5 1.5-1.5z"/></svg>
+                    </button>
+                    <div class="user-profile">
+                        <div class="profile-picture-container">
+                            <!-- SOLUCIÓN: Añadir un elemento <img> para la foto de perfil, inicialmente oculto -->
+                            <img id="profile-picture-img" src="" alt="Foto de perfil" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                            <!-- El SVG se mostrará si no hay imagen seleccionada -->
+                            <svg id="profile-picture-svg" class="user-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                            </svg>
+                        </div>
+                        <div class="user-info">
+                            <span id="user-display-name">Cargando...</span>
+                            <div class="user-balance">
+                                <span>$0,00</span>
+                            </div>
+                        </div>
+                        <div class="menu-container">
+                            <button id="menu-toggle-btn" class="menu-toggle-btn" title="Opciones de usuario">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+                            </button>
+                            <div id="user-menu" class="user-menu">
+                                <button id="configure-ui-btn" class="menu-item" style="display: none;">Administrador</button>
+                                <button id="menu-logout-btn" class="menu-item logout-item">Cerrar Sesión</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="menu-container">
-                        <button id="menu-toggle-btn" class="menu-toggle-btn" title="Opciones de usuario">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-                        </button>
-                        <div id="user-menu" class="user-menu">
-                            <button id="configure-ui-btn" class="menu-item" style="display: none;">Administrador</button>
-                            <button id="menu-logout-btn" class="menu-item logout-item">Cerrar Sesión</button>
-                        </div>
-                    </div>
+                </div>
             </header>
             <main class="main-content">
                 <div class="game-carousel-container">
@@ -1529,6 +1559,101 @@
         } catch (error) {
             console.error("Error in onSessionStateChanged setup:", error);
         }
+    </script>
+    <audio id="bg-music-1" src="../audio/home/1.mp3" loop preload="auto"></audio>
+    <audio id="bg-music-2" src="../audio/home/2.mp3" loop preload="auto"></audio>
+    <audio id="bg-music-3" src="../audio/home/3.mp3" loop preload="auto"></audio>
+    <audio id="bg-music-4" src="../audio/home/4.mp3" loop preload="auto"></audio>
+
+    <script>
+        const backgroundMusic = [
+            document.getElementById('bg-music-1'),
+            document.getElementById('bg-music-2'),
+            document.getElementById('bg-music-3'),
+            document.getElementById('bg-music-4')
+        ];
+
+        let currentSongIndex = -1;
+
+        function playRandomSong() {
+            if (backgroundMusic.length === 0) return;
+
+            // Stop current song if any
+            if (currentSongIndex !== -1) {
+                backgroundMusic[currentSongIndex].pause();
+                backgroundMusic[currentSongIndex].currentTime = 0;
+            }
+
+            // Play a new random song
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * backgroundMusic.length);
+            } while (newIndex === currentSongIndex); // Ensure a different song plays
+
+            currentSongIndex = newIndex;
+            const song = backgroundMusic[currentSongIndex];
+            song.volume = 0.013; // 20% volume
+            song.play().catch(error => {
+                console.warn("Autoplay prevented for background music. User interaction needed.", error);
+                // Optionally, show a play button to the user
+            });
+        }
+
+        // Play next song when current one ends
+        backgroundMusic.forEach(song => {
+            song.addEventListener('ended', playRandomSong);
+        });
+
+        // Start playing music when the page loads (requires user interaction for autoplay in most browsers)
+        window.addEventListener('load', () => {
+            playRandomSong();
+        });
+
+        // Attempt to play on first user interaction
+        document.addEventListener('click', () => {
+            if (currentSongIndex === -1) { // Only if no song has started yet
+                playRandomSong();
+            } else if (backgroundMusic[currentSongIndex].paused) {
+                backgroundMusic[currentSongIndex].play().catch(error => {
+                    console.warn("Autoplay prevented on click.", error);
+                });
+            }
+        }, { once: true }); // Only trigger once
+
+        // --- Lógica para el botón de silenciar música ---
+        const muteMusicBtn = document.getElementById('mute-music-btn');
+        const muteIcon = document.getElementById('mute-icon');
+        const unmuteIcon = document.getElementById('unmute-icon');
+        let isMuted = localStorage.getItem('isMusicMuted') === 'true';
+
+        function updateMuteButtonUI() {
+            if (isMuted) {
+                muteIcon.style.display = 'none';
+                unmuteIcon.style.display = 'block';
+                muteMusicBtn.classList.remove('music-on-glow'); // Quitar animación
+            } else {
+                muteIcon.style.display = 'block';
+                unmuteIcon.style.display = 'none';
+                muteMusicBtn.classList.add('music-on-glow'); // Añadir animación
+            }
+        }
+
+        function applyMuteState() {
+            backgroundMusic.forEach(song => {
+                song.muted = isMuted;
+            });
+            updateMuteButtonUI();
+            localStorage.setItem('isMusicMuted', isMuted);
+        }
+
+        muteMusicBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            applyMuteState();
+        });
+
+        // Apply initial mute state on load
+        window.addEventListener('load', applyMuteState);
+
     </script>
   </body>
   <script>
