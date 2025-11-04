@@ -690,14 +690,7 @@
     </style>
 </head>
 <body>
-    <!-- --- NUEVO: Pantalla para solicitar la rotación del dispositivo --- -->
-    <div id="orientation-lock-screen">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M18.5,6.5H14.5a1,1,0,0,1,0-2h6a1,1,0,0,1,1,1V11.5a1,1,0,0,1-2,0V7.53l-3.22,3.22a1,1,0,0,1-1.42-1.42Z"/><path d="M5.5,17.5h4a1,1,0,0,1,0,2h-6a1,1,0,0,1-1-1V12.5a1,1,0,0,1,2,0v3.97l3.22-3.22a1,1,0,0,1,1.42,1.42Z"/>
-        </svg>
-        <p>Por favor, rota tu dispositivo a modo horizontal para jugar.</p>
-        <button id="play-button">Jugar</button>
-    </div>
+
     <!-- --- NUEVO: Pantalla de carga --- -->
     <div id="loading-screen">
         <div id="progress-container">
@@ -1129,59 +1122,9 @@
             });
         }
 
-        // --- NUEVO: Lógica para forzar la orientación horizontal ---
-        window.addEventListener('load', () => {
-            const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-            const playButton = document.getElementById('play-button');
-            const orientationLockScreen = document.getElementById('orientation-lock-screen');
-
-            // Generic function to lock orientation
-            function lockOrientation() {
-                if (screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape')
-                        .then(() => console.log('Screen orientation locked to landscape.'))
-                        .catch((err) => console.warn('Failed to lock screen orientation:', err));
-                } else if (screen.mozOrientation && screen.mozOrientation.lock) { // Firefox specific
-                    screen.mozOrientation.lock('landscape');
-                } else if (screen.msOrientation && screen.msOrientation.lock) { // IE/Edge specific
-                    screen.msOrientation.lock('landscape');
-                } else {
-                    console.warn('Screen orientation locking not supported by this browser.');
-                }
-            }
-
-            if (isMobile) {
-                // Attempt to lock on load
-                lockOrientation();
-                // Attempt to lock on orientation change
-                window.addEventListener('orientationchange', lockOrientation);
-
-                playButton.addEventListener('click', () => {
-                    // Request fullscreen
-                    if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen();
-                    } else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
-                        document.documentElement.mozRequestFullScreen();
-                    } else if (document.documentElement.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
-                        document.documentElement.webkitRequestFullscreen();
-                    } else if (document.documentElement.msRequestFullscreen) { /* IE/Edge */
-                        document.documentElement.msRequestFullscreen();
-                    }
-
-                    // Lock orientation again after fullscreen request
-                    lockOrientation();
-
-                    // Hide the orientation lock screen
-                    orientationLockScreen.style.display = 'none';
-                });
-            } else {
-                orientationLockScreen.style.display = 'none';
-            }
-
-            // Escuchar cambios de orientación para asegurar que la UI se actualice
-            screen.orientation.addEventListener('change', () => {
-                window.dispatchEvent(new Event('resize'));
-            });
+        // Escuchar cambios de orientación para asegurar que la UI se actualice
+        screen.orientation.addEventListener('change', () => {
+            window.dispatchEvent(new Event('resize'));
         });
     </script>
     <script>
