@@ -235,30 +235,18 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
     const moveIndicator = document.getElementById('move-indicator');
     if (moveIndicator) {
         if (isPlacing) {
-            if (!ballInHandAnimationPlayed) {
-                // Iniciar la animación solo una vez
-                moveIndicator.style.display = 'block';
-                moveIndicator.style.animation = 'fade-pulse 1s ease-in-out 3';
-                ballInHandAnimationPlayed = true;
+            moveIndicator.style.display = 'block';
+            moveIndicator.style.animation = 'fade-pulse 1s ease-in-out infinite'; // Animación infinita
 
-                // Después de que la animación termine (3 segundos), ocultar el elemento.
-                setTimeout(() => {
-                    moveIndicator.style.display = 'none';
-                    moveIndicator.style.animation = ''; // Limpiar la animación
-                }, 3000);
-            }
-
-            // Actualizar la posición del indicador en cada frame mientras está visible
-            if (moveIndicator.style.display === 'block') {
+            // Actualizar la posición del indicador en cada frame
+            if (cueBall && cueBall.mesh) { // --- Guarda para asegurar que la bola blanca exista
                 const screenPos = toScreenPosition(cueBall.mesh, camera);
-                moveIndicator.style.left = `${screenPos.x - moveIndicator.offsetWidth / 2}px`;
-                moveIndicator.style.top = `${screenPos.y - moveIndicator.offsetHeight / 2}px`;
+                moveIndicator.style.left = `${screenPos.x}px`;
+                moveIndicator.style.top = `${screenPos.y+50}px`;
             }
         } else {
-            // Si ya no es "bola en mano", resetear la bandera de animación para la próxima vez.
-            if (ballInHandAnimationPlayed) {
-                ballInHandAnimationPlayed = false;
-            }
+            moveIndicator.style.display = 'none';
+            moveIndicator.style.animation = ''; // Detener animación
         }
     }
 }

@@ -134,8 +134,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
                     // Lógica para "bola en mano": reposicionar la bola blanca.
 
-                    setPlacingCueBall(true);
-
                     if (cueBall) {
 
                         cueBall.isPocketed = false;
@@ -535,13 +533,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     if (faltaCometida && motivoFalta && !gameRef) { // Solo mostrar localmente en modo offline
         const currentUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
         showFoulMessage(`Falta de ${currentUsername}: ${motivoFalta}`);
-    }
-
-    // --- CORRECCIÓN: La bola en mano solo se activa si la falta lo requiere ---
-    if (faltaConBolaEnMano) { // Si no se metió la blanca, pero es falta con bola en mano
-        setPlacingCueBall(true);
-        // --- NUEVO: Sincronizar el estado de "bola en mano" con el servidor ---
-        // Esta lógica ahora se centraliza al final.
     }
 
     // --- CORRECCIÓN: Lógica de Cliente Autoritativo para actualizar el servidor ---
