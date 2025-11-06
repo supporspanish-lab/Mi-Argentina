@@ -786,7 +786,7 @@
                                 player2ChatName.textContent = currentUserProfile.username;
                                 setPlayerAvatar(player2ChatAvatar, currentUserProfile.profileImageName);
                                 startGameBtn.style.display = 'none';
-                                cancelWaitBtn.textContent = 'Abandonar Sala';
+                                cancelWaitBtn.textContent = 'Salir';
 
                                 unsubscribeGameListener = onSnapshot(doc(db, "games", gameId), (gameSnap) => {
                                     const gameData = gameSnap.data();
@@ -1025,7 +1025,7 @@
                                     player2ChatName.textContent = currentUserProfile.username; // Player 2 is current user
                                     setPlayerAvatar(player2ChatAvatar, currentUserProfile.profileImageName);
                                     startGameBtn.style.display = 'none'; // Player 2 doesn't see the start button
-                                    cancelWaitBtn.textContent = 'Abandonar Sala'; // Player 2 can abandon the room
+                                    cancelWaitBtn.textContent = 'Salir'; // Player 2 can abandon the room
 
                                     // Listen for game status changes to redirect to actual game
                                     unsubscribeGameListener = onSnapshot(doc(db, "games", gameId), (gameSnap) => {
@@ -1051,7 +1051,7 @@
                             setPlayerAvatar(player1ChatAvatar, currentUserProfile.profileImageName);
                             player2ChatName.textContent = 'Oponente';
                             player2ChatAvatar.style.display = 'none'; // Ocultar avatar del oponente inicialmente
-                            document.getElementById('cancel-wait-btn').textContent = 'Cancelar Sala';
+                            document.getElementById('cancel-wait-btn').textContent = 'Salir';
                             startGameBtn.style.display = 'none'; // Ensure start button is hidden when waiting for player 2
                         } else {
                             gameCarousel.style.display = 'flex';
@@ -1141,7 +1141,7 @@
                                 setPlayerAvatar(player1ChatAvatar, currentUserProfile.profileImageName);
                                 player2ChatName.textContent = 'Oponente';
                                 player2ChatAvatar.style.display = 'none';
-                                cancelWaitBtn.textContent = 'Cancelar Sala';
+                                cancelWaitBtn.textContent = 'Salir';
                                 startGameBtn.style.display = 'none';
                                 kickOpponentBtn.style.display = 'none';
 
@@ -1163,8 +1163,8 @@
                                             // Still waiting for player 2
                                             player2ChatName.textContent = 'Oponente';
                                             player2ChatAvatar.style.display = 'none';
-                                            startGameBtn.style.display = 'none';
-                                            cancelWaitBtn.textContent = 'Cancelar Sala';
+                                            startGameBtn.style.display = 'none'; // Ocultar botón de inicio
+                                            cancelWaitBtn.textContent = 'Salir'; // Cambiar texto a Salir
                                             kickOpponentBtn.style.display = 'none'; // Hide kick button
                                         }
                                         renderMessages(gameData.messages, chatMessagesContainer);

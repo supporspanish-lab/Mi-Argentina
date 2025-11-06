@@ -487,6 +487,36 @@
       .kick-button:hover {
         background-color: rgba(231, 76, 60, 0.2);
       }
+      /* --- NUEVO: Estilos para los botones de acción del chat en la cabecera --- */
+      .chat-action-buttons {
+          position: absolute;
+          left: 15px;
+          top: 50%;
+          transform: translateY(-50%);
+          display: flex;
+          gap: 8px;
+          align-items: center;
+      }
+
+      .chat-action-buttons .play-button,
+      .chat-action-buttons .cancel-button {
+          margin-top: 0;
+          padding: 6px 12px; /* Padding más pequeño */
+          font-size: 13px; /* Fuente más pequeña */
+          font-family: 'Roboto', sans-serif; /* Fuente estándar para consistencia */
+          letter-spacing: 0; /* Sin espaciado extra */
+          min-width: 80px; /* Ancho mínimo para que no se deforme */
+          box-shadow: none; /* Quitar sombra para un look más plano */
+      }
+
+      .chat-action-buttons .play-button:hover,
+      .chat-action-buttons .cancel-button:hover {
+          transform: none; /* Quitar efecto de hover */
+          box-shadow: 0 0 8px var(--shadow-color); /* Sombra sutil en hover */
+      }
+      .chat-action-buttons .cancel-button {
+        background-color: rgba(231, 76, 60, 0.2);
+      }
       /* Ajustes para el botón de cancelar */
       .chat-modal .cancel-button {
           margin-top: 0; /* Eliminar el margen superior extra */

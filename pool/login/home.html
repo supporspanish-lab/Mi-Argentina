@@ -68,6 +68,10 @@
                 <div class="game-carousel-container">
                     <div id="waiting-screen" class="chat-modal">
                         <div class="chat-header">
+                            <div id="chat-action-buttons" class="chat-action-buttons">
+                                <button id="start-game-btn" class="play-button" style="display: none;">Iniciar</button>
+                                <button id="cancel-wait-btn" class="cancel-button">Cancelar</button>
+                            </div>
                             <button id="minimize-chat-btn" class="minimize-chat-btn" title="Minimizar Chat">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                             </button>
@@ -92,10 +96,6 @@
                                 <input type="text" id="chat-message-input" placeholder="Escribe un mensaje...">
                                 <button id="send-chat-message-btn">Enviar</button>
                             </div>
-                        </div>
-                        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
-                            <button id="start-game-btn" class="play-button" style="display: none;">Iniciar Partida</button>
-                            <button id="cancel-wait-btn" class="cancel-button">Cancelar Sala</button>
                         </div>
                     </div>
                     <div class="game-carousel" id="game-carousel"></div>
