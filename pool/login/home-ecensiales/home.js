@@ -588,7 +588,11 @@
         });
 
         waitingScreen.addEventListener('click', (e) => {
-            if (waitingScreen.classList.contains('minimized')) {
+            // --- CORRECCIÓN: Asegurarse de que el chat solo se maximice si está minimizado
+            // y si el clic no fue en uno de los botones de acción.
+            if (waitingScreen.classList.contains('minimized') && 
+                !e.target.closest('#start-game-btn') && 
+                !e.target.closest('#cancel-wait-btn')) {
                 waitingScreen.classList.remove('minimized');
             }
         });
@@ -678,16 +682,33 @@
                             return;
                         }
 
-                        snapshot.forEach(docSnap => {
+                        snapshot.forEach(async (docSnap) => {
                             const invite = docSnap.data();
                             const inviteId = docSnap.id;
+
+                            // --- NUEVO: Obtener datos del remitente para el avatar ---
+                            const fromUserDoc = await getDoc(doc(db, 'saldo', invite.from));
+                            const fromUserData = fromUserDoc.exists() ? fromUserDoc.data() : {};
+                            const fromUserAvatar = fromUserData.profileImageName ? `../imajenes/perfil/${fromUserData.profileImageName}` : '';
+
+                            // --- NUEVO: Obtener datos de la partida para la apuesta ---
+                            const gameDoc = await getDoc(doc(db, 'games', invite.gameId));
+                            const gameData = gameDoc.exists() ? gameDoc.data() : {};
+                            const betAmount = gameData.betAmount || 0;
+
                             const inviteEl = document.createElement('div');
-                            inviteEl.className = 'friend-request-item game-invite-item'; // Add a specific class for game invites
+                            inviteEl.className = 'game-invite-item'; // Usar la nueva clase principal
                             inviteEl.innerHTML = `
-                                <span class="friend-request-info">Invitación a sala de ${invite.fromUsername}</span>
+                                <div class="game-invite-info">
+                                    ${fromUserAvatar ? `<img src="${fromUserAvatar}" class="game-invite-avatar">` : ''}
+                                    <div class="game-invite-text">
+                                        <span class="username">${invite.fromUsername}</span> te invita a una partida. <br>
+                                        ${betAmount > 0 ? `<span class="game-invite-bet">Apuesta: $${betAmount.toLocaleString()}</span>` : ''}
+                                    </div>
+                                </div>
                                 <div class="friend-request-actions">
-                                    <button class="accept-game-invite-btn" data-id="${inviteId}" data-game-id="${invite.gameId}">Aceptar</button>
-                                    <button class="decline-game-invite-btn" data-id="${inviteId}">Rechazar</button>
+                                    <button class="accept-btn accept-game-invite-btn" data-id="${inviteId}" data-game-id="${invite.gameId}">Aceptar</button>
+                                    <button class="decline-btn decline-game-invite-btn" data-id="${inviteId}">Rechazar</button>
                                 </div>
                             `;
                             friendRequestsContainer.appendChild(inviteEl);
@@ -1146,16 +1167,18 @@
                                             cancelWaitBtn.textContent = 'Cancelar Sala';
                                             kickOpponentBtn.style.display = 'none'; // Hide kick button
                                         }
-                                        // Player 1 can always start if a player 2 is present
-                                        if (gameData.player2) {
-                                            startGameBtn.style.display = 'block';
-                                            cancelWaitBtn.textContent = 'Cancelar Partida';
-                                        }
                                         renderMessages(gameData.messages, chatMessagesContainer);
                                     } else {
                                         // Game document was deleted, clean up the UI
                                         cleanupWaitingGame();
                                     }
+                    // Player 1 can always start if a player 2 is present
+                    if (gameData && gameData.player2) {
+                        startGameBtn.style.display = 'block';
+                        cancelWaitBtn.textContent = 'Cancelar Partida';
+                    } else if (gameData) { // If there's game data but no player 2
+                        startGameBtn.style.display = 'none';
+                    }
                                 });
 
                                 // Event listener for the new start game button

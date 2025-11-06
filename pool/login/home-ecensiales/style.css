@@ -338,14 +338,13 @@
           background-color: var(--container-bg-color);
           border: 1px solid var(--border-color);
           border-radius: 24px;
-          width: 100%;
-          max-width: 450px;
+          width: 700px; /* Ancho fijo como el modal de amigos */
+          max-width: 700px; /* Ancho máximo fijo */
           max-height: 90vh; /* Altura máxima para el chat, adaptable */
           overflow-y: auto; /* Permitir scroll vertical si el contenido excede la altura */
           box-shadow: 0 10px 30px rgba(0,0,0,0.3);
           margin-bottom: 80px;
       }
-
       .chat-header {
           width: 100%;
           padding-bottom: 10px;
@@ -354,7 +353,6 @@
           display: flex; /* Convertir en contenedor flex */
           align-items: center; /* Centrar verticalmente los hijos */
       }
-
       .player-info {
           display: flex;
           justify-content: center;
@@ -365,11 +363,9 @@
           flex-grow: 1; /* Ocupar el espacio disponible */
           text-align: center; /* Centrar el texto */
       }
-
       .player-name {
           color: var(--primary-color);
       }
-
       .chat-avatar {
           width: 30px;
           height: 30px;
@@ -378,7 +374,6 @@
           margin: 0 5px;
           border: 2px solid var(--primary-color);
       }
-
       .vs-text {
           color: var(--text-color);
           font-size: 16px;
@@ -402,7 +397,6 @@
       .chat-messages::-webkit-scrollbar {
           display: none; /* WebKit */
       }
-
       .chat-message {
           padding: 8px 12px;
           border-radius: 15px;
@@ -416,19 +410,16 @@
           align-self: flex-end;
           border-bottom-right-radius: 2px;
       }
-
       .chat-message.opponent {
           background-color: #444;
           color: var(--text-color);
           align-self: flex-start;
           border-bottom-left-radius: 2px;
       }
-
       .message-sender {
           font-weight: bold;
           margin-right: 5px;
       }
-
       .chat-controls-container {
           width: 100%;
           display: flex;
@@ -439,18 +430,15 @@
       .chat-left-button-area {
           flex-shrink: 0; /* Prevent button area from shrinking */
       }
-
       /* --- CORRECCIÓN: Hacer transparente el botón de invitar amigos en el chat --- */
       .chat-left-button-area button {
           background: none; /* Fondo transparente */
           padding: 8px; /* Mismo padding que otros botones de ícono */
           /* Hereda el resto de estilos de .menu-toggle-btn */
       }
-
       .chat-left-button-area button:hover {
         background-color: rgba(255,255,255,0.1); /* Efecto hover sutil */
       }
-
       .chat-input-area {
           flex-grow: 1; /* Allow the input area to take remaining space */
           display: flex;
@@ -466,7 +454,6 @@
           color: var(--text-color);
           outline: none;
       }
-
       .chat-input-area button {
           padding: 10px 15px;
           border-radius: 12px;
@@ -477,16 +464,13 @@
           cursor: pointer;
           transition: background-color 0.2s;
       }
-
       .chat-input-area button:hover {
         background-color: #00d47a;
       }
-
       .chat-input-area button:disabled {
         cursor: not-allowed; /* No funcional */
         opacity: 0.6;
       }
-
       .kick-button {
         background: none;
         border: none;
@@ -500,53 +484,14 @@
         transition: background-color 0.2s, color 0.2s;
         margin-left: 5px;
       }
-
       .kick-button:hover {
         background-color: rgba(231, 76, 60, 0.2);
       }
-
       /* Ajustes para el botón de cancelar */
       .chat-modal .cancel-button {
           margin-top: 0; /* Eliminar el margen superior extra */
           width: 100%;
       }
-
-      /* Media queries para responsividad del chat */
-      @media (max-width: 768px) {
-          .chat-modal {
-              max-height: 85vh;
-              max-width: 90vw;
-              margin-bottom: 40px;
-          }
-          .player-info {
-              font-size: 16px;
-          }
-          .vs-text {
-              font-size: 14px;
-          }
-      }
-
-      @media (max-width: 480px) {
-          .chat-modal {
-              max-height: 80vh;
-              padding: 15px;
-          }
-          .player-info {
-              font-size: 14px;
-          }
-          .vs-text {
-              font-size: 12px;
-          }
-          .chat-message {
-              font-size: 12px;
-              padding: 6px 10px;
-          }
-          .chat-input-area input, .chat-input-area button {
-              padding: 8px 12px;
-              font-size: 12px;
-          }
-      }
-
       /* --- NUEVO: Estilos para el avatar dentro de la tarjeta --- */
       .card-avatar {
           width: 80px;
@@ -1230,6 +1175,29 @@
         height: 24px;
       }
 
+      /* --- NUEVO: Estilos para la insignia de notificación en el botón de amigos --- */
+      .notification-badge {
+          position: absolute;
+          top: 0;
+          right: 0;
+          transform: translate(50%, -50%); /* Desplaza la insignia fuera de la esquina */
+          background-color: #e74c3c; /* Rojo para notificaciones */
+          color: white;
+          font-size: 10px;
+          font-weight: bold;
+          border-radius: 50%;
+          padding: 2px 6px; /* Ajusta el padding para un tamaño adecuado */
+          min-width: 18px; /* Asegura un ancho mínimo para números de 1 o 2 dígitos */
+          height: 18px; /* Asegura una altura fija */
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          line-height: 1; /* Evita espacio extra en la altura de línea */
+          box-shadow: 0 0 5px rgba(0,0,0,0.5);
+          z-index: 1; /* Asegura que esté por encima del botón */
+          display: none; /* Oculto por defecto */
+      }
+
       /* --- MODIFICADO: Hacer el modal de amigos más ancho --- */
       #friends-modal .modal-box {
           max-width: 700px; /* Ancho mayor para acomodar las dos listas */
@@ -1289,130 +1257,6 @@
         .friend-info,
         #found-username {
           word-break: break-word;
-        }
-      }
-
-      @media (orientation: landscape) and (max-height: 450px) {
-        .main-content {
-          flex-direction: column; /* Stack content vertically in landscape */
-          padding: 10px; /* Adjust padding for landscape */
-          gap: 10px;
-        }
-
-        .game-carousel-container {
-          width: 100%;
-          height: 100%; /* Ensure it takes full height */
-          padding: 0;
-          flex-direction: column;
-          flex-grow: 1;
-          justify-content: flex-start;
-          align-items: center;
-        }
-
-        .chat-modal {
-          display: flex !important;
-          flex-direction: column; /* Explicitly set as column flex container */
-          width: 100%;
-          max-width: unset;
-          max-height: 95vh; /* Limitar la altura máxima para que no se corte */
-          margin: 0;
-          padding: 5px;
-          font-size: 13px;
-          overflow-y: auto; /* Permitir scroll en el modal si el contenido excede max-height */
-        }
-
-        .chat-messages {
-          /* flex-grow: 1; Removed to prevent infinite expansion */
-          max-height: 90px; /* Fixed height to display approx 3 messages */
-          width: 100%;
-          overflow-y: auto;
-          padding: 3px;
-          background-color: var(--input-bg-color);
-          border-radius: 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          text-align: left;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-          min-height: 0;
-        }
-
-        .game-carousel {
-          display: none; /* Hide game carousel in landscape to give chat full space */
-        }
-
-        .chat-header {
-          padding: 5px 8px; /* More compact padding */
-        }
-
-        .player-info {
-          font-size: 12px; /* Smaller font for player info */
-          gap: 3px; /* Smaller gap */
-        }
-
-        .chat-avatar {
-          width: 20px;
-          height: 20px;
-        }
-
-        .vs-text {
-          font-size: 10px;
-        }
-
-        .chat-messages {
-          padding: 3px;
-          font-size: 11px;
-        }
-
-        .chat-input-area input, .chat-input-area button {
-          padding: 5px 8px;
-          font-size: 11px;
-        }
-
-        .play-button, .cancel-button {
-          padding: 8px 15px;
-          font-size: 14px;
-        }
-
-        #friends-modal .modal-box {
-          width: 90vw; /* Ocupar la mayor parte del ancho */
-          max-width: 500px; /* Un poco más ancho que en vertical */
-          max-height: 95vh; /* Ocupar casi toda la altura disponible */
-          padding: 5px; /* Reducir padding */
-          display: flex; /* Asegurar que es un contenedor flex */
-          flex-direction: column; /* Organizar elementos en columna */
-          overflow-y: auto; /* Permitir scroll vertical en el modal si es necesario */
-        }
-        #friends-content-wrapper {
-          flex-direction: row; /* Volver a poner las listas una al lado de la otra si hay espacio */
-          gap: 10px;
-          flex-grow: 1; /* Permitir que el contenedor de listas crezca */
-          min-height: 0; /* Evitar que el contenido flex se desborde */
-        }
-        .friend-list-panel {
-          flex: 1; /* Asegurar que ocupe el espacio disponible */
-          max-height: unset; /* Eliminar altura máxima fija para que se ajuste al flex */
-          overflow-y: auto; /* Asegurar scroll si el contenido es largo */
-          flex-grow: 1; /* Permitir que las listas crezcan */
-          min-height: 0; /* Evitar que el contenido flex se desborde */
-        }
-
-        .friend-request-info,
-        .friend-info {
-          word-break: break-word;
-          flex-shrink: 1; /* Permitir que el texto se encoja */
-        }
-
-        .friend-request-actions {
-          display: flex;
-          flex-wrap: wrap; /* Permitir que los botones se envuelvan */
-          gap: 5px; /* Espacio entre botones */
-        }
-
-        .friend-request-actions button {
-          flex-shrink: 0; /* Evitar que los botones se encojan demasiado */
-          min-width: unset; /* Eliminar cualquier min-width potencial */
         }
       }
 
@@ -1559,6 +1403,50 @@
           background-color: #e74c3c;
           color: #fff;
           border: none;
+      }
+
+      /* --- NUEVO: Estilos mejorados para las invitaciones a partidas --- */
+      .game-invite-item {
+          display: flex;
+          flex-direction: column; /* Apilar información y acciones */
+          gap: 10px; /* Espacio entre la información y los botones */
+          padding: 12px;
+          border-radius: 8px;
+          background-color: rgba(0, 242, 145, 0.08); /* Un ligero tinte verde */
+          border: 1px solid var(--primary-color);
+          margin-bottom: 10px;
+      }
+
+      .game-invite-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+      }
+
+      .game-invite-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid var(--primary-color);
+          flex-shrink: 0;
+      }
+
+      .game-invite-text {
+          font-size: 14px;
+          font-weight: 500;
+          flex-grow: 1; /* Ocupar el espacio disponible */
+      }
+
+      .game-invite-text .username {
+          font-weight: 700;
+          color: var(--primary-color);
+      }
+
+      .game-invite-bet {
+          font-size: 12px;
+          color: #FFD700; /* Dorado para la apuesta */
+          font-weight: bold;
       }
 
       /* --- NUEVO: Estilos para la lista de amigos --- */
