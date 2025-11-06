@@ -207,13 +207,14 @@
       .main-content {
         flex-grow: 1;
         display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        flex-direction: row; /* Arrange children horizontally */
+        justify-content: center; /* Center horizontally */
+        align-items: center; /* Vertically align */
         width: 100%;
-        overflow: hidden;
+        /* overflow: hidden; */ /* Removed as it might hide content */
         padding: 0 20px 20px 20px; /* SOLUCIÓN: Añadir padding aquí */
         position: relative;
+        gap: 20px; /* Add space between carousel and friends button */
       }
 
       /* --- NUEVO: Estilos para el carrusel de partidas --- */
@@ -843,12 +844,17 @@
       }
 
       .friends-icon-container {
-        width: 100%;
+        /* New styles for friends-icon-container */
         display: flex;
-        justify-content: flex-end;
-        padding: 0 20px;
-        margin-bottom: 10px; /* Add some space below the icon */
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        padding: 0;
+        margin: 0;
       }
+
+
+
 
       /* Estilos para modales generales */
       .modal-overlay {
@@ -1127,6 +1133,52 @@
       /* --- MODIFICADO: Hacer el modal de amigos más ancho --- */
       #friends-modal .modal-box {
           max-width: 700px; /* Ancho mayor para acomodar las dos listas */
+      }
+
+      @media (max-width: 768px) {
+        #friends-modal .modal-box {
+          max-width: 90vw; /* Use 90% of viewport width on tablets and smaller */
+        }
+      }
+
+      @media (max-width: 480px) {
+        #friends-modal .modal-box {
+          max-width: 95vw; /* Use 95% of viewport width on mobile */
+          padding: 15px; /* Reduce padding */
+        }
+
+        #friends-content-wrapper {
+          flex-direction: column; /* Stack friend lists vertically */
+        }
+
+        .friend-list-panel {
+          min-height: auto; /* Allow height to adjust */
+          max-height: 30vh; /* Limit height for scroll */
+        }
+
+        #user-id-container,
+        #add-friend-container {
+          flex-direction: column; /* Stack elements in user ID and add friend sections */
+          align-items: flex-start;
+        }
+
+        #user-id-container button,
+        #add-friend-container .input-group button {
+          align-self: flex-end; /* Align buttons to the right */
+        }
+
+        #friend-search-input {
+          width: 100%;
+        }
+
+        .found-user-actions {
+          flex-direction: column;
+          gap: 5px;
+        }
+
+        .found-user-actions button {
+          width: 100%;
+        }
       }
 
       /* --- NUEVO: Contenedor para las dos listas de amigos --- */
