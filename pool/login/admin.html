@@ -241,6 +241,7 @@
 
         <div class="section-container">
             <h2>Salas de Juego Activas</h2>
+            <button id="delete-old-games-btn" class="action-button" style="margin-bottom: 15px;">Eliminar Salas Antiguas (más de 1 día)</button>
             <table id="games-table">
                 <thead>
                     <tr>
@@ -279,6 +280,7 @@
 
         const usersTableBody = document.getElementById('users-table').querySelector('tbody');
         const gamesTableBody = document.getElementById('games-table').querySelector('tbody');
+        const deleteOldGamesBtn = document.getElementById('delete-old-games-btn');
 
         // Function to fetch and display users
         async function loadUsers() {
@@ -423,6 +425,43 @@
                 cell.style.textAlign = "center";
             });
         }
+
+        deleteOldGamesBtn.addEventListener('click', async () => {
+            if (!confirm('¿Estás seguro de que quieres eliminar todas las salas de juego con más de 24 horas de antigüedad? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            const gamesRef = collection(db, "games");
+            const now = new Date();
+            const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+            let deletedCount = 0;
+
+            try {
+                const querySnapshot = await getDocs(gamesRef);
+                const deletePromises = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    const gameData = docSnap.data();
+                    const createdAt = gameData.createdAt?.toDate();
+
+                    if (createdAt && createdAt < twentyFourHoursAgo) {
+                        deletePromises.push(deleteDoc(doc(db, "games", docSnap.id)));
+                        deletedCount++;
+                    }
+                });
+
+                await Promise.all(deletePromises);
+
+                if (deletedCount > 0) {
+                    alert(`${deletedCount} sala(s) de juego antigua(s) ha(n) sido eliminada(s).`);
+                } else {
+                    alert('No se encontraron salas de juego antiguas para eliminar.');
+                }
+            } catch (error) {
+                console.error("Error deleting old game rooms:", error);
+                alert('Hubo un error al eliminar las salas de juego antiguas: ' + error.message);
+            }
+        });
 
         // Load data when the page loads
         document.addEventListener('DOMContentLoaded', () => {
