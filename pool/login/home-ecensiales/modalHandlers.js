@@ -19,7 +19,7 @@ export const setupAvatarModal = () => {
         profilePictureModal.classList.remove('visible');
     });
 
-    const TOTAL_AVATARS = 2;
+    const TOTAL_AVATARS = 8;
     for (let i = 1; i <= TOTAL_AVATARS; i++) {
         const img = document.createElement('img');
         const imgPath = `../imajenes/perfil/${i}.jpg`;

@@ -194,10 +194,10 @@ export const setupFriendsListListener = () => {
             }
 
             for (const friendId of friendIds) {
-                const qByFriendId = doc(db, "saldo", friendId);
-                const friendQuerySnapshot = await getDocFromAuth(qByFriendId);
-                if (!friendQuerySnapshot.empty) {
-                    const friendData = friendQuerySnapshot.docs[0].data();
+                const friendDocRef = doc(db, "saldo", friendId);
+                const friendDocSnap = await getDocFromAuth(friendDocRef);
+                if (friendDocSnap.exists()) {
+                    const friendData = friendDocSnap.data();
                     const friendEl = document.createElement('div');
                     friendEl.className = 'friend-item';
 

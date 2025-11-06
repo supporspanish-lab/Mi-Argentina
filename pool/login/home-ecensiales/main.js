@@ -3,6 +3,7 @@ import { setupMaintenanceModal, setupAvatarModal, setupBetModal, setupFriendsMod
 import { setupFriendSearch } from './friendshipHandlers.js';
 import { setupGameRoomListeners, createGame, purgeStaleGames } from './gameRoomHandlers.js';
 import { setupErrorHandling } from './utils.js';
+import { setupBackgroundMusic } from './home.js'; // CORRECCIÓN: Importar la lógica de la música
 
 // Configurar el manejo de errores primero
 setupErrorHandling();
@@ -16,6 +17,7 @@ setupErrorConsoleModal();
 setupFriendSearch();
 setupGameRoomListeners();
 setupMenuListeners();
+setupBackgroundMusic(); // CORRECCIÓN: Inicializar la música de fondo
 
 // Configurar listeners de autenticación que activarán otras configuraciones al iniciar sesión
 setupAuthListeners();
