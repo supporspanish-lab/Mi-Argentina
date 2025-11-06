@@ -1,6 +1,6 @@
-import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, profilePictureModal, closeAvatarModalBtn, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, copyErrorsBtn, closeErrorModalBtn } from './domElements.js';
+import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, profilePictureModal, closeAvatarModalBtn, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn } from './domElements.js';
 import { updateUserProfile } from '../auth.js';
-import { getState, setCurrentUserProfile } from './state.js';
+import { getState } from './state.js';
 import { updateErrorConsole, isMaintenanceModalOpen } from './utils.js';
 
 export const setupMaintenanceModal = () => {

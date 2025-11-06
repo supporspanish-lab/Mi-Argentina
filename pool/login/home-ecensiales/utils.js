@@ -1,5 +1,5 @@
-import { db, doc, deleteDoc, updateDoc } from './firebaseService.js';
-import { maintenanceModal, errorConsoleTextarea, errorConsoleModal, waitingScreen, gameCarousel, player2ChatName, player2ChatAvatar, startGameBtn, cancelWaitBtn } from './domElements.js';
+import { db, doc, deleteDoc, updateDoc, getDoc } from './firebaseService.js';
+import { maintenanceModal, errorConsoleTextarea, errorConsoleModal, waitingScreen, gameCarousel, player2ChatName, player2ChatAvatar, startGameBtn, cancelWaitBtn, kickOpponentBtn } from './domElements.js';
 import { getState, setUserWaitingGameId, setPollingIntervalId } from './state.js';
 
 export let isMaintenanceModalOpen = false;
@@ -112,6 +112,7 @@ export async function fetchUserProfile(uid) {
     return null;
 }
 
+// --- NUEVO: Manejo de errores global ---
 export const setupErrorHandling = () => {
     const originalConsoleError = console.error;
     console.error = function(...args) {
@@ -168,6 +169,7 @@ export const setupErrorHandling = () => {
     };
 };
 
+// --- NUEVO: Limpieza de la sala de espera ---
 export const cleanupWaitingGame = async () => {
     const { currentUser, userWaitingGameId } = getState();
 
@@ -202,6 +204,7 @@ export const cleanupWaitingGame = async () => {
             player2ChatAvatar.style.display = 'none';
             startGameBtn.style.display = 'none';
             cancelWaitBtn.textContent = 'Cancelar Sala';
+            kickOpponentBtn.style.display = 'none';
         }
     }
 };

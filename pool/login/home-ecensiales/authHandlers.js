@@ -1,4 +1,4 @@
-import { onSessionStateChanged, onUserProfileUpdate, logout, updateUserProfile } from '../auth.js';
+import { onSessionStateChanged, onUserProfileUpdate, logout } from '../auth.js';
 import { userDisplayName, userBalanceSpan, profileImg, profileSvg, configureUiBtn, logoutBtn, menuToggleBtn, userMenu } from './domElements.js';
 import { getState, setCurrentUser, setCurrentUserProfile, setPreviousBalance, stopPolling } from './state.js';
 import { requestNotificationPermission, animateBalance, showBalanceUpdateNotification, setPlayerAvatar, cleanupWaitingGame } from './utils.js';

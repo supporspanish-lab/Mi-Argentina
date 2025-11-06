@@ -340,7 +340,8 @@
           border-radius: 24px;
           width: 100%;
           max-width: 450px;
-          height: 500px; /* Altura fija para el chat */
+          max-height: 90vh; /* Altura máxima para el chat, adaptable */
+          overflow-y: auto; /* Permitir scroll vertical si el contenido excede la altura */
           box-shadow: 0 10px 30px rgba(0,0,0,0.3);
           margin-bottom: 80px;
       }
@@ -384,8 +385,9 @@
       }
 
       .chat-messages {
-          flex-grow: 1; /* Ocupa el espacio restante */
+          /* flex-grow: 1; Ocupa el espacio restante */
           width: 100%;
+          height: 150px; /* Altura fija para mostrar aproximadamente 3 mensajes */
           overflow-y: auto; /* Scroll para los mensajes */
           padding: 10px;
           background-color: var(--input-bg-color);
@@ -427,8 +429,30 @@
           margin-right: 5px;
       }
 
-      .chat-input-area {
+      .chat-controls-container {
           width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+      }
+
+      .chat-left-button-area {
+          flex-shrink: 0; /* Prevent button area from shrinking */
+      }
+
+      /* --- CORRECCIÓN: Hacer transparente el botón de invitar amigos en el chat --- */
+      .chat-left-button-area button {
+          background: none; /* Fondo transparente */
+          padding: 8px; /* Mismo padding que otros botones de ícono */
+          /* Hereda el resto de estilos de .menu-toggle-btn */
+      }
+
+      .chat-left-button-area button:hover {
+        background-color: rgba(255,255,255,0.1); /* Efecto hover sutil */
+      }
+
+      .chat-input-area {
+          flex-grow: 1; /* Allow the input area to take remaining space */
           display: flex;
           gap: 10px;
       }
@@ -490,7 +514,7 @@
       /* Media queries para responsividad del chat */
       @media (max-width: 768px) {
           .chat-modal {
-              height: 400px;
+              max-height: 85vh;
               max-width: 90vw;
               margin-bottom: 40px;
           }
@@ -504,7 +528,7 @@
 
       @media (max-width: 480px) {
           .chat-modal {
-              height: 350px;
+              max-height: 80vh;
               padding: 15px;
           }
           .player-info {
@@ -1096,6 +1120,76 @@
           font-size: 16px;
           font-family: 'Roboto', sans-serif;
       }
+      /* --- NUEVO: Estilos para el toggle de Sala Privada --- */
+      .private-room-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 15px;
+          margin-bottom: 15px; /* Add some space below */
+          cursor: pointer;
+          user-select: none; /* Prevent text selection */
+      }
+
+      .private-room-toggle input[type="checkbox"] {
+          /* Ocultar el checkbox nativo */
+          position: absolute;
+          opacity: 0;
+          width: 0;
+          height: 0;
+      }
+
+      .private-room-toggle label {
+          position: relative;
+          display: flex;
+          align-items: center;
+          font-size: 16px;
+          color: var(--text-color);
+          cursor: pointer;
+          padding-left: 35px; /* Espacio para el checkbox custom */
+      }
+
+      .private-room-toggle label::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 20px;
+          height: 20px;
+          border: 2px solid var(--border-color);
+          border-radius: 4px;
+          background-color: var(--input-bg-color);
+          transition: all 0.2s ease;
+      }
+
+      .private-room-toggle input[type="checkbox"]:checked + label::before {
+          background-color: var(--primary-color);
+          border-color: var(--primary-color);
+      }
+
+      .private-room-toggle label::after {
+          content: '';
+          position: absolute;
+          left: 7px; /* Ajustar para centrar el check */
+          top: 50%;
+          transform: translateY(-50%) rotate(45deg);
+          width: 6px;
+          height: 12px;
+          border: solid var(--bg-color); /* Color del check */
+          border-width: 0 2px 2px 0;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+      }
+
+      .private-room-toggle input[type="checkbox"]:checked + label::after {
+          opacity: 1;
+      }
+
+      .private-room-toggle:hover label::before {
+          border-color: var(--primary-color);
+          box-shadow: 0 0 5px var(--shadow-color);
+      }
       /* --- NUEVO: Estilos para el indicador de jugadores en línea --- */
       .online-indicator-container {
           display: flex;
@@ -1130,6 +1224,12 @@
         height: 24px;
       }
 
+      /* --- NUEVO: Estilo para la imagen del botón de chat izquierdo --- */
+      #left-chat-button img {
+        width: 24px;
+        height: 24px;
+      }
+
       /* --- MODIFICADO: Hacer el modal de amigos más ancho --- */
       #friends-modal .modal-box {
           max-width: 700px; /* Ancho mayor para acomodar las dos listas */
@@ -1137,23 +1237,27 @@
 
       @media (max-width: 768px) {
         #friends-modal .modal-box {
-          max-width: 90vw; /* Use 90% of viewport width on tablets and smaller */
+          max-width: 80vw; /* Use 80% of viewport width on tablets and smaller */
         }
       }
 
       @media (max-width: 480px) {
         #friends-modal .modal-box {
-          max-width: 95vw; /* Use 95% of viewport width on mobile */
+          width: 85vw; /* Aseguramos que no sea 100% */
+          max-width: 300px; /* Un valor fijo más pequeño para móviles */
+          max-height: 80vh; /* Limitar la altura para que no ocupe toda la pantalla */
           padding: 15px; /* Reduce padding */
         }
 
         #friends-content-wrapper {
           flex-direction: column; /* Stack friend lists vertically */
+          gap: 10px; /* Reduce gap for mobile */
         }
 
         .friend-list-panel {
           min-height: auto; /* Allow height to adjust */
           max-height: 30vh; /* Limit height for scroll */
+          width: 100%; /* Ensure it takes full width */
         }
 
         #user-id-container,
@@ -1178,6 +1282,137 @@
 
         .found-user-actions button {
           width: 100%;
+        }
+
+        #user-friend-id,
+        .friend-request-info,
+        .friend-info,
+        #found-username {
+          word-break: break-word;
+        }
+      }
+
+      @media (orientation: landscape) and (max-height: 450px) {
+        .main-content {
+          flex-direction: column; /* Stack content vertically in landscape */
+          padding: 10px; /* Adjust padding for landscape */
+          gap: 10px;
+        }
+
+        .game-carousel-container {
+          width: 100%;
+          height: 100%; /* Ensure it takes full height */
+          padding: 0;
+          flex-direction: column;
+          flex-grow: 1;
+          justify-content: flex-start;
+          align-items: center;
+        }
+
+        .chat-modal {
+          display: flex !important;
+          flex-direction: column; /* Explicitly set as column flex container */
+          width: 100%;
+          max-width: unset;
+          max-height: 95vh; /* Limitar la altura máxima para que no se corte */
+          margin: 0;
+          padding: 5px;
+          font-size: 13px;
+          overflow-y: auto; /* Permitir scroll en el modal si el contenido excede max-height */
+        }
+
+        .chat-messages {
+          /* flex-grow: 1; Removed to prevent infinite expansion */
+          max-height: 90px; /* Fixed height to display approx 3 messages */
+          width: 100%;
+          overflow-y: auto;
+          padding: 3px;
+          background-color: var(--input-bg-color);
+          border-radius: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          text-align: left;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          min-height: 0;
+        }
+
+        .game-carousel {
+          display: none; /* Hide game carousel in landscape to give chat full space */
+        }
+
+        .chat-header {
+          padding: 5px 8px; /* More compact padding */
+        }
+
+        .player-info {
+          font-size: 12px; /* Smaller font for player info */
+          gap: 3px; /* Smaller gap */
+        }
+
+        .chat-avatar {
+          width: 20px;
+          height: 20px;
+        }
+
+        .vs-text {
+          font-size: 10px;
+        }
+
+        .chat-messages {
+          padding: 3px;
+          font-size: 11px;
+        }
+
+        .chat-input-area input, .chat-input-area button {
+          padding: 5px 8px;
+          font-size: 11px;
+        }
+
+        .play-button, .cancel-button {
+          padding: 8px 15px;
+          font-size: 14px;
+        }
+
+        #friends-modal .modal-box {
+          width: 90vw; /* Ocupar la mayor parte del ancho */
+          max-width: 500px; /* Un poco más ancho que en vertical */
+          max-height: 95vh; /* Ocupar casi toda la altura disponible */
+          padding: 5px; /* Reducir padding */
+          display: flex; /* Asegurar que es un contenedor flex */
+          flex-direction: column; /* Organizar elementos en columna */
+          overflow-y: auto; /* Permitir scroll vertical en el modal si es necesario */
+        }
+        #friends-content-wrapper {
+          flex-direction: row; /* Volver a poner las listas una al lado de la otra si hay espacio */
+          gap: 10px;
+          flex-grow: 1; /* Permitir que el contenedor de listas crezca */
+          min-height: 0; /* Evitar que el contenido flex se desborde */
+        }
+        .friend-list-panel {
+          flex: 1; /* Asegurar que ocupe el espacio disponible */
+          max-height: unset; /* Eliminar altura máxima fija para que se ajuste al flex */
+          overflow-y: auto; /* Asegurar scroll si el contenido es largo */
+          flex-grow: 1; /* Permitir que las listas crezcan */
+          min-height: 0; /* Evitar que el contenido flex se desborde */
+        }
+
+        .friend-request-info,
+        .friend-info {
+          word-break: break-word;
+          flex-shrink: 1; /* Permitir que el texto se encoja */
+        }
+
+        .friend-request-actions {
+          display: flex;
+          flex-wrap: wrap; /* Permitir que los botones se envuelvan */
+          gap: 5px; /* Espacio entre botones */
+        }
+
+        .friend-request-actions button {
+          flex-shrink: 0; /* Evitar que los botones se encojan demasiado */
+          min-width: unset; /* Eliminar cualquier min-width potencial */
         }
       }
 
@@ -1356,6 +1591,29 @@
           object-fit: cover;
       }
 
+      /* --- NUEVO: Estilos mejorados para el botón de invitar a sala --- */
+      .invite-to-game-btn {
+          background-color: var(--primary-color);
+          color: #000;
+          border: none;
+          border-radius: 8px;
+          padding: 8px 14px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          margin-left: auto; /* Empuja el botón a la derecha */
+      }
+      .invite-to-game-btn:hover:not(:disabled) {
+          background-color: #00d47a;
+          transform: scale(1.05);
+          box-shadow: 0 0 10px var(--shadow-color);
+      }
+      .invite-to-game-btn:disabled {
+          background-color: #555;
+          color: #999;
+          cursor: not-allowed;
+      }
 .minimize-chat-btn {
     background: none;
     border: none;

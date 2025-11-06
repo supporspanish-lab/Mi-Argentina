@@ -1,4 +1,4 @@
-import { db, collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, arrayUnion } from './firebaseService.js';
+import { db, collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, arrayUnion, getDoc as getDocFromAuth } from './firebaseService.js';
 import { friendSearchView, friendResultView, searchInput, searchBtn, searchError, foundUserAvatarImg, foundUserAvatarSvg, foundUsernameSpan, addFriendBtn, cancelAddFriendBtn, friendRequestsContainer, friendsListContainer } from './domElements.js';
 import { getState } from './state.js';
 import { setPlayerAvatar } from './utils.js';
@@ -21,8 +21,8 @@ export const setupFriendSearch = () => {
 
         // 1. Buscar por UID
         try {
-            const qById = query(collection(db, "saldo"), where("uid", "==", searchTerm));
-            const querySnapshotById = await getDocs(qById);
+            const qById = doc(db, "saldo", searchTerm);
+            const querySnapshotById = await getDocFromAuth(qById);
             if (!querySnapshotById.empty) {
                 foundUser = { id: querySnapshotById.docs[0].id, ...querySnapshotById.docs[0].data() };
             }
@@ -194,8 +194,8 @@ export const setupFriendsListListener = () => {
             }
 
             for (const friendId of friendIds) {
-                const qByFriendId = query(collection(db, "saldo"), where("uid", "==", friendId));
-                const friendQuerySnapshot = await getDocs(qByFriendId);
+                const qByFriendId = doc(db, "saldo", friendId);
+                const friendQuerySnapshot = await getDocFromAuth(qByFriendId);
                 if (!friendQuerySnapshot.empty) {
                     const friendData = friendQuerySnapshot.docs[0].data();
                     const friendEl = document.createElement('div');

@@ -81,6 +81,7 @@
         const chatMessageInput = document.getElementById('chat-message-input');
         const sendChatMessageBtn = document.getElementById('send-chat-message-btn');
         const minimizeChatBtn = document.getElementById('minimize-chat-btn');
+        const leftChatButton = document.getElementById('left-chat-button');
 
         // --- Lógica para el modal de selección de avatar ---
         const profilePictureContainer = document.querySelector('.profile-picture-container');
@@ -96,6 +97,7 @@
         const confirmBetBtn = document.getElementById('confirm-bet-btn');
         const betAmountInput = document.getElementById('bet-amount-input');
         const betErrorMessage = document.getElementById('bet-error-message');
+        const privateRoomCheckbox = document.getElementById('private-room-checkbox');
         
         // --- NUEVO: Lógica para el modal de amigos ---
         const friendsBtn = document.getElementById('friends-btn');
@@ -103,6 +105,11 @@
         const closeFriendsModalBtn = document.getElementById('close-friends-modal-btn');
         const userFriendIdSpan = document.getElementById('user-friend-id');
         const copyFriendIdBtn = document.getElementById('copy-friend-id-btn');
+
+        // --- NUEVO: Elementos del modal de invitación a la sala ---
+        const inviteFriendsModal = document.getElementById('invite-friends-modal');
+        const inviteFriendsListContainer = document.getElementById('invite-friends-list-container');
+        const closeInviteFriendsModalBtn = document.getElementById('close-invite-friends-modal-btn');
 
         // --- NUEVO: Lógica para el buscador de amigos ---
         const friendSearchView = document.getElementById('friend-search-view');
@@ -117,6 +124,7 @@
         const cancelAddFriendBtn = document.getElementById('cancel-add-friend-btn');
         let foundUser = null;
 
+        const friendRequestsContainer = document.getElementById('friend-requests-container');
         const searchUser = async () => {
             const searchTerm = searchInput.value.trim();
             searchError.textContent = '';
@@ -222,7 +230,7 @@
             }
         });
 
-        if (friendsBtn && friendsModal && closeFriendsModalBtn) {
+        if (friendsBtn && friendsModal) {
             friendsBtn.addEventListener('click', () => {
                 friendsModal.classList.add('visible');
                 // --- NUEVO: Mostrar el ID del usuario actual en el modal ---
@@ -250,9 +258,7 @@
                 }
             });
 
-            closeFriendsModalBtn.addEventListener('click', () => {
-                friendsModal.classList.remove('visible');
-            });
+
 
             // Cerrar el modal si se hace clic en el fondo oscuro
             friendsModal.addEventListener('click', (e) => {
@@ -260,7 +266,42 @@
                     friendsModal.classList.remove('visible');
                 }
             });
+
+            // --- NUEVO: Cerrar el modal de amigos con el botón de cerrar ---
+            if (closeFriendsModalBtn) {
+                closeFriendsModalBtn.addEventListener('click', () => {
+                    friendsModal.classList.remove('visible');
+                });
+            }
         }
+
+        // --- NUEVO: Lógica para el botón de chat izquierdo ---
+        if (leftChatButton) {
+            leftChatButton.addEventListener('click', async () => {
+                if (userWaitingGameId) { // Only open invite modal if in a game
+                    inviteFriendsModal.classList.add('visible');
+                    // Populate the invite friends list
+                    await renderInviteFriendsList();
+                } else {
+                    alert('Debes estar en una sala de espera para invitar amigos.');
+                }
+            });
+        }
+
+        // --- NUEVO: Lógica para cerrar el modal de invitación a la sala ---
+        if (inviteFriendsModal) {
+            inviteFriendsModal.addEventListener('click', (e) => {
+                if (e.target === inviteFriendsModal) {
+                    inviteFriendsModal.classList.remove('visible');
+                }
+            });
+            if (closeInviteFriendsModalBtn) {
+                closeInviteFriendsModalBtn.addEventListener('click', () => {
+                    inviteFriendsModal.classList.remove('visible');
+                });
+            }
+        }
+
         // --- Lógica para el modal de errores de consola ---
         const errorConsoleModal = document.getElementById('error-console-modal');
         const errorConsoleTextarea = document.getElementById('error-console-textarea');
@@ -272,6 +313,7 @@
         let currentUserProfile = null; // Variable para guardar el perfil del usuario
         let previousBalance = null; // --- NUEVO: Para detectar cambios en el saldo
         let userWaitingGameId = null;
+        let unsubscribeGameListener = null; // Para limpiar el listener de la partida
         let lastMessageCount = 0;
 
         function updateErrorConsole() {
@@ -436,9 +478,7 @@
                 container.innerHTML = '';
                 lastMessageCount = 0;
             }
-            requestAnimationFrame(() => {
-                container.scrollTop = container.scrollHeight; // Scroll to the bottom
-            });
+
         }
         
         // --- NUEVO: Lógica para Notificaciones Push ---
@@ -599,7 +639,6 @@
                     });
 
                     // --- NUEVO: Lógica para escuchar solicitudes de amistad ---
-                    const friendRequestsContainer = document.getElementById('friend-requests-container');
                     const requestsRef = collection(db, 'friend_requests');
                     const q = query(requestsRef, where('to', '==', user.uid), where('status', '==', 'pending'));
 
@@ -626,7 +665,38 @@
                         });
                     });
 
+                    // --- NUEVO: Lógica para escuchar invitaciones a sala ---
+                    const gameInvitationsRef = collection(db, 'game_invitations');
+                    const qGameInvites = query(gameInvitationsRef, where('to', '==', user.uid), where('status', '==', 'pending'));
+
+                    onSnapshot(qGameInvites, (snapshot) => {
+                        // Clear previous game invites (if any) before rendering new ones
+                        const existingGameInvites = friendRequestsContainer.querySelectorAll('.game-invite-item');
+                        existingGameInvites.forEach(item => item.remove());
+
+                        if (snapshot.empty) {
+                            return;
+                        }
+
+                        snapshot.forEach(docSnap => {
+                            const invite = docSnap.data();
+                            const inviteId = docSnap.id;
+                            const inviteEl = document.createElement('div');
+                            inviteEl.className = 'friend-request-item game-invite-item'; // Add a specific class for game invites
+                            inviteEl.innerHTML = `
+                                <span class="friend-request-info">Invitación a sala de ${invite.fromUsername}</span>
+                                <div class="friend-request-actions">
+                                    <button class="accept-game-invite-btn" data-id="${inviteId}" data-game-id="${invite.gameId}">Aceptar</button>
+                                    <button class="decline-game-invite-btn" data-id="${inviteId}">Rechazar</button>
+                                </div>
+                            `;
+                            friendRequestsContainer.appendChild(inviteEl);
+                        });
+                    });
+
+                    // --- CORRECCIÓN: Unificar el manejo de clics para solicitudes de amistad e invitaciones de juego ---
                     friendRequestsContainer.addEventListener('click', async (e) => {
+                        // Aceptar solicitud de amistad
                         if (e.target.classList.contains('accept-btn')) {
                             const requestId = e.target.dataset.id;
                             const fromId = e.target.dataset.from;
@@ -634,31 +704,93 @@
                             const friendUserRef = doc(db, 'saldo', fromId);
 
                             try {
-                                await updateDoc(currentUserRef, {
-                                    friends: arrayUnion(fromId)
-                                });
-                                await updateDoc(friendUserRef, {
-                                    friends: arrayUnion(currentUser.uid)
-                                });
-                                await updateDoc(doc(db, 'friend_requests', requestId), {
-                                    status: 'accepted'
-                                });
+                                await updateDoc(currentUserRef, { friends: arrayUnion(fromId) });
+                                await updateDoc(friendUserRef, { friends: arrayUnion(currentUser.uid) });
+                                await updateDoc(doc(db, 'friend_requests', requestId), { status: 'accepted' });
                             } catch (error) {
                                 console.error("Error accepting friend request: ", error);
                             }
                         }
 
+                        // Rechazar solicitud de amistad
                         if (e.target.classList.contains('decline-btn')) {
                             const requestId = e.target.dataset.id;
                             try {
-                                await updateDoc(doc(db, 'friend_requests', requestId), {
-                                    status: 'declined'
-                                });
+                                await updateDoc(doc(db, 'friend_requests', requestId), { status: 'declined' });
                             } catch (error) {
                                 console.error("Error declining friend request: ", error);
                             }
                         }
+
+                        // Aceptar invitación a partida
+                        if (e.target.classList.contains('accept-game-invite-btn')) {
+                            const inviteId = e.target.dataset.id;
+                            const gameId = e.target.dataset.gameId;
+                            try {
+                                // --- CORRECCIÓN: Lógica para unirse a la sala de chat en lugar de ir directo al juego ---
+                                const gameDocRef = doc(db, "games", gameId);
+                                const gameSnap = await getDoc(gameDocRef);
+
+                                if (!gameSnap.exists() || gameSnap.data().status !== 'waiting') {
+                                    alert('Esta partida ya no está disponible o alguien más se unió primero.');
+                                    await updateDoc(doc(db, 'game_invitations', inviteId), { status: 'expired' });
+                                    return;
+                                }
+
+                                const gameData = gameSnap.data();
+                                if (currentUserProfile && gameData.betAmount > currentUserProfile.balance) {
+                                    alert('No tienes saldo suficiente para unirte a esta partida.');
+                                    return;
+                                }
+
+                                const random = Math.random();
+                                const player1Uid = gameData.player1.uid;
+                                const player2Uid = currentUser.uid;
+                                const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
+
+                                await updateDoc(gameDocRef, {
+                                    player2: { uid: player2Uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
+                                    status: "players_joined",
+                                    currentPlayerUid: startingPlayerUid,
+                                    turn: 1
+                                });
+
+                                await updateDoc(doc(db, 'game_invitations', inviteId), { status: 'accepted' });
+
+                                userWaitingGameId = gameId;
+                                gameCarousel.style.display = 'none';
+                                waitingScreen.style.display = 'flex';
+                                player1ChatName.textContent = gameData.player1.username;
+                                setPlayerAvatar(player1ChatAvatar, gameData.player1.profileImageName);
+                                player2ChatName.textContent = currentUserProfile.username;
+                                setPlayerAvatar(player2ChatAvatar, currentUserProfile.profileImageName);
+                                startGameBtn.style.display = 'none';
+                                cancelWaitBtn.textContent = 'Abandonar Sala';
+
+                                unsubscribeGameListener = onSnapshot(doc(db, "games", gameId), (gameSnap) => {
+                                    const gameData = gameSnap.data();
+                                    if (gameData && gameData.status === "starting") {
+                                        window.location.href = `../index.html?gameId=${gameId}`;
+                                    }
+                                });
+
+                                friendsModal.classList.remove('visible'); // Cerrar modal de amigos
+                            } catch (error) {
+                                console.error("Error accepting game invitation: ", error);
+                            }
+                        }
+
+                        // Rechazar invitación a partida
+                        if (e.target.classList.contains('decline-game-invite-btn')) {
+                            const inviteId = e.target.dataset.id;
+                            try {
+                                await updateDoc(doc(db, 'game_invitations', inviteId), { status: 'declined' });
+                            } catch (error) {
+                                console.error("Error declining game invitation: ", error);
+                            }
+                        }
                     });
+
 
                     const friendsListContainer = document.getElementById('friends-list-container');
 
@@ -732,6 +864,10 @@
                             player2ChatAvatar.style.display = 'none';
                             startGameBtn.style.display = 'none';
                             cancelWaitBtn.textContent = 'Cancelar Sala';
+                            kickOpponentBtn.style.display = 'none';
+                            if (unsubscribeGameListener) {
+                                unsubscribeGameListener(); // Detener el listener anterior
+                            }
                         }
                     }
                 };
@@ -747,15 +883,6 @@
                     }
                 });
 
-                logoutBtn.addEventListener('click', async () => {
-                    await cleanupWaitingGame();
-                    logout().then(() => {
-                        window.location.href = 'login.html';
-                    }).catch((error) => {
-                        console.error('Error al cerrar sesión:', error);
-                    });
-                });
-
                 configureUiBtn.addEventListener('click', () => {
                     console.log('Botón Administrador clickeado! Abriendo admin.html en una nueva pestaña.');
                     window.open('admin.html', '_blank');
@@ -763,11 +890,12 @@
                 });
                 
                 const gamesRef = collection(db, "games");
-                const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"), where("player2", "==", null));
                 const STALE_GAME_MINUTES = 10;
 
                 const purgeStaleGames = async () => {
                     try {
+                        // --- CORRECCIÓN: Definir la consulta que faltaba ---
+                        const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"), where("player2", "==", null));
                         const snapshot = await getDocs(waitingGamesQuery);
                         const now = new Date();
                         const promises = [];
@@ -776,7 +904,7 @@
                             const createdAt = gameData.createdAt?.toDate();
                             if (createdAt) {
                                 const minutesDiff = (now - createdAt) / (1000 * 60);
-                                if (minutesDiff > STALE_GAME_MINUTES) {
+                                if (minutesDiff > STALE_GAME_MINUTES && docSnap.data().status === "waiting" && docSnap.data().player2 === null) {
                                     // Stale game logic
                                 }
                             }
@@ -794,6 +922,7 @@
                     if (waitingScreen.style.display === 'flex' && userWaitingGameId) {
                         return; // Don't poll for games if the user is already in a waiting room
                     }
+                    const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"), where("player2", "==", null), where("isPrivate", "==", false));
                     try {
                         const querySnapshot = await getDocs(waitingGamesQuery);
                         gameCarousel.innerHTML = '';
@@ -878,8 +1007,7 @@
                                     cancelWaitBtn.textContent = 'Abandonar Sala'; // Player 2 can abandon the room
 
                                     // Listen for game status changes to redirect to actual game
-                                    let gameStartedAndLoaded = false; // Flag to prevent multiple iframe loads
-                                    onSnapshot(doc(db, "games", gameId), (gameSnap) => {
+                                    unsubscribeGameListener = onSnapshot(doc(db, "games", gameId), (gameSnap) => {
                                         const gameData = gameSnap.data();
                                         if (gameData) {
                                             renderMessages(gameData.messages, chatMessagesContainer);
@@ -887,7 +1015,6 @@
                                                 root.style.display = 'none';
                                                 gameContainer.style.display = 'block';
                                                 gameIframe.src = `../index.html?gameId=${gameId}`;
-                                                gameStartedAndLoaded = true; // Set flag to true after loading
                                             }
                                         }
                                     });
@@ -981,7 +1108,9 @@
                                     currentPlayerUid: null,
                                     balls: ballPositions,
                                     turn: 1,
-                                    betAmount: betAmount // --- CORREGIDO: Guardar la apuesta
+                                    betAmount: betAmount,
+                                    isPrivate: privateRoomCheckbox.checked,
+                                    messages: [] // Initialize messages array
                                 });
 
                                 userWaitingGameId = newGame.id;
@@ -996,15 +1125,13 @@
                                 kickOpponentBtn.style.display = 'none';
 
                                 let gameStartedAndLoaded = false; // Flag to prevent multiple iframe loads
-                                onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
+                                unsubscribeGameListener = onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
                                     const gameData = gameSnap.data();
                                     if (gameData) {
                                         if (gameData.status === "players_joined" && gameData.player2) {
                                             // Player 2 has joined, update UI for Player 1
                                             player2ChatName.textContent = gameData.player2.username;
                                             setPlayerAvatar(player2ChatAvatar, gameData.player2.profileImageName);
-                                            startGameBtn.style.display = 'block'; // Show play button
-                                            cancelWaitBtn.textContent = 'Cancelar Partida'; // Change text for cancel button
                                             kickOpponentBtn.style.display = 'block'; // Show kick button
                                         } else if (gameData.status === "starting" && !gameStartedAndLoaded) { // Check flag
                                             root.style.display = 'none';
@@ -1018,6 +1145,11 @@
                                             startGameBtn.style.display = 'none';
                                             cancelWaitBtn.textContent = 'Cancelar Sala';
                                             kickOpponentBtn.style.display = 'none'; // Hide kick button
+                                        }
+                                        // Player 1 can always start if a player 2 is present
+                                        if (gameData.player2) {
+                                            startGameBtn.style.display = 'block';
+                                            cancelWaitBtn.textContent = 'Cancelar Partida';
                                         }
                                         renderMessages(gameData.messages, chatMessagesContainer);
                                     } else {
@@ -1120,7 +1252,6 @@
 
                 logoutBtn.addEventListener('click', async () => {
                     stopPolling(); // Detener el polling al cerrar sesión
-                    window.dispatchEvent(new CustomEvent('userLoggedOut')); // --- NUEVO: Notificar a PocketBase
                     await cleanupWaitingGame();
                     logout().then(() => {
                         window.location.href = 'login.html';
@@ -1131,7 +1262,6 @@
 
                 window.addEventListener('beforeunload', async (event) => {
                     stopPolling(); // Detener el polling al abandonar la página
-                    window.dispatchEvent(new CustomEvent('userLoggedOut')); // --- NUEVO: Notificar a PocketBase
                     await cleanupWaitingGame();
                 });
 
@@ -1139,7 +1269,6 @@
                 fetchWaitingGames();
 
                 cancelWaitBtn.addEventListener('click', async () => {
-                    window.dispatchEvent(new CustomEvent('userLoggedOut')); // --- NUEVO: Notificar a PocketBase
                     await cleanupWaitingGame();
                 });
 
@@ -1178,4 +1307,84 @@
         });
         } catch (error) {
             console.error("Error in onSessionStateChanged setup:", error);
+        }
+
+        // --- NUEVO: Función para enviar invitación a la sala ---
+        async function sendGameInvitation(friendId, toUsername, gameId) {
+            try {
+                const gameInvitationsRef = collection(db, 'game_invitations');
+                await addDoc(gameInvitationsRef, {
+                    from: currentUser.uid,
+                    fromUsername: currentUserProfile.username,
+                    to: friendId,
+                    toUsername: toUsername,
+                    gameId: gameId,
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+                console.log(`Invitación a la sala ${gameId} enviada a ${friendId}`);
+                alert(`Invitación enviada a ${toUsername}!`);
+            } catch (error) {
+                console.error("Error al enviar invitación a la sala:", error);
+                alert("Error al enviar invitación.");
+            }
+        }
+
+        // --- NUEVO: Función para renderizar la lista de amigos para invitar ---
+        async function renderInviteFriendsList() {
+            if (!currentUser || !userWaitingGameId) return;
+
+            const userDoc = await getDoc(doc(db, 'saldo', currentUser.uid));
+            if (!userDoc.exists()) return;
+
+            const userData = userDoc.data();
+            const friendIds = userData.friends || [];
+            inviteFriendsListContainer.innerHTML = '<h4>Mis Amigos</h4>';
+
+            if (friendIds.length === 0) {
+                inviteFriendsListContainer.innerHTML += '<p>No tienes amigos todavía.</p>';
+                return;
+            }
+
+            for (const friendId of friendIds) {
+                const friendDoc = await getDoc(doc(db, 'saldo', friendId));
+                if (friendDoc.exists()) {
+                    const friendData = friendDoc.data();
+                    const friendEl = document.createElement('div');
+                    friendEl.className = 'friend-item';
+
+                    let avatarHtml = '';
+                    if (friendData.profileImageName) {
+                        avatarHtml = `<img src="../imajenes/perfil/${friendData.profileImageName}" alt="Avatar">`;
+                    } else {
+                        avatarHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>`;
+                    }
+
+                    friendEl.innerHTML = `
+                        <div class="friend-avatar">
+                            ${avatarHtml}
+                        </div>
+                        <span class="friend-info">${friendData.username}</span>
+                        ${friendId !== currentUser.uid ? `<button class="invite-to-game-btn" data-friend-id="${friendId}">Invitar a Sala</button>` : ''}
+                    `;
+                    inviteFriendsListContainer.appendChild(friendEl);
+                }
+            }
+
+            // Add event listeners for invite buttons
+            inviteFriendsListContainer.querySelectorAll('.invite-to-game-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    // --- CORRECCIÓN: Obtener los datos del amigo desde el elemento clickeado ---
+                    const friendToInviteId = e.target.dataset.friendId;
+                    const friendItem = e.target.closest('.friend-item');
+                    const friendUsername = friendItem.querySelector('.friend-info').textContent;
+
+                    if (friendToInviteId && userWaitingGameId) {
+                        await sendGameInvitation(friendToInviteId, friendUsername, userWaitingGameId);
+                        // --- MEJORA: Añadir un checkmark para feedback visual ---
+                        e.target.innerHTML = '✓ Invitado';
+                        e.target.disabled = true;
+                    }
+                });
+            });
         }

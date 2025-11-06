@@ -31,6 +31,9 @@
                         <svg id="mute-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8.83v6.34L17.17 12 14 8.83zM12 4L7.17 9H4c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h3.17L12 20V4zm-2 1.17L5.83 10H4v4h1.83L10 18.83V5.17z"/></svg>
                         <svg id="unmute-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4L7.17 9H4c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h3.17L12 20V4zm-2 1.17L5.83 10H4v4h1.83L10 18.83V5.17zM18.5 12l1.5-1.5-1.5-1.5-1.5 1.5-1.5-1.5-1.5 1.5 1.5 1.5-1.5 1.5 1.5 1.5 1.5-1.5 1.5 1.5 1.5-1.5z"/></svg>
                     </button>
+                    <div class="friends-icon-container">
+                        <button id="friends-btn" class="menu-toggle-btn friends-on-glow" title="Amigos"><img src="../imajenes/amigos.png" alt="Amigos"></button>
+                    </div>
                     <div class="user-profile">
                         <div class="profile-picture-container">
                             <!-- SOLUCIÓN: Añadir un elemento <img> para la foto de perfil, inicialmente oculto -->
@@ -78,9 +81,14 @@
                         </div>
                         <div class="chat-messages">
                         </div>
-                        <div class="chat-input-area">
-                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje...">
-                            <button id="send-chat-message-btn">Enviar</button>
+                        <div class="chat-controls-container">
+                            <div class="chat-left-button-area">
+                                <button id="left-chat-button" class="menu-toggle-btn" title="Amigos"><img src="../imajenes/amigos.png" alt="Amigos"></button>
+                            </div>
+                            <div class="chat-input-area">
+                                <input type="text" id="chat-message-input" placeholder="Escribe un mensaje...">
+                                <button id="send-chat-message-btn">Enviar</button>
+                            </div>
                         </div>
                         <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
                             <button id="start-game-btn" class="play-button" style="display: none;">Iniciar Partida</button>
@@ -89,9 +97,7 @@
                     </div>
                     <div class="game-carousel" id="game-carousel"></div>
                 </div>
-                <div class="friends-icon-container">
-                    <button id="friends-btn" class="menu-toggle-btn friends-on-glow" title="Amigos"><img src="../imajenes/amigos.png" alt="Amigos"></button>
-                </div>
+
             </main>
         </div>
     </div>
@@ -148,9 +154,18 @@
                     
                 </div>
             </div>
-            <div class="modal-buttons">
-                <button id="close-friends-modal-btn" class="cancel-button">Cerrar</button>
+            <button id="close-friends-modal-btn" class="cancel-button" style="align-self: center; margin-top: 20px;">Cerrar</button>
+        </div>
+    </div>
+    <!-- --- NUEVO: Modal para Invitar Amigos a la Sala --- -->
+    <div id="invite-friends-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Invitar Amigos a la Sala</h3>
+            <div id="invite-friends-list-container" class="friend-list-panel">
+                <h4>Mis Amigos</h4>
+                <!-- La lista de amigos para invitar se cargará aquí -->
             </div>
+            <button id="close-invite-friends-modal-btn" class="cancel-button" style="align-self: center; margin-top: 20px;">Cerrar</button>
         </div>
     </div>
     <!-- --- NUEVO: Pantalla de carga al encontrar partida --- -->
@@ -191,6 +206,10 @@
                  <input type="number" id="bet-amount-input" class="form-input" placeholder="Monto de la apuesta" min="1000" step="100">
             </div>
             <p id="bet-error-message" style="color: #e74c3c; min-height: 1em;"></p>
+            <div class="private-room-toggle" style="margin-top: 15px;">
+                <input type="checkbox" id="private-room-checkbox">
+                <label for="private-room-checkbox">Sala Privada</label>
+            </div>
             <div class="modal-buttons">
                 <button id="cancel-bet-btn" class="cancel-button" style="background-color: #555; border-color: #777;">Cancelar</button>
                 <button id="confirm-bet-btn" class="play-button" style="font-size: 18px; padding: 15px 30px;">Apostar y Crear</button>

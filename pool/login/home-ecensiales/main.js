@@ -1,10 +1,10 @@
 import { setupAuthListeners, setupMenuListeners } from './authHandlers.js';
 import { setupMaintenanceModal, setupAvatarModal, setupBetModal, setupFriendsModal, setupErrorConsoleModal } from './modalHandlers.js';
-import { setupFriendSearch, setupFriendRequestsListener, setupFriendsListListener } from './friendshipHandlers.js';
+import { setupFriendSearch } from './friendshipHandlers.js';
 import { setupGameRoomListeners, createGame, purgeStaleGames } from './gameRoomHandlers.js';
 import { setupErrorHandling } from './utils.js';
 
-// Setup error handling first
+// Configurar el manejo de errores primero
 setupErrorHandling();
 
 // Setup UI event listeners
@@ -17,7 +17,7 @@ setupFriendSearch();
 setupGameRoomListeners();
 setupMenuListeners();
 
-// Setup authentication listeners which will trigger other setups upon login
+// Configurar listeners de autenticación que activarán otras configuraciones al iniciar sesión
 setupAuthListeners();
 
 // Purge stale games on load

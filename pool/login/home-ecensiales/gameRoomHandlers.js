@@ -1,5 +1,5 @@
-import { db, collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, arrayUnion, deleteDoc } from './firebaseService.js';
-import { gameCarousel, waitingScreen, cancelWaitBtn, startGameBtn, kickOpponentBtn, chatMessagesContainer, chatMessageInput, sendChatMessageBtn, minimizeChatBtn, player1ChatName, player2ChatName, player1ChatAvatar, player2ChatAvatar, betModal, betAmountInput } from './domElements.js';
+import { db, collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, arrayUnion, deleteDoc, getDoc } from './firebaseService.js';
+import { gameCarousel, waitingScreen, cancelWaitBtn, startGameBtn, kickOpponentBtn, chatMessagesContainer, chatMessageInput, sendChatMessageBtn, minimizeChatBtn, player1ChatName, player2ChatName, player1ChatAvatar, player2ChatAvatar, betModal, betAmountInput, betErrorMessage } from './domElements.js';
 import { getState, setUserWaitingGameId, setLastMessageCount, setPollingIntervalId, stopPolling } from './state.js';
 import { setPlayerAvatar, renderMessages, cleanupWaitingGame } from './utils.js';
 
@@ -122,7 +122,7 @@ export const createGame = async (betAmount) => {
     };
 };
 
-export const fetchWaitingGames = async () => {
+export const fetchWaitingGames = async (isPrivate = false) => {
     const { currentUser, userWaitingGameId, currentUserProfile } = getState();
     if (!currentUser) return;
 
@@ -131,7 +131,7 @@ export const fetchWaitingGames = async () => {
     }
     try {
         const gamesRef = collection(db, "games");
-        const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"), where("player2", "==", null));
+        const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"), where("player2", "==", null), where("isPrivate", "==", isPrivate));
         const querySnapshot = await getDocs(waitingGamesQuery);
         gameCarousel.innerHTML = '';
         let userIsWaiting = false;
@@ -240,6 +240,7 @@ export const fetchWaitingGames = async () => {
             `;
             createCard.addEventListener('click', async () => {
                 betAmountInput.value = '1000';
+                betErrorMessage.textContent = '';
                 betModal.classList.add('visible');
             });
             gameCarousel.appendChild(createCard);
