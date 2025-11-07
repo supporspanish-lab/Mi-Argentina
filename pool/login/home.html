@@ -45,10 +45,32 @@
         50% { transform: rotate(90deg) scale(1.1); }
       }
     </style>
+    <!-- NUEVO: Estilos para el video de fondo -->
+    <style>
+      #background-video {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        z-index: -1; /* Detrás de todo el contenido */
+        object-fit: cover; /* Asegura que el video cubra todo el espacio sin deformarse */
+      }
+      /* SOLUCIÓN: Evitar que el video agrande la página y cause scroll */
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* La clave para evitar el scroll */
+      }
+    </style>
   </head>
   <body>
-    <!-- MODIFICADO: Quitado 'loop' para que el video se reproduzca una vez y se pause al final -->
-    <video autoplay muted playsinline id="background-video" preload="auto"></video>
+    <!-- NUEVO: Elemento para el video de fondo -->
+    <video autoplay muted id="background-video"></video>
 
     <div id="root">
         <div class="app-container">
@@ -280,51 +302,6 @@
     <!-- CORRECCIÓN: Cargar main.js, que es el punto de entrada principal de la aplicación -->
     <script type="module" src="./home-ecensiales/main.js"></script>
   </body>
-  <!-- MODIFICADO: Script para el video de fondo aleatorio con control de volumen -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const backgroundVideo = document.getElementById('background-video');
-        
-        // --- CORRECCIÓN: Rutas relativas correctas para GitHub Pages ---
-        const videos = [
-            './video/video1.mp4',
-            './video/video2.mp4',
-            './video/video3.mp4'
-        ];
-        const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-
-        backgroundVideo.src = randomVideo;
-
-        // Cuando el video esté listo para reproducirse, lo hacemos visible.
-        backgroundVideo.addEventListener('canplay', () => {
-            backgroundVideo.play().catch(error => {
-                console.log("La reproducción automática del video silenciado fue bloqueada. Se iniciará con la interacción del usuario.");
-            });
-            // Hacemos que el video aparezca suavemente (aún silenciado).
-            backgroundVideo.classList.add('visible');
-        });
-    });
-  </script>
-  <!-- NUEVO: Script para manejar el autoplay de la música -->
-  <script>
-    function handleFirstInteraction() {
-      // Dispara un evento personalizado que el audioManager puede escuchar
-      window.dispatchEvent(new CustomEvent('userInteracted'));
-
-      // --- MODIFICADO: Activar sonido y opacidad completa del video en la primera interacción ---
-      const backgroundVideo = document.getElementById('background-video');
-      if (backgroundVideo && backgroundVideo.muted) {
-          backgroundVideo.muted = false;
-          backgroundVideo.volume = 0.04; // Establecer volumen al 4%
-          backgroundVideo.classList.add('sound-on'); // Aumentar opacidad a 1
-      }
-
-      // Una vez que se ejecuta, elimina el listener para no volver a llamarlo
-      // El listener ya se elimina solo porque usamos { once: true }
-    }
-    document.body.addEventListener('click', handleFirstInteraction, { once: true });
-    document.body.addEventListener('touchstart', handleFirstInteraction, { once: true });
-  </script>
   <script>
     // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
     // Esta función establece la altura del contenedor principal a la altura
@@ -385,5 +362,24 @@
       window.addEventListener('resize', checkOrientation); // Fallback para algunos dispositivos
     }
     window.addEventListener('load', lockOrientation);
+  </script>
+  <!-- NUEVO: Script para el video de fondo aleatorio -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const videoElement = document.getElementById('background-video');
+      // Nota: Asumo que 'video2.mp3' fue un error y debería ser 'video2.mp4'.
+      const videos = [
+        '../video/video1.mp4',
+        '../video/video2.mp4',
+        '../video/video3.mp4'
+      ];
+
+      // Elige un video al azar
+      const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+
+      // Asigna la fuente al elemento de video y lo carga
+      videoElement.src = randomVideo;
+      videoElement.load();
+    });
   </script>
 </html>
