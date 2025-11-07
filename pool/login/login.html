@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maestro del BlackBall - Iniciar Sesión</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- SOLUCIÓN: Evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        #update-message-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: var(--text-color);
+            font-size: 24px;
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+        }
+        #update-message {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .hidden {
+            display: none !important;
+        }
+        :root {
+            --primary-color: #00f291;
+            --bg-color: #1a1a1a;
+            --container-bg-color: rgba(35, 35, 35, 0.85);
+            --input-bg-color: #2c2c2c;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --text-color: #ffffff;
+            --text-secondary-color: #a0a0a0;
+            --shadow-color: rgba(0, 242, 145, 0.5);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%; /* Asegurar que html y body ocupen toda la altura */
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(160deg, #0a100d 0%, #1a1a1a 100%);
+            color: var(--text-color);
+            display: grid;
+            place-items: center;
+            position: relative;
+            overflow: hidden; /* Evita el scroll */
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 30px;
+            background-color: var(--container-bg-color);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            margin: 0;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out forwards;
+            will-change: transform, opacity;
+            transition: background-color 1s ease-out 0.5s, border-color 1s ease-out 0.5s, backdrop-filter 1s ease-out 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .login-content {
+            transition: opacity 0.3s ease-out;
+        }
+        
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: spin 1s linear infinite;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .login-container.is-disintegrating .login-content {
+            opacity: 0;
+        }
+
+        .login-container.is-disintegrating {
+            background-color: transparent;
+            border-color: transparent;
+            backdrop-filter: blur(0px);
+        }
+
+        .particles-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            border-radius: 24px;
+        }
+
+        .dust-particle {
+            position: absolute;
+            background-color: var(--text-color);
+            border-radius: 50%;
+            opacity: 1;
+            animation-name: dust-effect;
+            animation-timing-function: ease-out;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes dust-effect {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x-end), var(--y-end)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .app-title {
+            font-family: 'Righteous', cursive;
+            font-size: 36px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .app-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary-color);
+            margin-bottom: 40px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: var(--input-bg-color);
+            border: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group:focus-within {
+            border-color: transparent;
+        }
+
+        .input-group::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 250%;
+            padding-bottom: 250%;
+            background: conic-gradient(from 180deg, #00f291, #00d4ff, #ad62f7, #f762a3, #00f291);
+            transform: translate(-50%, -50%);
+            animation: rotate-glow 4s ease-in-out infinite;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            z-index: 1;
+        }
+
+        @keyframes rotate-glow {
+            0% { transform: translate(-50%, -50%) rotate(0deg); filter: brightness(1.1) blur(1px); }
+            50% { transform: translate(-50%, -50%) rotate(180deg); filter: brightness(1.4) blur(3px); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); filter: brightness(1.1) blur(1px); }
+        }
+
+        .input-group::after {
+            content: '';
+            position: absolute;
+            inset: 1px;
+            background-color: var(--input-bg-color);
+            border-radius: 10px;
+            z-index: 2;
+        }
+
+        .input-group:focus-within::before {
+            opacity: 1;
+        }
+
+        .input-icon {
+            position: relative;
+            z-index: 3;
+            color: var(--text-secondary-color);
+            width: 20px;
+            height: 20px;
+            margin: 0 16px;
+            transition: color 0.3s ease;
+        }
+
+        .input-group:focus-within .input-icon {
+            color: var(--primary-color);
+        }
+
+        .form-input {
+            position: relative;
+            z-index: 3;
+            flex-grow: 1;
+            border: none;
+            background: none;
+            outline: none;
+            padding: 16px 16px 16px 0;
+            color: var(--text-color);
+            font-size: 16px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .form-input::placeholder {
+            color: var(--text-secondary-color);
+        }
+
+        .btn-primary {
+            margin-top: 10px;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary-color);
+            color: #000;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 15px var(--shadow-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 0 5px var(--shadow-color);
+        }
+
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-secondary-color);
+            margin: 25px 0;
+            font-size: 14px;
+        }
+
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .separator:not(:empty)::before {
+            margin-right: .5em;
+        }
+
+        .separator:not(:empty)::after {
+            margin-left: .5em;
+        }
+
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: #fff;
+            color: #333;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-google:hover {
+            background-color: #f2f2f2;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .register-link {
+            margin-top: 25px;
+            font-size: 14px;
+            color: var(--text-secondary-color);
+        }
+
+        .register-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- NUEVO: Estilos para ocultar/mostrar elementos de registro --- */
+        .register-only {
+            display: none;
+        }
+        .login-container.register-mode .login-only {
+            display: none;
+        }
+        .login-container.reset-mode .login-only,
+        .login-container.reset-mode .register-only {
+            display: none;
+        }
+
+        /* --- NUEVO: Estilo para el mensaje de error --- */
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            min-height: 1.2em; /* Evita que el layout salte */
+            text-align: center;
+        }
+        .error-message.success {
+            color: var(--primary-color); /* Verde para mensajes de éxito */
+        }
+
+        .form-options {
+            text-align: right;
+            margin-bottom: 15px;
+        }
+
+        /* --- NUEVO: Media Queries para Responsividad --- */
+
+        /* Para móviles en vertical (hasta 480px) */
+        @media (max-width: 480px) {
+            .login-container {
+                width: 90vw; /* Usar el 90% del ancho de la ventana */
+                padding: 30px 20px; /* Reducir el padding */
+            }
+
+            .app-title {
+                font-size: 30px; /* Título un poco más pequeño */
+            }
+
+            .app-subtitle {
+                font-size: 14px;
+                margin-bottom: 30px;
+            }
+
+            .login-form {
+                gap: 15px; /* Menos espacio entre elementos del formulario */
+            }
+
+            .form-input, .btn-google {
+                font-size: 15px;
+            }
+
+            .btn-primary {
+                padding: 15px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SOLUCIÓN: Añadir el contenedor para los mensajes de actualización del Service Worker -->
+    <div id="update-message-container">
+        <div class="loading-spinner"></div>
+        <p id="update-message">Cargando aplicación...</p>
+    </div>
+
+    <div class="login-container" id="login-container">
+        <div class="loading-spinner" id="loading-spinner"></div>
+        <div class="login-content" id="login-content">
+            <h1 class="app-title">BlackBall Pool</h1>
+            <p class="app-subtitle">Inicia sesión para jugar</p>
+            
+            <form class="login-form" id="login-form">
+                <div class="input-group register-only" id="username-group">
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0-8a3 3 0 1 1-3 3 3 3 0 0 1 3-3Zm0 10a8 8 0 0 0-8 8 1 1 0 0 0 2 0 6 6 0 0 1 12 0 1 1 0 0 0 2 0 8 8 0 0 0-8-8Z"></path></svg>
+                    <input 
+                        type="text" 
+                        class="form-input" 
+                        placeholder="Nombre de Usuario" 
+                        aria-label="Nombre de Usuario"
+                    />
+                </div>
+                <div class="input-group">
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2.5a5.5 5.5 0 0 1 5.5 5.5c0 1.57-.67 3-1.69 3.99a7.5 7.5 0 0 1 4.2 6.32V20H3.99v-1.69a7.5 7.5 0 0 1 4.2-6.32A5.5 5.5 0 0 1 6.5 8a5.5 5.5 0 0 1 5.5-5.5Z" />
+                    </svg>
+                    <input 
+                        type="email" 
+                        class="form-input" 
+                        id="email-input"
+                        placeholder="Correo Electrónico" 
+                        aria-label="Correo Electrónico"
+                        autocomplete="email"
+                        required 
+                    />
+                </div>
+                <div class="input-group" id="password-group">
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2.5c-2.48 0-4.5 2.02-4.5 4.5v3h9v-3c0-2.48-2.02-4.5-4.5-4.5Zm7.5 7.5H4.5c-.83 0-1.5.67-1.5 1.5v8c0 .83.67 1.5 1.5 1.5h15c.83 0 1.5-.67 1.5-1.5v-8c0-.83-.67-1.5-1.5-1.5Z" />
+                    </svg>
+                    <input 
+                        type="password" 
+                        class="form-input" 
+                        placeholder="Contraseña" 
+                        autocomplete="current-password"
+                        aria-label="Contraseña"
+                        required 
+                    />
+                </div>
+                <div class="form-options login-only">
+                    <a href="javascript:void(0);" id="switchToReset" class="register-link">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <div class="input-group register-only" id="confirm-password-group">
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c-2.48 0-4.5 2.02-4.5 4.5v3h9v-3c0-2.48-2.02-4.5-4.5-4.5Zm7.5 7.5H4.5c-.83 0-1.5.67-1.5 1.5v8c0 .83.67 1.5 1.5 1.5h15c.83 0 1.5-.67 1.5-1.5v-8c0-.83-.67-1.5-1.5-1.5Z"></path></svg>
+                    <input 
+                        type="password" 
+                        class="form-input" 
+                        placeholder="Confirmar Contraseña" 
+                        autocomplete="new-password"
+                        aria-label="Confirmar Contraseña"
+                    />
+                </div>
+                <!-- NUEVO: Contenedor para mensajes de error -->
+                <p id="error-message" class="error-message"></p>
+
+                <button type="submit" class="btn-primary">Ingresar</button>
+
+                <p class="register-link login-only">
+                    ¿No tienes una cuenta? <a href="javascript:void(0);" id="switchToRegister">Regístrate ahora</a>
+                </p>
+                <p class="register-link register-only" id="switchToLoginContainer">
+                    ¿Ya tienes una cuenta? <a href="javascript:void(0);" id="switchToLogin">Inicia sesión</a>
+                </p>
+            </form>
+        </div>
+        <div class="particles-container" id="particles-container"></div>
+    </div>
+
+    <!-- SDKs de Firebase -->
+    <script type="module">
+        // --- Lógica de la Interfaz de Usuario ---
+        import { registerWithEmail, loginWithEmail, sendResetPasswordEmail, db } from './auth.js'; // Importar db para la lógica de perfil
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form');
+            const loginContainer = document.getElementById('login-container');
+            const particlesContainer = document.getElementById('particles-container');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            const switchToRegister = document.getElementById('switchToRegister');
+            const switchToLogin = document.getElementById('switchToLogin');
+            const switchToReset = document.getElementById('switchToReset'); // NUEVO
+            const subtitle = document.querySelector('.app-subtitle');
+            const submitButton = document.querySelector('.btn-primary');
+            const usernameGroup = document.getElementById('username-group');
+            const confirmPasswordGroup = document.getElementById('confirm-password-group');
+            const passwordGroup = document.getElementById('password-group'); // MODIFICADO: Usar ID
+            const emailInput = document.getElementById('email-input'); // NUEVO
+            const errorMessageElement = document.getElementById('error-message'); // NUEVO
+
+            const createDustParticles = (count) => {
+                if (!particlesContainer) return;
+                
+                // Clear any previous particles
+                particlesContainer.innerHTML = '';
+                
+                for (let i = 0; i < count; i++) {
+                    const particle = document.createElement('div');
+                    particle.classList.add('dust-particle');
+                    
+                    particle.style.top = `${Math.random() * 100}%`;
+                    particle.style.left = `${Math.random() * 100}%`;
+                    particle.style.width = `${Math.random() * 3 + 1}px`;
+                    particle.style.height = particle.style.width;
+                    particle.style.animationDelay = `${Math.random() * 1.5}s`;
+                    particle.style.animationDuration = `${Math.random() * 1 + 0.8}s`;
+                    particle.style.setProperty('--x-end', `${(Math.random() - 0.5) * 300}px`);
+                    particle.style.setProperty('--y-end', `${(Math.random() - 0.5) * 300}px`);
+                    
+                    particlesContainer.appendChild(particle);
+                }
+            };
+
+            const triggerDisintegration = () => {
+                if (loginContainer.classList.contains('is-disintegrating')) return;
+
+                document.getElementById('login-content').style.opacity = '0';
+                loadingSpinner.style.opacity = '1';
+
+                setTimeout(() => {
+                    loginContainer.classList.add('is-disintegrating');
+                    createDustParticles(800);
+                    loadingSpinner.style.opacity = '0';
+
+                    setTimeout(() => {
+                        window.location.href = 'home.html';
+                    }, 3000);
+                }, 150);
+            };
+
+            // --- Lógica de Autenticación ---
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const isRegisterMode = loginContainer.classList.contains('register-mode');
+                const isResetMode = loginContainer.classList.contains('reset-mode');
+                const email = emailInput.value;
+                errorMessageElement.textContent = '';
+                errorMessageElement.classList.remove('success');
+
+                try {
+                    if (isResetMode) {
+                        await sendResetPasswordEmail(email);
+                        errorMessageElement.textContent = "Si este correo existe, recibirás un email (revisa también en spam) para restablecer tu contraseña.";
+                        errorMessageElement.classList.add('success');
+                        submitButton.disabled = true;
+                        return;
+                    }
+
+                    let password = '';
+                    if (!isResetMode) {
+                        password = passwordGroup.querySelector('input').value;
+                    }
+
+                    if (isRegisterMode) {
+                        const confirmPassword = confirmPasswordGroup.querySelector('input').value;
+                        if (password !== confirmPassword) {
+                            errorMessageElement.textContent = "Las contraseñas no coinciden.";
+                            return;
+                        }
+                        const username = usernameGroup.querySelector('input').value;
+                        await registerWithEmail(username, email, password);
+                    } else {
+                        await loginWithEmail(email, password);
+                    }
+                    const loginSound = new Audio('../audio/login.mp3');
+                    loginSound.play().catch(e => console.error("Error al reproducir el sonido de login:", e));
+                    triggerDisintegration(); // Redirigir a home.html
+                } catch (error) {
+                    console.error("Error de autenticación:", error);
+                    let friendlyMessage = "Ocurrió un error. Inténtalo de nuevo.";
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            break;
+                        case 'auth/wrong-password':
+                            friendlyMessage = "La contraseña es incorrecta.";
+                            break;
+                        case 'auth/email-already-in-use':
+                            friendlyMessage = "Este correo electrónico ya está registrado.";
+                            break;
+                        case 'auth/weak-password':
+                            friendlyMessage = "La contraseña debe tener al menos 6 caracteres.";
+                            break;
+                        case 'auth/invalid-email':
+                            friendlyMessage = "El formato del correo electrónico no es válido.";
+                            break;
+                    }
+                    errorMessageElement.textContent = friendlyMessage;
+                }
+            });
+
+            // --- Lógica para cambiar entre formularios ---
+            switchToRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginContainer.classList.add('register-mode');
+                loginContainer.classList.remove('reset-mode');
+                errorMessageElement.textContent = ''; // Limpiar errores
+                subtitle.textContent = 'Crea tu cuenta para empezar';
+                submitButton.textContent = 'Registrarse';
+                // Cambiar placeholder de email
+                emailInput.placeholder = "Correo Electrónico";
+                emailInput.ariaLabel = "Correo Electrónico";
+
+                usernameGroup.style.display = 'flex';
+                passwordGroup.style.display = 'flex';
+                confirmPasswordGroup.style.display = 'flex';
+                document.getElementById('switchToLoginContainer').style.display = 'block';
+                // Hacer los nuevos campos requeridos
+                usernameGroup.querySelector('input').required = true;
+                confirmPasswordGroup.querySelector('input').required = true;
+            });
+
+            switchToLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginContainer.classList.remove('register-mode');
+                loginContainer.classList.remove('reset-mode');
+                errorMessageElement.textContent = ''; // Limpiar errores
+                subtitle.textContent = 'Inicia sesión para jugar';
+                submitButton.textContent = 'Ingresar';
+                // Restaurar placeholder original
+                emailInput.placeholder = "Correo Electrónico";
+                emailInput.ariaLabel = "Correo Electrónico";
+
+                usernameGroup.style.display = 'none';
+                passwordGroup.style.display = 'flex';
+                passwordGroup.querySelector('input').required = true; // Reactivar
+                confirmPasswordGroup.style.display = 'none';
+                document.getElementById('switchToLoginContainer').style.display = 'none';
+                // Quitar el 'required' de los campos de registro
+                usernameGroup.querySelector('input').required = false;
+                confirmPasswordGroup.querySelector('input').required = false;
+            });
+
+            // --- NUEVO: Lógica para cambiar a modo restablecer contraseña ---
+            switchToReset.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginContainer.classList.add('reset-mode');
+                loginContainer.classList.remove('register-mode');
+                errorMessageElement.textContent = ''; // Limpiar errores
+                submitButton.disabled = false; // Reactivar el botón
+                subtitle.textContent = 'Ingresa tu correo para restablecer la contraseña';
+                submitButton.textContent = 'Enviar Enlace';
+                // --- MODIFICADO: Ocultar campo de contraseña y ajustar placeholder ---
+                emailInput.placeholder = "Correo Electrónico";
+                emailInput.ariaLabel = "Correo Electrónico";
+                passwordGroup.style.display = 'none';
+                passwordGroup.querySelector('input').required = false; // Desactivar
+                confirmPasswordGroup.style.display = 'none';
+                document.getElementById('switchToLoginContainer').style.display = 'block';
+                usernameGroup.style.display = 'none'; // Ocultar campo de nombre de usuario
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const updateMessageContainer = document.getElementById('update-message-container');
+            const updateMessageElement = document.getElementById('update-message');
+            const loginContainer = document.getElementById('login-container');
+
+            // Initially hide the login container
+            loginContainer.classList.add('hidden');
+
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('../sw.js')
+                        .then(registration => {
+                            console.log('ServiceWorker registrado con éxito:', registration);
+
+                            // Check for updates immediately after registration
+                            registration.update();
+
+                            // Listen for messages from the service worker
+                            navigator.serviceWorker.addEventListener('message', event => {
+                                console.log('Mensaje del Service Worker:', event.data);
+                                if (event.data.type === 'UPDATE_CHECKING') {
+                                    updateMessageElement.textContent = 'Revisando versiones...';
+                                } else if (event.data.type === 'UPDATE_FOUND') {
+                                    updateMessageElement.textContent = 'Actualizando...';
+                                } else if (event.data.type === 'UPDATE_ACTIVATED') {
+                                    updateMessageElement.textContent = 'Actualización completa. Recargando...';
+                                    setTimeout(() => window.location.reload(), 1000);
+                                } else if (event.data.type === 'NO_UPDATE') {
+                                    updateMessageElement.textContent = 'Versión actualizada.';
+                                    setTimeout(() => {
+                                        updateMessageContainer.classList.add('hidden');
+                                        loginContainer.classList.remove('hidden');
+                                    }, 1000);
+                                }
+                            });
+
+                            // If there's an active service worker, send a message to check for updates
+                            if (navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage({ type: 'CHECK_FOR_UPDATES' });
+                            }
+
+                        })
+                        .catch(error => {
+                            console.log('Fallo el registro de ServiceWorker:', error);
+                            updateMessageElement.textContent = 'Error al cargar la aplicación. Inténtalo de nuevo.';
+                            // If SW registration fails, show the login form after a delay
+                            setTimeout(() => {
+                                updateMessageContainer.classList.add('hidden');
+                                loginContainer.classList.remove('hidden');
+                            }, 2000);
+                        });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
