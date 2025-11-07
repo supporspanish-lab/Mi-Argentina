@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackBall - Panel de Administración</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- SOLUCIÓN: Evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- NUEVO: SDK de PocketBase -->
+    <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
+    <style>
+        :root {
+            --primary-color: #00f291;
+            --bg-color: #1a1a1a;
+            --container-bg-color: rgba(35, 35, 35, 0.85);
+            --text-color: #ffffff;
+            --text-secondary-color: #a0a0a0;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --red-color: #e74c3c;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(160deg, #0a100d 0%, #1a1a1a 100%);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .admin-container {
+            background-color: var(--container-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+            margin-top: 70px; /* Added margin-top to account for the back-button */
+        }
+        h1 {
+            font-family: 'Righteous', cursive;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+        h2 {
+            color: var(--primary-color);
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        .section-container {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+            color: var(--text-color);
+        }
+        th {
+            background-color: rgba(0, 242, 145, 0.1);
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        .back-button {
+            background-color: var(--primary-color);
+            color: #000;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        .back-button:hover {
+            background-color: #00d47a;
+        }
+        .action-button {
+            background-color: var(--red-color);
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 12px;
+        }
+        .action-button:hover {
+            background-color: #c0392b;
+        }
+        .status-waiting {
+            color: orange;
+        }
+        .status-starting {
+            color: var(--primary-color);
+        }
+        .status-active {
+            color: lightblue;
+        }
+        .status-finished {
+            color: var(--text-secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .admin-container {
+                padding: 15px;
+                margin-bottom: 10px;
+                margin-top: 60px; /* Adjusted for smaller screens */
+            }
+
+            .back-button {
+                top: 10px;
+                left: 10px;
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .section-container {
+                padding: 10px;
+            }
+
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+
+            tr {
+                border: 1px solid var(--border-color);
+                margin-bottom: 10px;
+            }
+
+            td {
+                border: none;
+                border-bottom: 1px solid var(--border-color);
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+            }
+
+            td:before {
+                position: absolute;
+                top: 6px;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: 700;
+                color: var(--primary-color);
+            }
+
+            /*
+            Label the data
+            */
+            #users-table td:nth-of-type(1):before { content: "UID:"; }
+            #users-table td:nth-of-type(2):before { content: "Nombre de Usuario:"; }
+            #users-table td:nth-of-type(3):before { content: "Email:"; }
+            #users-table td:nth-of-type(4):before { content: "Balance:"; }
+            #users-table td:nth-of-type(5):before { content: "Acciones:"; }
+
+            #games-table td:nth-of-type(1):before { content: "ID de Sala:"; }
+            #games-table td:nth-of-type(2):before { content: "Jugador 1:"; }
+            #games-table td:nth-of-type(3):before { content: "Jugador 2:"; }
+            #games-table td:nth-of-type(4):before { content: "Estado:"; }
+            #games-table td:nth-of-type(5):before { content: "Creada:"; }
+            #games-table td:nth-of-type(6):before { content: "Acciones:"; }
+
+            .action-button {
+                width: 100%;
+                padding: 8px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.history.back();">Volver</button>
+    <div class="admin-container">
+        <h1>Panel de Administración</h1>
+
+        <div class="section-container">
+            <h2>Gestión de Usuarios</h2>
+            <table id="users-table">
+                <thead>
+                    <tr>
+                        <th>UID</th>
+                        <th>Nombre de Usuario</th>
+                        <th>Email</th>
+                        <th>Balance</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- User data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section-container">
+            <h2>Salas de Juego Activas</h2>
+            <button id="delete-old-games-btn" class="action-button" style="margin-bottom: 15px;">Eliminar Salas Antiguas (más de 1 día)</button>
+            <table id="games-table">
+                <thead>
+                    <tr>
+                        <th>ID de Sala</th>
+                        <th>Jugador 1</th>
+                        <th>Jugador 2</th>
+                        <th>Estado</th>
+                        <th>Creada</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Game data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- NUEVO: Sección de Administración de PocketBase -->
+        <div class="section-container">
+            <h2>Gestión de PocketBase</h2>
+            <p style="color: var(--text-secondary-color); margin-bottom: 15px;">
+                Usa esta herramienta solo para la configuración inicial del servidor.
+            </p>
+            <button id="create-pb-collection-btn" class="action-button" style="background-color: orange; color: #000; padding: 10px 15px; font-size: 14px;">
+                Crear Colección 'online_users'
+            </button>
+            <p id="pb-status-message" style="margin-top: 15px; font-weight: bold;"></p>
+        </div>
+
+        <button class="back-button" onclick="window.history.back();">Volver</button>
+    </div>
+
+    <script type="module">
+        import { db, auth, onAuthStateChanged } from './auth.js';
+        import { collection, getDocs, onSnapshot, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const usersTableBody = document.getElementById('users-table').querySelector('tbody');
+        const gamesTableBody = document.getElementById('games-table').querySelector('tbody');
+        const deleteOldGamesBtn = document.getElementById('delete-old-games-btn');
+
+        // Function to fetch and display users
+        async function loadUsers() {
+
+            usersTableBody.innerHTML = ''; // Clear existing data
+            const usersRef = collection(db, "saldo"); // Assuming 'saldo' is your user collection
+            try {
+                const querySnapshot = await getDocs(usersRef);
+
+                if (querySnapshot.empty) {
+
+                    const row = usersTableBody.insertRow();
+                    const cell = row.insertCell(0);
+                    cell.colSpan = 5; // Span across all columns
+                    cell.textContent = "No hay usuarios registrados.";
+                    cell.style.textAlign = "center";
+                }
+                querySnapshot.forEach((doc) => {
+                    const userData = doc.data();
+
+                    const row = usersTableBody.insertRow();
+                    row.insertCell(0).textContent = doc.id;
+                    row.insertCell(1).textContent = userData.username || 'N/A';
+                    row.insertCell(2).textContent = userData.email || 'N/A';
+                    
+                    const balanceCell = row.insertCell(3);
+                    const balanceInput = document.createElement('input');
+                    balanceInput.type = 'number';
+                    balanceInput.value = userData.balance || 0;
+                    balanceInput.style.width = '80px';
+                    balanceInput.style.marginRight = '5px';
+                    balanceInput.style.padding = '5px';
+                    balanceInput.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    balanceInput.style.border = '1px solid var(--border-color)';
+                    balanceInput.style.borderRadius = '4px';
+                    balanceInput.style.color = 'var(--text-color)';
+                    
+                    const saveBalanceButton = document.createElement('button');
+                    saveBalanceButton.textContent = 'Guardar';
+                    saveBalanceButton.className = 'action-button';
+                    saveBalanceButton.style.backgroundColor = 'var(--primary-color)';
+                    saveBalanceButton.style.color = '#000';
+                    saveBalanceButton.style.padding = '5px 10px';
+                    saveBalanceButton.style.fontSize = '12px';
+                    saveBalanceButton.onclick = async () => {
+                        const newBalance = parseFloat(balanceInput.value);
+                        if (!isNaN(newBalance)) {
+                            await updateUserBalance(doc.id, newBalance);
+                        } else {
+                            alert('Por favor, introduce un número válido para el saldo.');
+                        }
+                    };
+                    balanceCell.appendChild(balanceInput);
+                    balanceCell.appendChild(saveBalanceButton);
+                    
+                    const actionsCell = row.insertCell(4);
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Eliminar';
+                    deleteButton.className = 'action-button';
+                    deleteButton.onclick = async () => {
+                        if (confirm(`¿Estás seguro de que quieres eliminar al usuario ${userData.username || userData.email}?`)) {
+                            await deleteDoc(doc(db, "saldo", doc.id)); // Changed "users" to "saldo"
+                            loadUsers(); // Reload users after deletion
+                        }
+                    };
+                    actionsCell.appendChild(deleteButton);
+                });
+            } catch (error) {
+    
+                const row = usersTableBody.insertRow();
+                const cell = row.insertCell(0);
+                cell.colSpan = 5; // Span across all columns
+                cell.textContent = "Error al cargar usuarios: " + error.message;
+                cell.style.textAlign = "center";
+            }
+        }
+
+        // Function to update user balance
+        async function updateUserBalance(userId, newBalance) {
+            try {
+                const userDocRef = doc(db, "saldo", userId);
+                await updateDoc(userDocRef, {
+                    balance: newBalance
+                });
+                alert('Saldo actualizado correctamente.');
+                loadUsers(); // Reload users to reflect the updated balance
+            } catch (error) {
+
+                alert('Error al actualizar el saldo: ' + error.message);
+            }
+        }
+
+        // Function to fetch and display game rooms
+        function loadGameRooms() {
+
+            gamesTableBody.innerHTML = ''; // Clear existing data
+            const gamesRef = collection(db, "games");
+
+            onSnapshot(gamesRef, (querySnapshot) => {
+                gamesTableBody.innerHTML = ''; // Clear on every update
+                if (querySnapshot.empty) {
+                    const row = gamesTableBody.insertRow();
+                    const cell = row.insertCell(0);
+                    cell.colSpan = 6; // Span across all columns
+                    cell.textContent = "No hay salas de juego activas.";
+                    cell.style.textAlign = "center";
+                }
+                querySnapshot.forEach((docSnap) => {
+                    const gameData = docSnap.data();
+                    const gameId = docSnap.id;
+
+                    const row = gamesTableBody.insertRow();
+                    row.insertCell(0).textContent = gameId;
+                    row.insertCell(1).textContent = gameData.player1?.username || 'N/A';
+                    row.insertCell(2).textContent = gameData.player2?.username || 'Esperando...';
+                    
+                    const statusCell = row.insertCell(3);
+                    statusCell.textContent = gameData.status;
+                    statusCell.classList.add(`status-${gameData.status}`);
+
+                    row.insertCell(4).textContent = gameData.createdAt ? new Date(gameData.createdAt.toDate()).toLocaleString() : 'N/A';
+
+                    const actionsCell = row.insertCell(5);
+                    const closeButton = document.createElement('button');
+                    closeButton.textContent = 'Cerrar Sala';
+                    closeButton.className = 'action-button';
+                    closeButton.onclick = async () => {
+                        if (confirm(`¿Estás seguro de que quieres cerrar la sala ${gameId}?`)) {
+                            await deleteDoc(doc(db, "games", gameId));
+                            // No need to reload, onSnapshot will handle it
+                        }
+                    };
+                    actionsCell.appendChild(closeButton);
+                });
+            }, (error) => {
+                console.error("Error loading game rooms:", error);
+                gamesTableBody.innerHTML = ''; // Clear existing data
+                const row = gamesTableBody.insertRow();
+                const cell = row.insertCell(0);
+                cell.colSpan = 6; // Span across all columns
+                cell.textContent = "Error al cargar salas de juego: " + error.message;
+                cell.style.textAlign = "center";
+            });
+        }
+
+        deleteOldGamesBtn.addEventListener('click', async () => {
+            if (!confirm('¿Estás seguro de que quieres eliminar todas las salas de juego con más de 24 horas de antigüedad? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            const gamesRef = collection(db, "games");
+            const now = new Date();
+            const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+            let deletedCount = 0;
+
+            try {
+                const querySnapshot = await getDocs(gamesRef);
+                const deletePromises = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    const gameData = docSnap.data();
+                    const createdAt = gameData.createdAt?.toDate();
+
+                    if (createdAt && createdAt < twentyFourHoursAgo) {
+                        deletePromises.push(deleteDoc(doc(db, "games", docSnap.id)));
+                        deletedCount++;
+                    }
+                });
+
+                await Promise.all(deletePromises);
+
+                if (deletedCount > 0) {
+                    alert(`${deletedCount} sala(s) de juego antigua(s) ha(n) sido eliminada(s).`);
+                } else {
+                    alert('No se encontraron salas de juego antiguas para eliminar.');
+                }
+            } catch (error) {
+                console.error("Error deleting old game rooms:", error);
+                alert('Hubo un error al eliminar las salas de juego antiguas: ' + error.message);
+            }
+        });
+
+        // Load data when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // User is signed in, proceed to load data
+                    loadUsers();
+                    loadGameRooms();
+                } else {
+                    // No user is signed in, redirect to login page
+                    window.location.href = 'login.html';
+                }
+            });
+        });
+
+        // --- NUEVO: Lógica para crear colección en PocketBase ---
+        const createPbCollectionBtn = document.getElementById('create-pb-collection-btn');
+        const pbStatusMessage = document.getElementById('pb-status-message');
+
+        createPbCollectionBtn.addEventListener('click', async () => {
+            pbStatusMessage.textContent = '';
+            pbStatusMessage.style.color = 'var(--text-color)';
+
+            const adminEmail = prompt("Introduce el email de administrador de PocketBase:");
+            if (!adminEmail) return;
+
+            const adminPassword = prompt("Introduce la contraseña de administrador de PocketBase:");
+            if (!adminPassword) return;
+
+            pbStatusMessage.textContent = 'Conectando con PocketBase...';
+
+            // IMPORTANTE: La URL debe ser la de tu servidor de PocketBase
+            const pb = new PocketBase('https://mi-servidor-h33w.onrender.com');
+
+            try {
+                // 1. Autenticar como administrador
+                await pb.admins.authWithPassword(adminEmail, adminPassword);
+                pbStatusMessage.textContent = 'Autenticado como admin. Creando colección...';
+
+                // 2. Definir el esquema y las reglas de la colección
+                const collectionSchema = [
+                    {
+                        "name": "userId",
+                        "type": "text",
+                        "required": true,
+                        "options": {}
+                    }
+                ];
+                const collectionRules = {
+                    "listRule": "@request.auth.id != \"\"",
+                    "viewRule": "@request.auth.id != \"\"",
+                    "createRule": "@request.auth.id = @request.data.userId",
+                    "updateRule": "@request.auth.id = userId",
+                    "deleteRule": "@request.auth.id = userId"
+                };
+
+                // 3. Crear la colección
+                await pb.collections.create({
+                    "name": "online_users",
+                    "type": "base",
+                    "schema": collectionSchema,
+                    ...collectionRules
+                });
+
+                pbStatusMessage.style.color = 'var(--primary-color)';
+                pbStatusMessage.textContent = "¡Éxito! La colección 'online_users' ha sido creada correctamente.";
+
+            } catch (error) {
+                pbStatusMessage.style.color = 'var(--red-color)';
+                // --- MODIFICADO: Comprobar si el error es porque la colección ya existe (más robusto) ---
+                if (error.status === 400 && error.data?.data?.name?.message?.includes("already exists")) {
+                    // Este error específico significa que la colección ya existe
+                    pbStatusMessage.textContent = "Información: La colección 'online_users' ya existe.";
+                } else {
+                    console.error("Error al crear la colección en PocketBase:", error);
+                    pbStatusMessage.textContent = `Error: ${error.data?.message || error.message}`;
+                }
+            } finally {
+                // 4. MUY IMPORTANTE: Cerrar la sesión de administrador inmediatamente (usando la nueva propiedad 'isSuperuser')
+                if (pb.authStore.isSuperuser) {
+                    pb.authStore.clear();
+                }
+            }
+        });
+    </script>
+</body>
+</html>         if (pb.authStore.isSuperuser) {
+                    pb.authStore.clear();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

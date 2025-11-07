@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Juego de BlackBal con Canvas</title>
+    <!-- NUEVO: Evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="manifest" href="login/manifest.json">
+    <style>
+        /* Reinicio CSS para asegurar que el HTML y el Body ocupen el 100% */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Asegura que no haya scrollbars en el body */
+            /* --- NUEVO: Mejoras para la experiencia táctil --- */
+            touch-action: none; /* Evita acciones del navegador como hacer zoom o scroll */
+            user-select: none; /* Evita que el texto se seleccione al tocar */
+            box-sizing: border-box; /* Incluye padding y border en el ancho/alto */
+        }
+        #gameContainer {
+            position: relative; /* Cambiado de absolute para que los cálculos sean más sencillos */
+            width: 100%;
+            height: 100%;
+        }
+        /* --- NUEVO: Estilos para forzar la orientación horizontal en móviles --- */
+        #orientation-lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0d203b;
+            z-index: 200; /* Por encima de todo */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #orientation-lock-screen svg {
+            width: 64px;
+            height: 64px;
+            fill: white;
+            margin-bottom: 20px;
+            animation: rotate-animation 2s infinite linear;
+        }
+        @keyframes rotate-animation {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(90deg); }
+        }
+
+
+        #play-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        /* --- NUEVO: Estilos para la pantalla de carga --- */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0d203b;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        #progress-container {
+            width: 80%;
+            max-width: 400px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #2ecc71;
+            transition: width 0.2s ease;
+        }
+        #progress-text {
+            margin-top: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0d203b; /* Un azul oscuro más profundo */
+        }
+        /* --- NUEVO: Estilos para los controles de tamaño de la mesa --- */
+        #table-resize-controls {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            z-index: 20;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: none; /* Oculto por defecto */
+        }
+        #table-resize-controls input {
+            width: 60px;
+        }
+
+        /* --- MODIFICACIÓN: Usar una clase para que ambos puntos compartan estilo --- */
+        .spin-selector-dot {
+            position: absolute;
+            width: 20%; /* --- MODIFICACIÓN: Punto un poco más pequeño --- */
+            height: 20%;
+            background-color: #e74c3c; /* Rojo */
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            border: 1px solid rgba(0,0,0,0.5);
+            box-shadow: 0 0 5px #e74c3c;
+            /* --- MODIFICACIÓN: El centrado ahora se hará con la posición calculada --- */
+            transform: translate(-50%, -50%);
+        }
+
+        /* --- NUEVO: Estilos para el modal del selector de efecto --- */
+        #spinModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        #largeSpinSelector {
+            width: 35vh; /* Tamaño grande, relativo a la altura de la pantalla */
+            height: 35vh;
+            max-width: 90vw; /* Evitar que sea demasiado grande en pantallas anchas */
+            max-height: 90vw;
+            position: relative;
+            cursor: pointer;
+            transform: scale(0.8);
+            border-radius: 50%;
+            /* --- MODIFICACIÓN: Usar la imagen de la bola blanca como fondo --- */
+            background-image: url('imajenes/BolasMetidas/efecto.png');
+            background-size: contain; /* Asegura que toda la bola sea visible */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent; /* Evita que se vea un color de fondo */
+            transition: transform 0.2s ease-in-out;
+        }
+        #spinModalOverlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+        #spinModalOverlay.visible #largeSpinSelector {
+            transform: scale(1);
+        }
+        /* --- SOLUCIÓN: Indicar explícitamente al navegador que el canvas no es para hacer scroll --- */
+        /* Esto ayuda a eliminar las advertencias de "non-passive event listener". */
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        /* --- NUEVO: Estilo para la información de bolas entroneradas --- */
+        #pocketedInfo {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            display: none; /* Oculto por defecto */
+        }
+        /* --- NUEVO: Estilo para el botón de prueba --- */
+        #testPocketButton {
+            position: absolute;
+            top: 130px; /* Debajo del panel de información del jugador */
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            z-index: 10;
+            cursor: pointer;
+        }
+        /* --- NUEVO: Estilos para el visualizador de bolas entroneradas --- */
+        #pocketed-balls-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex; /* Para alinear las bolas en horizontal */
+            gap: 8px; /* Espacio entre las bolas */
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 8px;
+            border-radius: 8px;
+            z-index: 10;
+            height: 36px; /* Altura fija para el contenedor */
+            align-items: center;
+        }
+        .pocketed-ball-icon {
+            width: 32px; /* Tamaño del icono de la bola */
+            height: 32px;
+            border-radius: 50%;
+            background-color: #ccc; /* Color de fondo por si la imagen no carga */
+            /* --- CORREGIDO: Hacemos un "zoom" a la imagen para ocultar los bordes blancos --- */
+            background-size: 115%; /* Un poco más grande que el contenedor */
+            background-position: center; /* Asegura que la imagen esté centrada */
+            flex-shrink: 0; /* Evita que los iconos se encojan */
+        }
+        /* --- NUEVO: Estilo para los contenedores de bolas de jugador --- */
+        .pocketed-balls-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap; /* Asegura que los elementos permanezcan en una sola fila */
+            gap: 0.5vw; /* Espacio responsivo más pequeño entre los elementos */
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 0.5vw; /* Padding responsivo más pequeño */
+            border-radius: 8px;
+            z-index: 10;
+            min-height: 25px; /* Altura mínima más pequeña */
+            width: auto; /* Ancho automático para el contenido */
+            align-items: center;
+            box-sizing: border-box;
+            /* flex-shrink y max-width eliminados para permitir que el contenedor crezca */
+        }
+        .player-avatar {
+            width: 3.5vw; /* Tamaño responsivo aún más pequeño para el avatar */
+            height: 3.5vw; 
+            margin-right: 0.5vw; /* Espacio responsivo más pequeño */
+            /* flex-shrink: 0; */ /* Eliminado para permitir que se encoja */
+            transition: filter 0.3s ease; 
+        }
+
+        .player-avatar.active .timer-line {
+            stroke: #2ecc71; /* Borde verde vibrante para el temporizador */
+        }
+
+        /* --- NUEVO: Estilos para la animación de aparición de avatares --- */
+        .player-avatar-img.fade-in {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* --- NUEVO: Estilos para el icono de la bola entronerada en el contenedor del jugador --- */
+        .player-ball-icon {
+            width: 2.5vw; /* Tamaño responsivo aún más pequeño para las bolas */
+            height: 2.5vw; 
+            border-radius: 50%;
+            flex-shrink: 0; /* No permitir que el icono se encoja */
+            background-size: 115%;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .pocketed-ball-placeholder {
+            width: 2.5vw; /* Tamaño responsivo aún más pequeño para el placeholder */
+            height: 2.5vw; 
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px dashed #fff;
+            flex-shrink: 0; /* Asegura que no se encoja y mantenga su forma circular */
+        }
+
+        .player-name {
+            font-size: 1.2vw; /* Tamaño de fuente responsivo aún más pequeño para el nombre */
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            margin-right: 0.5vw; /* Espacio responsivo más pequeño */
+            white-space: nowrap; /* Evita que el texto se envuelva */
+            overflow: hidden; /* Oculta el texto que se desborda */
+            text-overflow: ellipsis; /* Muestra puntos suspensivos para el texto desbordado */
+            flex-shrink: 1; /* Permite que el nombre se encoja */
+        }
+
+        #top-ui-container {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 2vw; /* Espacio entre los contenedores de los jugadores */
+            z-index: 10;
+            padding: 1vh 0;
+            min-height: 10vh; /* Altura mínima para asegurar que el contenido quepa */
+            box-sizing: border-box;
+        }
+
+        #player1PocketedContainer.editable-ui {
+            /* position: absolute; */ /* Eliminado */
+            /* top: 2vh; */ /* Eliminado */
+            /* left: 2vw; */ /* Eliminado */
+            bottom: auto;
+            pointer-events: auto;
+            transform: scaleX(-1); /* Voltear horizontalmente el contenedor completo */
+        }
+        #player1PocketedContainer.editable-ui > .player-name,
+        #player1PocketedContainer.editable-ui > .pocketed-ball-placeholder,
+        #player1PocketedContainer.editable-ui > .player-ball-icon {
+            transform: scaleX(-1); /* Contrarrestar el volteo para el texto, avatar y bolas */
+        }
+        #player2PocketedContainer.editable-ui {
+            /* position: absolute; */ /* Eliminado */
+            /* top: 2vh; */ /* Eliminado */
+            /* right: 2vw; */ /* Eliminado */
+            bottom: auto; /* Eliminar posición inferior */
+            pointer-events: auto; 
+        }
+        /* --- NUEVO: Estilos para la miniatura del selector de efecto --- */
+        #miniSpinSelector {
+            width: 7vh; /* Tamaño relativo a la altura de la pantalla */
+            height: 7vh; 
+            position: absolute; /* --- CORRECCIÓN: Posicionamiento absoluto para ser editable --- */
+            cursor: pointer;
+            /* --- MODIFICACIÓN: Usar una imagen para la miniatura del efecto --- */
+            background-image: url('imajenes/BolasMetidas/efecto.png');
+            background-size: contain; /* Asegura que toda la bola sea visible */
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 50%;
+            pointer-events: auto; /* Permitir clics en este elemento */
+            /* --- NUEVO: Posición por defecto --- */
+            top: 2vh;
+            right: 2vw;
+            z-index: 11; /* --- NUEVO: Para que esté por encima de los marcadores de jugador --- */
+        }
+
+        /* --- NUEVO: Animación de pulso para los indicadores --- */
+        @keyframes fade-pulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* --- NUEVO: Estilos para el indicador de mover sobre la sombra --- */
+        #move-indicator {
+            position: absolute;
+            width: 80px; /* Un poco más grande para que se vea bien sobre la sombra */
+            height: 80px;
+            background-image: url('imajenes/mover.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: 29; /* Debajo del indicador de la mano */
+            display: none;
+            transform: translate(-50%, -50%); /* Centrar sobre la posición de la sombra */
+            opacity: 0; /* Inicia invisible */
+        }
+
+        /* --- NUEVO: Estilos para el indicador de mano para mover la bola --- */
+        #hand-indicator {
+            position: absolute;
+            width: 64px; /* Tamaño del icono de la mano */
+            height: 64px;
+            background-image: url('imajenes/mano.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none; /* Para que no interfiera con los clics */
+            z-index: 30;
+            display: none; /* Oculto por defecto */
+            transform: translate(-50%, -100%); /* Centrar horizontalmente y colocar la punta del dedo encima */
+        }
+        /* --- SOLUCIÓN: Estilos para el nuevo indicador de turno --- */
+        #turnIndicator {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(44, 62, 80, 0.85);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+            font-family: Arial, sans-serif;
+            font-size: 22px;
+            font-weight: bold;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            pointer-events: none; /* Para que no interfiera con el ratón */
+        }
+
+        /* --- NUEVO: Estilos para los sliders en el panel de opciones --- */
+        #options-panel h3 {
+            margin-top: 0;
+            color: #3498db;
+            font-size: 1.8vw; /* Responsive font size */
+            margin-bottom: 1.5vh;
+        }
+        #options-panel label {
+            display: block;
+            margin-top: 2vh;
+            margin-bottom: 0.5vh;
+            font-size: 1.2vw;
+        }
+        #options-panel input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 0.8vh; /* Responsive height */
+            background: #555;
+            border-radius: 5px;
+            outline: none;
+        }
+        #options-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 2vw; /* Responsive width */
+            height: 2vw; /* Responsive height */
+            background: #3498db;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        /* --- NUEVO: Estilo para los botones dentro del panel de opciones --- */
+        #options-panel button {
+            width: 100%;
+            padding: 1vh 0.5vw;
+            margin-top: 1.5vh;
+            background-color: #3498db;
+            border: 1px solid #2980b9;
+            border-radius: 5px;
+            color: white;
+            font-size: 1.5vw;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #options-panel button:hover {
+            background-color: #4aa3df;
+        }
+
+        /* --- NUEVO: Estilos para el panel de opciones deslizable --- */
+        #options-panel {
+            position: fixed;
+            top: 0; /* Pegado a la parte superior */
+            left: 0; /* Pegado a la izquierda */
+            width: 30vw; /* Ancho responsivo para el panel */
+            max-width: 90vw; /* Ancho máximo en pantallas pequeñas */
+            max-height: 80vh; /* --- CORRECCIÓN: Altura máxima para evitar que se salga de la pantalla --- */
+            overflow-y: auto; /* --- NUEVO: Añadir scroll si el contenido es más alto --- */
+            height: auto; /* La altura se ajusta al contenido */
+            background-color: rgba(13, 32, 59, 0.95); /* Mismo color de fondo que el body */
+            border-bottom: 2px solid #3498db;
+            border-right: 2px solid #3498db; /* Borde derecho */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transform: translateY(-100%); /* Inicia oculto arriba */
+            transition: transform 0.3s ease-in-out;
+            z-index: 200;
+            padding: 2vh 1vw 1vw 1vw; /* Padding responsivo */
+            box-sizing: border-box; /* --- CORRECCIÓN: Asegurar que el padding no aumente el tamaño total --- */
+            color: white;
+            font-family: Arial, sans-serif;
+            border-bottom-right-radius: 10px;
+        }
+        #options-panel.open {
+            transform: translateY(0); /* Muestra el panel */
+        }
+        #options-toggle-btn {
+            position: fixed;
+            top: 0;
+            left: 0; /* Pegado a la izquierda */
+            transform: none; /* Sin transformación inicial */
+            width: 5vw; /* Responsive width */
+            height: 5vh; /* Responsive height */
+            background-color: #3498db;
+            border: none;
+            border-bottom-right-radius: 10px;
+            cursor: pointer;
+            z-index: 201; /* Por encima del panel cuando está cerrado */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5vw; /* Responsive padding */
+            transition: transform 0.3s ease-in-out;
+        }
+        #options-toggle-btn span {
+            color: white;
+            font-size: 2.5vw; /* Responsive font size */
+        }
+
+        @keyframes fall-from-top {
+            0% {
+                transform: translate(-50%, -200%);
+                opacity: 0;
+            }
+            100% {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+            }
+        }
+
+        #foulMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -200%);
+            background-color: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #c0392b;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 21;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        #foulMessage.show {
+            animation: fall-from-top 0.5s ease-in-out forwards;
+        }
+        /* --- SOLUCIÓN: Botón dentro del mensaje de falta/victoria --- */
+        #foulMessage button {
+            display: none; /* Oculto por defecto */
+            margin-top: 15px;
+            pointer-events: auto; /* Reactivar puntero para el botón */
+        }
+
+        /* --- MODIFICACIÓN: Wrapper principal para posicionar todo --- */
+        #powerBarWrapper {
+            position: absolute;
+            top: 50%;
+            left: 2vw;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+
+        /* --- NUEVO: Contenedor de recorte (Clipping Mask) --- */
+        #powerBarClippingContainer {
+            position: relative; /* Necesario para que los elementos absolutos internos se posicionen correctamente */
+            width: 3vw; /* Mismo ancho que la barra */
+            height: 40vh; /* Misma altura que la barra */
+            overflow: hidden; /* ¡La magia está aquí! Oculta todo lo que se salga. */
+        }
+
+        #newPowerBarContainer {
+            width: 3vw; /* Ancho de la barra */
+            height: 40vh; /* Altura total de la barra */
+            /* --- NUEVO: Degradado de fondo con líneas --- */
+            background: 
+                /* Capa 2: Líneas horizontales repetidas */
+                repeating-linear-gradient(
+                    to top,
+                    transparent, transparent 19px, /* 19px de espacio transparente */
+                    rgba(0, 0, 0, 0.3) 19px, rgba(0, 0, 0, 0.3) 20px /* 1px de línea oscura */
+                ),
+                /* Capa 1: Degradado de color de fondo */
+                linear-gradient(to top, #2ecc71, #f1c40f, #e74c3c); /* Verde -> Amarillo -> Rojo */
+
+            border: 2px solid #333;
+            position: absolute; /* Se posiciona dentro del contenedor de recorte */
+        }
+
+        #newPowerBarHandle {
+            width: 35vh; /* Altura visual del taco (después de rotar) */
+            height: 4vw; /* Ancho visual del taco (después de rotar) */
+            object-fit: contain;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%) rotate(270deg);
+            top: 0; /* La posición 'top' será controlada por JS */
+            transform-origin: center center; /* Asegurar que la rotación sea desde el centro */
+            cursor: grab;
+        }
+
+        /* --- NUEVO: Estilos para modales personalizados --- */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000; /* Muy alto para estar por encima de todo */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            font-family: Arial, sans-serif;
+        }
+        .custom-modal-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .custom-modal-box {
+            background-color: #1a2b42;
+            padding: 20px 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 450px;
+            border: 2px solid #3498db;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            color: white;
+            text-align: center;
+        }
+        .custom-modal-box h3 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        .custom-modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 25px;
+        }
+        .custom-modal-buttons button {
+            padding: 10px 25px;
+        }
+
+
+        /* --- SOLUCIÓN: Estilos para el modal de error --- */
+        #error-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999; /* Por encima de todo */
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #error-modal {
+            background-color: #2c3e50;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            border: 2px solid #e74c3c;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #error-modal h2 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        #error-details {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap; /* Para que el texto se ajuste */
+            word-break: break-all; /* Para romper palabras largas si es necesario */
+            overflow-y: auto; /* Scroll si el error es muy largo */
+            flex-grow: 1;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 700px) {
+            .pocketed-balls-container {
+                align-items: center;
+                gap: 1vw;
+            }
+            .player-avatar-wrapper {
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- --- NUEVO: Pantalla de carga --- -->
+    <div id="loading-screen">
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="progress-text">0%</div>
+    </div>
+
+    <div id="powerBarWrapper" class="editable-ui">
+        <!-- --- NUEVO: Contenedor de recorte que envuelve la barra y el taco --- -->
+        <div id="powerBarClippingContainer">
+            <div id="newPowerBarContainer"></div>
+            <!-- El taco ahora está DENTRO del contenedor de recorte -->
+            <div id="newPowerBarHandle" style="background-image: url('imajenes/taco.png'); background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+        </div>
+        <div id="powerPercentageDisplay" style="color: white; text-align: center; margin-top: 10px; font-size: 1.5em; font-weight: bold;">0%</div>
+        <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+        <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+    </div>
+
+    <div id="gameContainer">
+
+        <!-- --- NUEVO: Panel de opciones deslizable --- -->
+        <div id="options-panel">
+            <div id="main-options-view">
+                <h3>Opciones</h3>
+                <button id="modify-ui-btn">Modificar UI</button>
+            </div>
+            <div id="edit-ui-options-view" style="display: none;">
+                <h3>Ajustar Interfaz</h3>
+                <label for="player-pockets-size">Tamaño Marcadores</label>
+                <input type="range" id="player-pockets-size" min="30" max="100" value="48">
+                <label for="power-bar-size">Ancho Medidor Potencia</label>
+                <input type="range" id="power-bar-size" min="100" max="600" value="400">
+                <label for="power-bar-height">Grosor Medidor Potencia</label>
+                <input type="range" id="power-bar-height" min="10" max="50" value="15">
+                <button id="reset-ui-btn">Restablecer Configuración</button>
+                <button id="exit-edit-mode-btn">Volver</button>
+            </div>
+        </div>
+        <button id="options-toggle-btn"><span>&#9881;</span></button>
+
+        <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->
+
+        <!-- --- NUEVO: Modal para el selector de efecto en grande --- -->
+        <div id="spinModalOverlay">
+            <div id="largeSpinSelector">
+                <div id="spinSelectorDot" class="spin-selector-dot"></div>
+            </div>
+        </div>
+
+        <!-- --- NUEVO: Modal de confirmación personalizado --- -->
+        <div id="confirm-reset-modal" class="custom-modal-overlay">
+            <div class="custom-modal-box">
+                <h3>Restablecer Configuración</h3>
+                <p>¿Estás seguro de que quieres restablecer la interfaz a sus valores por defecto? Esta acción no se puede deshacer.</p>
+                <div class="custom-modal-buttons">
+                    <button id="confirm-reset-no" class="modal-btn cancel" style="background-color: #555;">Cancelar</button>
+                    <button id="confirm-reset-yes" class="modal-btn confirm" style="background-color: #c0392b;">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="poolCanvas"></canvas>
+
+        <div id="top-ui-container">
+            <!-- Contenedor para las bolas del jugador 1 -->
+            <div id="player1PocketedContainer" class="pocketed-balls-container editable-ui">
+                <div id="player1-name" class="player-name">Jugador 1</div>
+                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; min-width: 24px; min-height: 24px; margin-right: 0.5vw;">
+                    <svg id="player1-avatar-svg" class="player-avatar" viewBox="0 0 36 36" style="position: absolute; top: 0; left: 0; z-index: 2;">
+                        <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
+                        <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
+                        <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                        <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                            <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                        </g>
+                    </svg>
+                    <img id="player1-avatar-img" src="" class="player-avatar" style="display: none; position: absolute; top: 0; left: 0; border-radius: 50%; object-fit: cover; width: 100%; height: 100%; z-index: 1;">
+                </div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+            </div>
+
+            <!-- Contenedor de Ganancias -->
+            <div id="winnings-container" class="editable-ui" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 8vw; max-width: 90px; background-color: rgba(0,0,0,0.6); border-radius: 8px; padding: 1vw; aspect-ratio: 1 / 1; box-sizing: border-box;">
+                <div id="winnings-image" style="width: 60%; height: 60%; background-image: url('imajenes/moneda/moneda.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 5px; margin-bottom: 0.5vw;"></div>
+                <div id="winnings-text" style="color: #FFD700; font-size: 1.2vw; font-weight: bold; text-shadow: 0 0 5px #000;">$0</div>
+            </div>
+
+            <!-- Contenedor para las bolas del jugador 2 -->
+            <div id="player2PocketedContainer" class="pocketed-balls-container editable-ui">
+                <div id="player2-name" class="player-name">Jugador 2</div>
+                <div class="player-avatar-wrapper" style="position: relative; width: 3.5vw; height: 3.5vw; min-width: 24px; min-height: 24px; margin-right: 0.5vw;">
+                    <svg id="player2-avatar-svg" class="player-avatar" viewBox="0 0 36 36" style="position: absolute; top: 0; left: 0; z-index: 2;">
+                        <circle class="avatar-icon-bg" cx="18" cy="18" r="15.915" fill="#34495e"></circle>
+                        <circle class="timer-track" cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="3"></circle>
+                        <circle class="timer-line" cx="18" cy="18" r="15.915" fill="none" stroke-width="3" stroke-dasharray="100, 100"></circle>
+                        <g class="avatar-icon" transform="translate(9, 9) scale(0.75)">
+                            <path d="M12,12.75A5.25,5.25,0,1,0,6.75,7.5,5.256,5.256,0,0,0,12,12.75Zm0-9A3.75,3.75,0,1,1,8.25,7.5,3.754,3.754,0,0,1,12,3.75Z"></path><path d="M12,14.25a8.991,8.991,0,0,0-8.99,9,1.5,1.5,0,0,0,3,0,6,6,0,0,1,12,0,1.5,1.5,0,0,0,3,0,8.991,8.991,0,0,0-8.99-9Z"></path>
+                        </g>
+                    </svg>
+                    <img id="player2-avatar-img" src="" class="player-avatar" style="display: none; position: absolute; top: 0; left: 0; border-radius: 50%; object-fit: cover; width: 100%; height: 100%; z-index: 1;">
+                </div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <div class="pocketed-ball-placeholder"></div>
+                <!-- --- NUEVO: Agarraderas para edición de UI --- -->
+                <div class="resize-handle tl"></div><div class="resize-handle br"></div>
+            </div>
+        </div>
+        <div id="pocketedInfo"></div>
+        <div id="foulMessage">
+            <span id="foulMessageText"></span>
+        </div>
+
+        <!-- --- CORRECCIÓN: Mover el selector de efecto fuera del contenedor flexbox --- -->
+        <div id="miniSpinSelector" class="editable-ui">
+            <div id="miniSpinSelectorDot" class="spin-selector-dot"></div>
+        </div>
+
+        <!-- --- NUEVO: Indicador para mover sobre la sombra de la bola --- -->
+        <div id="move-indicator"></div>
+
+        <!-- --- SOLUCIÓN: Nuevo elemento para el indicador de turno --- -->
+        <div id="turnIndicator"></div>
+
+    </div>
+
+    <!-- --- SOLUCIÓN: Modal para mostrar errores --- -->
+    <div id="error-overlay">
+        <div id="error-modal">
+            <h2>¡Oh no! Ocurrió un error inesperado.</h2>
+            <p>Por favor, copia este error y envíalo al desarrollador para ayudar a solucionarlo.</p>
+            <pre id="error-details"></pre>
+            <button id="copy-error-btn" style="padding: 10px; font-size: 16px; cursor: pointer;">Copiar Error</button>
+        </div>
+    </div>
+
+
+    <!-- 
+        1. Import map: Le dice al navegador qué archivo cargar cuando vea "import 'three'".
+    -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+            }
+        }
+    </script>
+    <!-- 2. Cargar pool.js como un módulo para permitir el uso de 'import' -->
+    <!-- <script type="module" src="pool.js"></script> -->
+
+    <!-- --- MODIFICACIÓN PARA PRUEBAS ONLINE --- -->
+    <script type="module">
+        const url = new URL(window.location);
+        if (!url.searchParams.has('gameId')) {
+            window.location.href = 'login/home.html'; // Redirigir a home si no hay gameId
+        }
+
+        // 2. Importar y ejecutar el script principal del juego.
+        // El script 'pool.js' ya contiene la lógica para leer el 'gameId' de la URL e iniciar la conexión.
+        import './pool.js';
+    </script>
+
+    <!-- --- NUEVO: Script para la sincronización en tiempo real del apuntado --- -->
+    <script type="module">
+        // 1. Importar las funciones necesarias de Firestore y la autenticación.
+        import { db, auth, onSnapshot, doc, updateDoc } from './login/auth.js';
+
+                    // 2. Obtener el ID de la partida desde la URL.
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const gameId = urlParams.get('gameId');
+                    const winningsText = document.getElementById('winnings-text');
+        
+                    // --- CORRECCIÓN: Envolver la lógica en un 'if' para evitar el 'Illegal return statement' ---
+                    if (!gameId) {
+                        console.error("No se encontró gameId en la URL. La sincronización no funcionará.");
+                    } else {
+                        // --- NUEVO: Escuchar cambios en el documento del juego para actualizar las ganancias ---
+                        onSnapshot(doc(db, "games", gameId), (docSnap) => {
+                            if (docSnap.exists()) {
+                                const gameData = docSnap.data();
+                                const betAmount = gameData.betAmount || 0;
+                                const totalWinnings = betAmount * 2; // Apuesta de ambos jugadores
+                                winningsText.textContent = `$${totalWinnings.toLocaleString()}`;
+                            } else {
+                                console.log("El documento del juego no existe.");
+                                winningsText.textContent = '$0'; // Resetear si el juego no existe
+                                window.location.reload(); // Recargar la página
+                            }
+                        });            // 3. Función "throttle" para no sobrecargar Firestore.
+            // Limita las actualizaciones a una cada 50ms como máximo.
+            function throttle(func, limit) {
+                let inThrottle;
+                return function(...args) {
+                    if (!inThrottle) {
+                        func.apply(this, args);
+                        inThrottle = true;
+                        setTimeout(() => inThrottle = false, limit);
+                    }
+                }
+            }
+
+            // 4. Función para enviar la actualización del ángulo a Firestore.
+            const sendAimUpdate = throttle(async (angle) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        await updateDoc(gameRef, { aimingAngle: angle });
+                    } catch (error) {
+                        console.error("Error al sincronizar el apuntado:", error);
+                    }
+                }
+            }, 500); // Límite de 500ms.
+
+            // --- NUEVO: Función para enviar la actualización de la potencia a Firestore ---
+            const sendPowerUpdate = throttle(async (power) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo \'aimingPower\' para la potencia
+                        await updateDoc(gameRef, { aimingPower: power });
+                    } catch (error) {
+                        console.error("Error al sincronizar la potencia:", error);
+                    }
+                }
+            }, 500); // Mismo límite para la potencia
+
+            let lastSentCueBallPosition = null; // Variable para almacenar la última posición enviada
+
+            // --- NUEVO: Función para enviar la posición de la bola blanca durante "bola en mano" ---
+            const sendCueBallPositionUpdate = throttle(async (position) => {
+                // Convertir el objeto de posición a una cadena para una comparación sencilla
+                const currentPositionString = JSON.stringify(position);
+                const lastPositionString = JSON.stringify(lastSentCueBallPosition);
+
+                // Solo enviar la actualización si la posición ha cambiado
+                if (currentPositionString !== lastPositionString) {
+                    if (gameId) {
+                        try {
+                            const gameRef = doc(db, "games", gameId);
+                            await updateDoc(gameRef, { cueBallPosition: position });
+                            lastSentCueBallPosition = position; // Actualizar la última posición enviada
+                        } catch (error) {
+                            console.error("Error al sincronizar la posición de la bola blanca:", error);
+                        }
+                    }
+                }
+            }, 1000); // Límite de 1000ms.
+
+            // --- NUEVO: Función para enviar la actualización del efecto (spin) ---
+            const sendSpinUpdate = throttle(async (spin) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo 'aimingSpin'
+                        await updateDoc(gameRef, { aimingSpin: spin });
+                    } catch (error) {
+                        console.error("Error al sincronizar el efecto:", error);
+                    }
+                }
+            }, 1000); // Mismo límite
+
+            // --- NUEVO: Función para enviar el estado de visibilidad del modal de efecto ---
+            const sendSpinModalUpdate = async (isVisible) => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        // Usamos un nuevo campo 'isSpinModalOpen'
+                        await updateDoc(gameRef, { isSpinModalOpen: isVisible });
+                    } catch (error) {
+                        console.error("Error al sincronizar el modal de efecto:", error);
+                    }
+                }
+            };
+
+
+            // 5. Crear un evento personalizado para que pool.js pueda enviar el ángulo.
+            // El script pool.js deberá disparar este evento cuando el jugador apunte.
+            // Ejemplo en pool.js: window.dispatchEvent(new CustomEvent('sendaim', { detail: { angle: currentAngle } }));
+            window.addEventListener('sendaim', (event) => {
+                if (event.detail && typeof event.detail.angle !== 'undefined') {
+                    sendAimUpdate(event.detail.angle);
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de potencia ---
+            window.addEventListener('sendpower', (event) => {
+                if (event.detail && typeof event.detail.power !== 'undefined') {
+                    sendPowerUpdate(Number(event.detail.power));
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de efecto (spin) ---
+            window.addEventListener('sendspin', (event) => {
+                if (event.detail && event.detail.spin) {
+                    sendSpinUpdate(event.detail.spin);
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de visibilidad del modal de efecto ---
+            window.addEventListener('setspinmodal', (event) => {
+                if (event.detail && typeof event.detail.visible !== 'undefined') {
+                    sendSpinModalUpdate(event.detail.visible);
+                }
+            });
+
+            // --- NUEVO: Listener para el evento de mover la bola blanca ---
+            window.addEventListener('sendcueballmove', (event) => {
+                if (event.detail && event.detail.position) {
+                    sendCueBallPositionUpdate(event.detail.position);
+                }
+            });
+
+            // --- NUEVO: Listener para limpiar la posición de la bola blanca en el servidor ---
+            window.addEventListener('clearcueballpositionrequest', async () => {
+                if (gameId) {
+                    try {
+                        const gameRef = doc(db, "games", gameId);
+                        await updateDoc(gameRef, { cueBallPosition: null });
+                    } catch (error) {
+                        console.error("Error al limpiar la posición de la bola blanca:", error);
+                    }
+                }
+            });
+
+
+
+            // --- NUEVO: Listener para enviar los datos del tiro al servidor ---
+            window.addEventListener('sendShot', async (event) => {
+                if (gameId && event.detail) {
+                    const { gameState: gameData, ...shotData } = event.detail; // Separar gameState del resto de los datos del tiro
+                    const gameRef = doc(db, "games", gameId);
+                    try {
+                        await updateDoc(gameRef, { 
+                            lastShot: { // --- TEMPORAL: Directamente a lastShot para sincronización inmediata
+                                playerUid: auth.currentUser.uid,
+                                currentPlayerUid: gameData.currentPlayerUid, // --- SOLUCIÓN: Incluir el UID del jugador actual en el resultado del turno
+                                // --- SOLUCIÓN: Incluir la información de ambos jugadores para la lógica del servidor ---
+                                player1: gameData.player1,
+                                player2: gameData.player2,
+                                ...shotData, // Enviar solo los datos del tiro, no todo el gameState
+                                timestamp: Date.now()
+                            },
+                            ballInHandFor: null, cueBallPosition: null,
+                            aimingSpin: { x: 0, y: 0 }, isSpinModalOpen: false
+                        });
+                    } catch (error) {
+                        console.error("Error al enviar los datos del tiro:", error);
+                    }
+                }
+            });
+
+
+        }
+    </script>
+
+    <!-- --- SOLUCIÓN: Script para capturar errores globales --- -->
+    <script>
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorDetails = document.getElementById('error-details');
+        const copyErrorBtn = document.getElementById('copy-error-btn');
+        
+        function showErrorModal(errorInfo) {
+            errorDetails.textContent = errorInfo;
+            errorOverlay.style.display = 'flex';
+        }
+
+        copyErrorBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(errorDetails.textContent).then(() => {
+                copyErrorBtn.textContent = '¡Copiado!';
+                setTimeout(() => {
+                    copyErrorBtn.textContent = 'Copiar Error';
+                }, 2000);
+            }).catch(err => {
+                console.error('No se pudo copiar el error: ', err);
+                copyErrorBtn.textContent = 'Error al copiar';
+            });
+        });
+
+        // Capturar errores de JavaScript estándar
+        window.onerror = function (message, source, lineno, colno, error) {
+            const errorInfo = `Error: ${message}\nArchivo: ${source}\nLínea: ${lineno}, Columna: ${colno}\n\nPila de llamadas:\n${error ? error.stack : 'No disponible'}`;
+            showErrorModal(errorInfo);
+            return true; // Evita que el error se muestre en la consola del navegador por defecto
+        };
+
+        // Capturar errores en promesas que no fueron manejados (ej. fetch)
+        window.addEventListener('unhandledrejection', function (event) {
+            const reason = event.reason;
+            let errorInfo = 'Error en una promesa no manejada.\n';
+            if (reason instanceof Error) {
+                errorInfo += `Error: ${reason.message}\n\nPila de llamadas:\n${reason.stack}`;
+            }
+            else {
+                errorInfo += `Razón: ${JSON.stringify(reason, null, 2)}`;
+            }
+            showErrorModal(errorInfo);
+        });
+    </script>
+
+    <!-- 3. Registrar el Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { // --- CORRECCIÓN: Usar 'load' para asegurar que todo el DOM esté listo
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => { /* El Service Worker se registró correctamente. */ })
+                    .catch(error => {
+                        console.log('Error en el registro del Service Worker:', error);
+                    });
+            });
+        }
+
+        // Escuchar cambios de orientación para asegurar que la UI se actualice
+        screen.orientation.addEventListener('change', () => {
+            window.dispatchEvent(new Event('resize'));
+        });
+    </script>
+    <script>
+        const newPowerBarContainer = document.getElementById('newPowerBarContainer');
+        const newPowerBarHandle = document.getElementById('newPowerBarHandle');
+
+        let isDragging = false;
+        let powerPercent = 0;
+        let dragStartY = 0; // --- NUEVO: Para guardar la posición Y inicial del arrastre
+
+        // --- CORRECCIÓN: El evento ahora se escucha en todo el contenedor de la barra ---
+        newPowerBarContainer.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            newPowerBarContainer.setPointerCapture(e.pointerId); // Capturar el puntero en el contenedor
+            e.preventDefault(); // Prevenir el comportamiento por defecto del navegador
+
+            // Guardar la posición Y inicial y resetear la barra a 0%
+            dragStartY = e.clientY;
+            powerPercent = 0;
+            updatePowerBar(0); // Actualizar la UI a 0%
+        });
+
+        document.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+
+            const rect = newPowerBarContainer.getBoundingClientRect();
+            const containerHeight = rect.height;
+
+            // --- CORRECCIÓN: El arrastre ahora es de abajo hacia arriba para cargar potencia ---
+            const dragDistance = e.clientY - dragStartY;
+
+            // --- CORRECCIÓN: La potencia y la posición visual ahora se basan en el mismo cálculo ---
+            // Esto sincroniza perfectamente el movimiento del taco con el porcentaje.
+            // El recorrido total para llegar al 100% es la altura de la barra.
+            // --- CORRECCIÓN: Se limita el recorrido a 1.0 para que no pase del 100%.
+            const newPowerPercent = Math.max(0, Math.min(dragDistance / containerHeight, 1.0));
+            
+            // Guardamos la potencia para el cálculo de disparo y la posición visual.
+            powerPercent = newPowerPercent; 
+            // --- CORRECCIÓN: Como ya no hay sobrerrecorrido, solo pasamos un valor.
+            // Ambos argumentos (display y posición) usarán el mismo porcentaje.
+            updatePowerBar(powerPercent, powerPercent);
+        });
+
+        document.addEventListener('pointerup', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                try {
+                    // --- CORRECCIÓN: Usar el 'e' del evento para obtener el pointerId ---
+                    if (e.pointerId) newPowerBarContainer.releasePointerCapture(e.pointerId);
+                } catch (err) { /* La captura del puntero ya no existía, no hay problema. */ }
+                
+                // --- CORRECCIÓN: Mostrar la potencia real de disparo (limitada a 100%) ---
+                console.log(`Disparo con potencia: ${Math.round(Math.min(powerPercent, 1) * 100)}%`);
+
+                // Animar la barra de vuelta a 0%
+                newPowerBarHandle.style.transition = 'top 0.3s ease-out';
+                updatePowerBar(0, 0); // Resetear tanto la potencia como la posición visual
+                // Quitar la transición después de la animación para que el arrastre sea instantáneo
+                setTimeout(() => {
+                    newPowerBarHandle.style.transition = '';
+                }, 300);
+            }
+        });
+
+        // Función que actualiza la UI de la barra de potencia
+        function updatePowerBar(powerPercent, visualPercent) {
+            // Si visualPercent no se proporciona, se usa powerPercent.
+            const displayPercent = visualPercent !== undefined ? visualPercent : powerPercent;
+            const containerHeight = newPowerBarContainer.offsetHeight;
+
+            // --- CORRECCIÓN: El taco empieza abajo y se mueve hacia arriba ---
+            // 1. La posición inicial (0%) es abajo del todo. 
+            //    Para que empiece más abajo, multiplica containerHeight por un número mayor (ej: 1.5).
+            const startPosition = containerHeight * 1.4;
+            // 2. A medida que se arrastra, el taco sube. El recorrido es la altura del contenedor.
+            const topPosition = startPosition - (displayPercent * containerHeight);
+
+            // Actualizar la posición del taco
+            newPowerBarHandle.style.top = `${topPosition}px`;
+        }
+
+        // Inicializar la barra de potencia a 0
+        updatePowerBar(0, 0);
+
+
+    </script>
+</body></html>
