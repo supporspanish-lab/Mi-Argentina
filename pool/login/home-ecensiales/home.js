@@ -8,12 +8,12 @@ export const setupBackgroundMusic = () => {
     const unmuteIcon = document.getElementById('unmute-icon');
     
     // --- Seleccionar una pista de música de fondo aleatoria ---
-    // --- CORRECCIÓN: Usar rutas absolutas desde la raíz del proyecto ---
+    // --- CORRECCIÓN: Usar rutas relativas para que funcionen en GitHub Pages ---
     const backgroundMusicTracks = [
-        '/audio/home/1.mp3',
-        '/audio/home/2.mp3',
-        '/audio/home/3.mp3',
-        '/audio/home/4.mp3'
+        '../../audio/home/1.mp3',
+        '../../audio/home/2.mp3',
+        '../../audio/home/3.mp3',
+        '../../audio/home/4.mp3'
     ];
     const randomTrack = backgroundMusicTracks[Math.floor(Math.random() * backgroundMusicTracks.length)];
     const backgroundAudio = new Audio(randomTrack);
