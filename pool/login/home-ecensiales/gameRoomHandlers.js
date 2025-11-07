@@ -160,13 +160,15 @@ export const createGame = async (betAmount, isPrivate = false) => {
             cleanupWaitingGame();
         }
     });
+};
 
+export const setupStartGameButton = () => {
     startGameBtn.onclick = async () => {
-        const { userWaitingGameId, currentUser } = getState();
+        const { userWaitingGameId } = getState();
         if (confirm('¿Estás seguro de que quieres iniciar la partida?')) {
-            if (userWaitingGameId && currentUser) {
+            if (userWaitingGameId) {
                 const gameDocRef = doc(db, "games", userWaitingGameId);
-                const gameSnap = await getDoc(gameDocRef); // Get game data
+                const gameSnap = await getDoc(gameDocRef);
                 if (!gameSnap.exists()) {
                     console.error("Game document not found.");
                     alert("Error: Documento de partida no encontrado.");
@@ -174,71 +176,9 @@ export const createGame = async (betAmount, isPrivate = false) => {
                 }
                 const gameData = gameSnap.data();
 
-                if (gameData.balancesDeducted) { // Check if already deducted
-                    console.log("Balances already deducted for this game. Proceeding to start.");
-                    await updateDoc(gameDocRef, { status: "starting" });
-                    return;
-                }
-
-                const player1Uid = gameData.player1.uid;
-                const player2Uid = gameData.player2.uid;
-                const betAmount = gameData.betAmount;
-
-                if (!player1Uid || !player2Uid || !betAmount) {
-                    console.error("Missing player UIDs or bet amount in game data.");
-                    alert("Error: Faltan UIDs de jugador o monto de apuesta en los datos de la partida.");
-                    return;
-                }
-
-                // Fetch player balances
-                const player1Profile = await fetchUserProfile(player1Uid);
-                const player2Profile = await fetchUserProfile(player2Uid);
-
-                if (!player1Profile || !player2Profile) {
-                    console.error("Could not fetch one or both player profiles.");
-                    alert("Error al obtener perfiles de jugador. No se puede iniciar la partida.");
-                    return;
-                }
-
-                // Check balances
-                if (player1Profile.balance < betAmount || player2Profile.balance < betAmount) {
-                    alert("Uno de los jugadores no tiene saldo suficiente para la apuesta. No se puede iniciar la partida.");
-                    return;
-                }
-
-                // Deduct balances and record transactions
-                const newPlayer1Balance = player1Profile.balance - betAmount;
-                const newPlayer2Balance = player2Profile.balance - betAmount;
-
-                const player1Transaction = {
-                    amount: -betAmount,
-                    type: 'bet',
-                    gameId: userWaitingGameId,
-                    timestamp: new Date()
-                };
-                const player2Transaction = {
-                    amount: -betAmount,
-                    type: 'bet',
-                    gameId: userWaitingGameId,
-                    timestamp: new Date()
-                };
-
-                await updateUserProfile(player1Uid, {
-                    balance: newPlayer1Balance,
-                    transactions: arrayUnion(player1Transaction)
-                });
-                await updateUserProfile(player2Uid, {
-                    balance: newPlayer2Balance,
-                    transactions: arrayUnion(player2Transaction)
-                });
-
-                console.log(`Balances deducted for game ${userWaitingGameId}. Player 1 new balance: ${newPlayer1Balance}, Player 2 new balance: ${newPlayer2Balance}`);
-
-                // Update game status to starting and mark balances as deducted
-                await updateDoc(gameDocRef, {
-                    status: "starting",
-                    balancesDeducted: true
-                });
+                // La deducción de saldo ahora se hace en `revisar.js` al meter la bola 8 o ganar/perder.
+                // Aquí solo cambiamos el estado para que ambos jugadores inicien.
+                await updateDoc(gameDocRef, { status: "starting" });
             }
         }
     };
@@ -327,29 +267,29 @@ export const fetchWaitingGames = async (isPrivate = false) => {
                     cancelWaitBtn.textContent = 'Abandonar Sala';
 
                     onSnapshot(doc(db, "games", gameId), (gameSnap) => {
-                        const gameData = gameSnap.data();
-                        if (gameData) {
-                            renderMessages(gameData.messages, chatMessagesContainer);
-                            setLastMessageCount(gameData.messages ? gameData.messages.length : 0);
+        const gameData = gameSnap.data();
+        if (gameData) {
+            renderMessages(gameData.messages, chatMessagesContainer);
+            setLastMessageCount(gameData.messages ? gameData.messages.length : 0);
 
-                            // Si el juego comienza, redirigir.
-                            if (gameData.status === "starting") {
-                                const { gameStarted } = getState();
-                                if (!gameStarted) {
-                                    setGameStarted(true);
-                                    startGameFullscreen(gameId);
-                                }
-                            }
-                            // Si el jugador 2 (el que se unió) ya no está en la partida,
-                            // y el juego NO está en estado "starting", entonces limpiar la sala de espera.
-                            else if (gameData.player2 === null && gameData.status !== "starting") {
-                                cleanupWaitingGame();
-                            }
-                        } else {
-                            // Si el documento del juego se elimina, limpiar la sala de espera.
-                            cleanupWaitingGame();
-                        }
-                    });
+            // Si el juego comienza, redirigir.
+            if (gameData.status === "starting") {
+                const { gameStarted } = getState();
+                if (!gameStarted) {
+                    setGameStarted(true);
+                    startGameFullscreen(gameId);
+                }
+            }
+            // Si el jugador 2 (el que se unió) ya no está en la partida,
+            // y el juego NO está en estado "starting", entonces limpiar la sala de espera.
+            else if (gameData.player2 === null && gameData.status !== "starting") {
+                cleanupWaitingGame();
+            }
+        } else {
+            // Si el documento del juego se elimina, limpiar la sala de espera.
+            cleanupWaitingGame();
+        }
+    });
                 });
                 gameCarousel.appendChild(card);
             }
