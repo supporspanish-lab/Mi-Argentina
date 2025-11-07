@@ -3,10 +3,10 @@
   "short_name": "BlackBall Pool",
   "start_url": "login.html",
   "scope": "./",
-  "display": "minimal-ui",
+  "display": "standalone",
   "background_color": "#1a1a1a",
   "theme_color": "#00f291",
-  "orientation": "portrait",
+  "orientation": "landscape",
   "icons": [
     {
       "src": "../imajenes/pwa.png",
