@@ -1272,4 +1272,25 @@
         }
         window.addEventListener('load', lockOrientation);
     </script>
+    <!-- NUEVO: Script para la música de fondo del juego -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const backgroundAudio = new Audio('audio/lofi.mp3');
+            backgroundAudio.loop = true;
+            backgroundAudio.volume = 0.04; // Volumen al 4%
+
+            // Función para iniciar la música en la primera interacción del usuario.
+            const playMusicOnFirstInteraction = () => {
+                backgroundAudio.play().catch(error => {
+                    console.warn("La reproducción de música de fondo fue bloqueada por el navegador hasta la interacción del usuario.", error);
+                });
+                // Eliminar los listeners una vez que la música ha comenzado.
+                document.body.removeEventListener('click', playMusicOnFirstInteraction);
+                document.body.removeEventListener('touchstart', playMusicOnFirstInteraction);
+            };
+
+            document.body.addEventListener('click', playMusicOnFirstInteraction, { once: true });
+            document.body.addEventListener('touchstart', playMusicOnFirstInteraction, { once: true });
+        });
+    </script>
 </body></html>
