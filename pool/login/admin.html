@@ -21,6 +21,7 @@
             --border-color: rgba(255, 255, 255, 0.2);
             --red-color: #e74c3c;
         }
+
         body {
             font-family: 'Roboto', sans-serif;
             background-color: var(--bg-color);
@@ -34,6 +35,7 @@
             padding: 20px;
             box-sizing: border-box;
         }
+
         .admin-container {
             background-color: var(--container-bg-color);
             border: 1px solid var(--border-color);
@@ -46,22 +48,25 @@
             margin-bottom: 20px;
             margin-top: 70px; /* Added margin-top to account for the back-button */
         }
+
         h1 {
             font-family: 'Righteous', cursive;
             color: var(--primary-color);
             margin-bottom: 20px;
             font-size: 36px;
         }
+
         h2 {
             color: var(--primary-color);
             margin-top: 30px;
             margin-bottom: 15px;
             font-size: 24px;
         }
+
         .section-container {
             background-color: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
-            padding: 20px;
+            padding: 20px; 
             margin-top: 20px;
         }
         table {
@@ -69,6 +74,7 @@
             border-collapse: collapse;
             margin-top: 15px;
         }
+
         th, td {
             border: 1px solid var(--border-color);
             padding: 10px;
@@ -80,6 +86,7 @@
             color: var(--primary-color);
             font-weight: 700;
         }
+
         tr:nth-child(even) {
             background-color: rgba(255, 255, 255, 0.05);
         }
@@ -98,6 +105,7 @@
             left: 20px;
             z-index: 1000;
         }
+
         .back-button:hover {
             background-color: #00d47a;
         }
@@ -111,6 +119,7 @@
             transition: background-color 0.3s;
             font-size: 12px;
         }
+
         .action-button:hover {
             background-color: #c0392b;
         }
@@ -125,6 +134,34 @@
         }
         .status-finished {
             color: var(--text-secondary-color);
+        }
+
+        /* --- NUEVO: Estilos para el formulario de registro --- */
+        .admin-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .form-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .admin-form label {
+            font-weight: 700;
+            color: var(--text-secondary-color);
+        }
+        .admin-form input {
+            width: 100%;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-color);
+            font-size: 14px;
+            box-sizing: border-box;
         }
 
         @media (max-width: 768px) {
@@ -221,6 +258,27 @@
     <div class="admin-container">
         <h1>Panel de Administración</h1>
 
+        <!-- NUEVO: Sección para registrar usuarios -->
+        <div class="section-container">
+            <h2>Registrar Nuevo Usuario</h2>
+            <form id="register-form" class="admin-form">
+                <div class="form-group">
+                    <label for="register-username">Nombre de Usuario:</label>
+                    <input type="text" id="register-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email:</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Contraseña:</label>
+                    <input type="password" id="register-password" required minlength="6">
+                </div>
+                <button type="submit" class="action-button" style="background-color: var(--primary-color); color: #000; width: auto; padding: 10px 20px;">Registrar Usuario</button>
+            </form>
+            <p id="register-status-message" style="margin-top: 15px; font-weight: bold;"></p>
+        </div>
+
         <div class="section-container">
             <h2>Gestión de Usuarios</h2>
             <table id="users-table">
@@ -275,7 +333,7 @@
     </div>
 
     <script type="module">
-        import { db, auth, onAuthStateChanged } from './auth.js';
+        import { db, auth, onAuthStateChanged, registerWithEmail } from './auth.js';
         import { collection, getDocs, onSnapshot, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         const usersTableBody = document.getElementById('users-table').querySelector('tbody');
@@ -460,6 +518,47 @@
             } catch (error) {
                 console.error("Error deleting old game rooms:", error);
                 alert('Hubo un error al eliminar las salas de juego antiguas: ' + error.message);
+            }
+        });
+
+        // --- NUEVO: Lógica para el formulario de registro ---
+        const registerForm = document.getElementById('register-form');
+        const registerStatusMessage = document.getElementById('register-status-message');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerStatusMessage.textContent = 'Registrando...';
+            registerStatusMessage.style.color = 'var(--text-color)';
+
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                await registerWithEmail(username, email, password);
+                registerStatusMessage.textContent = `¡Usuario '${username}' registrado con éxito!`;
+                registerStatusMessage.style.color = 'var(--primary-color)';
+                registerForm.reset(); // Limpiar el formulario
+                loadUsers(); // Recargar la lista de usuarios
+            } catch (error) {
+                console.error("Error al registrar usuario:", error);
+                let friendlyMessage = "Ocurrió un error inesperado.";
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        friendlyMessage = "Este correo electrónico ya está en uso.";
+                        break;
+                    case 'auth/invalid-email':
+                        friendlyMessage = "El formato del correo electrónico no es válido.";
+                        break;
+                    case 'auth/weak-password':
+                        friendlyMessage = "La contraseña debe tener al menos 6 caracteres.";
+                        break;
+                }
+                registerStatusMessage.textContent = `Error: ${friendlyMessage}`;
+                registerStatusMessage.style.color = 'var(--red-color)';
+            } finally {
+                // Opcional: Limpiar el mensaje después de unos segundos
+                setTimeout(() => { registerStatusMessage.textContent = ''; }, 5000);
             }
         });
 

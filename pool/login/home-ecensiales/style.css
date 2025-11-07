@@ -33,6 +33,29 @@
         position: relative;
         overflow: hidden; /* Evita cualquier scroll en el body */
       }
+      
+      /* --- MODIFICADO: Estilos para el video de fondo --- */
+      #background-video {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1; /* Posiciona el fondo detrás de todo */
+        object-fit: cover; /* Asegura que el video cubra el área sin deformarse */
+        opacity: 1; /* Opacidad completa */
+        animation: fadeInBg 2s ease-out forwards;
+      }
+
+      @keyframes fadeInBg {
+        from { opacity: 0; }
+        to { 
+          /* --- MODIFICADO: La opacidad final puede ser menor si quieres que el video sea más sutil --- */
+          /* Por ejemplo, usa 'opacity: 0.3;' para un fondo más oscuro */
+          opacity: 1; 
+        }
+      }
+      /* --- FIN NUEVO --- */
 
       #root {
         width: 100%;
@@ -1230,7 +1253,7 @@
 
       /* --- MODIFICADO: Hacer el modal de amigos más ancho --- */
       #friends-modal .modal-box {
-          max-width: 500px; /* Ancho mayor para acomodar las dos listas */
+          max-width: 800px; /* Ancho mayor para acomodar las dos listas */
       }
 
       @media (max-width: 768px) {

@@ -1,7 +1,7 @@
 // Importar las funciones necesarias de los SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, runTransaction, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 // --- SOLUCIÓN: Re-exportar las funciones para que otros módulos (como pool.js) puedan usarlas
 export { doc, setDoc, getDoc, onSnapshot, onAuthStateChanged, updateDoc, deleteDoc, runTransaction };
@@ -36,6 +36,13 @@ export async function registerWithEmail(username, email, password) {
     return user;
 }
 
+/**
+ * Inicia sesión con email y contraseña.
+ * Si el usuario no tiene un perfil en Firestore, se crea uno.
+ * @param {string} email - El email del usuario.
+ * @param {string} password - La contraseña del usuario.
+ * @returns {Promise<User>} El objeto de usuario de Firebase.
+ */
 export async function loginWithEmail(email, password) {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -51,6 +58,43 @@ export async function loginWithEmail(email, password) {
         });
     }
     return user;
+}
+
+/**
+ * NUEVO: Inicia sesión con nombre de usuario o email.
+ * Determina si el input es un email o un username y procede a la autenticación.
+ * @param {string} usernameOrEmail - El nombre de usuario o el email.
+ * @param {string} password - La contraseña.
+ * @returns {Promise<User>} El objeto de usuario de Firebase.
+ */
+export async function loginWithUsernameOrEmail(usernameOrEmail, password) {
+    let emailToLogin = usernameOrEmail;
+
+    // Si no parece un email, asumimos que es un nombre de usuario y buscamos el email.
+    if (!usernameOrEmail.includes('@')) {
+        const usersRef = collection(db, "saldo");
+        const q = query(usersRef, where("username", "==", usernameOrEmail));
+        
+        try {
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                // Lanzamos un error compatible con Firebase Auth para que el login.html lo maneje.
+                const error = new Error("No se encontró ningún usuario con ese nombre.");
+                error.code = 'auth/user-not-found';
+                throw error;
+            }
+            // Asumimos que los nombres de usuario son únicos.
+            const userDoc = querySnapshot.docs[0];
+            emailToLogin = userDoc.data().email;
+        } catch (error) {
+            // Si hubo un error en la consulta o el usuario no se encontró, lo relanzamos.
+            console.error("Error buscando usuario por username:", error);
+            throw error;
+        }
+    }
+
+    // Una vez que tenemos el email (ya sea el original o el encontrado), iniciamos sesión.
+    return loginWithEmail(emailToLogin, password);
 }
 
 export async function sendResetPasswordEmail(email) {

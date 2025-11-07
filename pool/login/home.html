@@ -47,6 +47,9 @@
     </style>
   </head>
   <body>
+    <!-- MODIFICADO: Contenedor para el video de fondo aleatorio (sin 'muted') -->
+    <video autoplay playsinline id="background-video" preload="auto"></video>
+
     <div id="root">
         <div class="app-container">
             <header class="app-header">
@@ -277,6 +280,52 @@
     <!-- CORRECCIÓN: Cargar main.js, que es el punto de entrada principal de la aplicación -->
     <script type="module" src="./home-ecensiales/main.js"></script>
   </body>
+  <!-- MODIFICADO: Script para el video de fondo aleatorio con control de volumen -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const backgroundVideo = document.getElementById('background-video');
+        backgroundVideo.volume = 0.04; // Establecer volumen al 4%
+
+        const videos = [
+            '../video/video1.mp4',
+            '../video/video2.mp4',
+            '../video/video3.mp4'
+        ];
+        const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+
+        backgroundVideo.src = randomVideo;
+
+        // Intentar reproducir con sonido. Si falla, se reproduce silenciado.
+        const playPromise = backgroundVideo.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                // Autoplay con sonido fue bloqueado. Reproducir silenciado.
+                console.log("Autoplay con sonido bloqueado, reproduciendo video silenciado.");
+                backgroundVideo.muted = true;
+                backgroundVideo.play();
+            });
+        }
+    });
+  </script>
+  <!-- NUEVO: Script para manejar el autoplay de la música -->
+  <script>
+    function handleFirstInteraction() {
+      // Dispara un evento personalizado que el audioManager puede escuchar
+      window.dispatchEvent(new CustomEvent('userInteracted'));
+
+      // --- NUEVO: Activar sonido del video de fondo en la primera interacción ---
+      const backgroundVideo = document.getElementById('background-video');
+      if (backgroundVideo && backgroundVideo.muted) {
+          backgroundVideo.muted = false;
+      }
+
+      // Una vez que se ejecuta, elimina el listener para no volver a llamarlo
+      document.body.removeEventListener('click', handleFirstInteraction);
+      document.body.removeEventListener('touchstart', handleFirstInteraction);
+    }
+    document.body.addEventListener('click', handleFirstInteraction, { once: true });
+    document.body.addEventListener('touchstart', handleFirstInteraction, { once: true });
+  </script>
   <script>
     // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
     // Esta función establece la altura del contenedor principal a la altura

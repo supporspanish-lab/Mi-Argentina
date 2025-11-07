@@ -426,15 +426,6 @@
             <p class="app-subtitle">Inicia sesión para jugar</p>
             
             <form class="login-form" id="login-form">
-                <div class="input-group register-only" id="username-group">
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0-8a3 3 0 1 1-3 3 3 3 0 0 1 3-3Zm0 10a8 8 0 0 0-8 8 1 1 0 0 0 2 0 6 6 0 0 1 12 0 1 1 0 0 0 2 0 8 8 0 0 0-8-8Z"></path></svg>
-                    <input 
-                        type="text" 
-                        class="form-input" 
-                        placeholder="Nombre de Usuario" 
-                        aria-label="Nombre de Usuario"
-                    />
-                </div>
                 <div class="input-group">
                     <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2.5a5.5 5.5 0 0 1 5.5 5.5c0 1.57-.67 3-1.69 3.99a7.5 7.5 0 0 1 4.2 6.32V20H3.99v-1.69a7.5 7.5 0 0 1 4.2-6.32A5.5 5.5 0 0 1 6.5 8a5.5 5.5 0 0 1 5.5-5.5Z" />
@@ -442,11 +433,11 @@
                     <input 
                         type="email" 
                         class="form-input" 
-                        id="email-input"
-                        placeholder="Correo Electrónico" 
-                        aria-label="Correo Electrónico"
+                        id="login-input"
+                        placeholder="Email o Nombre de Usuario" 
+                        aria-label="Email o Nombre de Usuario"
                         autocomplete="email"
-                        required 
+                        required
                     />
                 </div>
                 <div class="input-group" id="password-group">
@@ -466,25 +457,12 @@
                     <a href="javascript:void(0);" id="switchToReset" class="register-link">¿Olvidaste tu contraseña?</a>
                 </div>
 
-                <div class="input-group register-only" id="confirm-password-group">
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c-2.48 0-4.5 2.02-4.5 4.5v3h9v-3c0-2.48-2.02-4.5-4.5-4.5Zm7.5 7.5H4.5c-.83 0-1.5.67-1.5 1.5v8c0 .83.67 1.5 1.5 1.5h15c.83 0 1.5-.67 1.5-1.5v-8c0-.83-.67-1.5-1.5-1.5Z"></path></svg>
-                    <input 
-                        type="password" 
-                        class="form-input" 
-                        placeholder="Confirmar Contraseña" 
-                        autocomplete="new-password"
-                        aria-label="Confirmar Contraseña"
-                    />
-                </div>
                 <!-- NUEVO: Contenedor para mensajes de error -->
                 <p id="error-message" class="error-message"></p>
 
                 <button type="submit" class="btn-primary">Ingresar</button>
 
-                <p class="register-link login-only">
-                    ¿No tienes una cuenta? <a href="javascript:void(0);" id="switchToRegister">Regístrate ahora</a>
-                </p>
-                <p class="register-link register-only" id="switchToLoginContainer">
+                <p class="register-link" id="switchToLoginContainer" style="display: none;">
                     ¿Ya tienes una cuenta? <a href="javascript:void(0);" id="switchToLogin">Inicia sesión</a>
                 </p>
             </form>
@@ -495,27 +473,22 @@
     <!-- SDKs de Firebase -->
     <script type="module">
         // --- Lógica de la Interfaz de Usuario ---
-        import { registerWithEmail, loginWithEmail, sendResetPasswordEmail, db } from './auth.js'; // Importar db para la lógica de perfil
+        import { loginWithUsernameOrEmail, sendResetPasswordEmail, db } from './auth.js'; // Importar db para la lógica de perfil
 
         document.addEventListener('DOMContentLoaded', () => {
             const loginForm = document.getElementById('login-form');
             const loginContainer = document.getElementById('login-container');
             const particlesContainer = document.getElementById('particles-container');
             const loadingSpinner = document.getElementById('loading-spinner');
-            
-            const switchToRegister = document.getElementById('switchToRegister');
             const switchToLogin = document.getElementById('switchToLogin');
             const switchToReset = document.getElementById('switchToReset'); // NUEVO
             const subtitle = document.querySelector('.app-subtitle');
             const submitButton = document.querySelector('.btn-primary');
-            const usernameGroup = document.getElementById('username-group');
-            const confirmPasswordGroup = document.getElementById('confirm-password-group');
             const passwordGroup = document.getElementById('password-group'); // MODIFICADO: Usar ID
-            const emailInput = document.getElementById('email-input'); // NUEVO
+            const loginInput = document.getElementById('login-input'); // NUEVO
             const errorMessageElement = document.getElementById('error-message'); // NUEVO
 
             const createDustParticles = (count) => {
-                if (!particlesContainer) return;
                 
                 // Clear any previous particles
                 particlesContainer.innerHTML = '';
@@ -557,37 +530,25 @@
             // --- Lógica de Autenticación ---
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const isRegisterMode = loginContainer.classList.contains('register-mode');
                 const isResetMode = loginContainer.classList.contains('reset-mode');
-                const email = emailInput.value;
+                const loginValue = loginInput.value;
                 errorMessageElement.textContent = '';
                 errorMessageElement.classList.remove('success');
 
                 try {
                     if (isResetMode) {
-                        await sendResetPasswordEmail(email);
+                        await sendResetPasswordEmail(loginValue);
                         errorMessageElement.textContent = "Si este correo existe, recibirás un email (revisa también en spam) para restablecer tu contraseña.";
                         errorMessageElement.classList.add('success');
                         submitButton.disabled = true;
                         return;
                     }
-
                     let password = '';
                     if (!isResetMode) {
                         password = passwordGroup.querySelector('input').value;
                     }
 
-                    if (isRegisterMode) {
-                        const confirmPassword = confirmPasswordGroup.querySelector('input').value;
-                        if (password !== confirmPassword) {
-                            errorMessageElement.textContent = "Las contraseñas no coinciden.";
-                            return;
-                        }
-                        const username = usernameGroup.querySelector('input').value;
-                        await registerWithEmail(username, email, password);
-                    } else {
-                        await loginWithEmail(email, password);
-                    }
+                    await loginWithUsernameOrEmail(loginValue, password);
                     const loginSound = new Audio('../audio/login.mp3');
                     loginSound.play().catch(e => console.error("Error al reproducir el sonido de login:", e));
                     triggerDisintegration(); // Redirigir a home.html
@@ -596,6 +557,7 @@
                     let friendlyMessage = "Ocurrió un error. Inténtalo de nuevo.";
                     switch (error.code) {
                         case 'auth/user-not-found':
+                            friendlyMessage = "Usuario o contraseña incorrectos.";
                             break;
                         case 'auth/wrong-password':
                             friendlyMessage = "La contraseña es incorrecta.";
@@ -609,32 +571,13 @@
                         case 'auth/invalid-email':
                             friendlyMessage = "El formato del correo electrónico no es válido.";
                             break;
+                    
                     }
                     errorMessageElement.textContent = friendlyMessage;
                 }
             });
 
             // --- Lógica para cambiar entre formularios ---
-            switchToRegister.addEventListener('click', (e) => {
-                e.preventDefault();
-                loginContainer.classList.add('register-mode');
-                loginContainer.classList.remove('reset-mode');
-                errorMessageElement.textContent = ''; // Limpiar errores
-                subtitle.textContent = 'Crea tu cuenta para empezar';
-                submitButton.textContent = 'Registrarse';
-                // Cambiar placeholder de email
-                emailInput.placeholder = "Correo Electrónico";
-                emailInput.ariaLabel = "Correo Electrónico";
-
-                usernameGroup.style.display = 'flex';
-                passwordGroup.style.display = 'flex';
-                confirmPasswordGroup.style.display = 'flex';
-                document.getElementById('switchToLoginContainer').style.display = 'block';
-                // Hacer los nuevos campos requeridos
-                usernameGroup.querySelector('input').required = true;
-                confirmPasswordGroup.querySelector('input').required = true;
-            });
-
             switchToLogin.addEventListener('click', (e) => {
                 e.preventDefault();
                 loginContainer.classList.remove('register-mode');
@@ -643,19 +586,13 @@
                 subtitle.textContent = 'Inicia sesión para jugar';
                 submitButton.textContent = 'Ingresar';
                 // Restaurar placeholder original
-                emailInput.placeholder = "Correo Electrónico";
-                emailInput.ariaLabel = "Correo Electrónico";
+                loginInput.placeholder = "Email o Nombre de Usuario";
+                loginInput.ariaLabel = "Email o Nombre de Usuario";
 
-                usernameGroup.style.display = 'none';
                 passwordGroup.style.display = 'flex';
                 passwordGroup.querySelector('input').required = true; // Reactivar
-                confirmPasswordGroup.style.display = 'none';
                 document.getElementById('switchToLoginContainer').style.display = 'none';
-                // Quitar el 'required' de los campos de registro
-                usernameGroup.querySelector('input').required = false;
-                confirmPasswordGroup.querySelector('input').required = false;
             });
-
             // --- NUEVO: Lógica para cambiar a modo restablecer contraseña ---
             switchToReset.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -666,21 +603,19 @@
                 subtitle.textContent = 'Ingresa tu correo para restablecer la contraseña';
                 submitButton.textContent = 'Enviar Enlace';
                 // --- MODIFICADO: Ocultar campo de contraseña y ajustar placeholder ---
-                emailInput.placeholder = "Correo Electrónico";
-                emailInput.ariaLabel = "Correo Electrónico";
+                loginInput.placeholder = "Correo Electrónico";
+                loginInput.ariaLabel = "Correo Electrónico";
                 passwordGroup.style.display = 'none';
                 passwordGroup.querySelector('input').required = false; // Desactivar
-                confirmPasswordGroup.style.display = 'none';
                 document.getElementById('switchToLoginContainer').style.display = 'block';
-                usernameGroup.style.display = 'none'; // Ocultar campo de nombre de usuario
             });
         });
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const updateMessageContainer = document.getElementById('update-message-container');
-            const updateMessageElement = document.getElementById('update-message');
             const loginContainer = document.getElementById('login-container');
+            const updateMessageElement = document.getElementById('update-message'); // SOLUCIÓN: Definir la variable
 
             // Initially hide the login container
             loginContainer.classList.add('hidden');

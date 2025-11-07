@@ -32,6 +32,10 @@ const ASSETS_TO_CACHE = [
     'audio/cushionHit.wav',
     'audio/EntrarPelotaTronera.mp3',
     'audio/cueHit.wav',
+    // --- NUEVO: Añadir las pistas de música de fondo a la caché ---
+    'audio/home/1.mp3',
+    'audio/home/2.mp3',
+    'audio/home/3.mp3',
     'audio/login.mp3', // Add login sound
     'modelos/billiard_balls.glb',
     // Login page assets
@@ -50,6 +54,11 @@ const ASSETS_TO_CACHE = [
     'login/home-ecensiales/state.js',
     'login/home-ecensiales/style.css',
     'login/home-ecensiales/utils.js',
+    // --- NUEVO: Añadir los videos de fondo a la caché ---
+    'video/video1.mp4',
+    'video/video2.mp4',
+    'video/video3.mp4',
+    'audio/home/4.mp3', // --- NUEVO: Añadir la cuarta pista de música de fondo
     // External dependencies from unpkg
     'https://unpkg.com/three@0.160.0/build/three.module.js',
     'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js',
@@ -100,32 +109,30 @@ self.addEventListener('fetch', (event) => {
     // Intenta obtener el recurso de la red primero.
     // Si falla (por ejemplo, sin conexión), recurre a la caché.
     // Esto asegura que siempre veamos los últimos cambios al recargar.
-    event.respondWith(
-        fetch(event.request).then((networkResponse) => {
-            // Si la petición a la red tiene éxito, la usamos y actualizamos la caché.
-            // --- SOLUCIÓN: Solo guardar en caché las respuestas de nuestro propio dominio ---
-            // Las respuestas a dominios externos (como unpkg.com) pueden ser "opacas" y no se pueden guardar con cache.put().
-            if (event.request.url.startsWith(self.location.origin)) {
-                return caches.open(CACHE_NAME).then((cache) => {
-                    // Solo guardar en caché respuestas válidas (status 200) y no parciales (status 206)
-                    // y que no sean opacas (type 'opaque' o 'cors' para recursos de terceros)
-                    if (networkResponse.ok && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                        cache.put(event.request, networkResponse.clone());
-                    }
-                    return networkResponse;
-                });
-            } else {
-                return networkResponse;
+    event.respondWith((async () => {
+        try {
+            // 1. Intenta ir a la red primero
+            const networkResponse = await fetch(event.request);
+
+            // 2. Si tiene éxito, actualiza la caché y devuelve la respuesta de la red
+            // Solo guardar en caché respuestas válidas (status 200) y de nuestro propio dominio
+            if (networkResponse.ok && networkResponse.type === 'basic') {
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(event.request, networkResponse.clone());
             }
-        }).catch(() => {
-            // Si la petición a la red falla, buscamos en la caché.
-            return caches.match(event.request).then((cachedResponse) => {
-                // Si está en caché, la devolvemos. Si no, la promesa se resuelve a 'undefined'
-                // y el navegador manejará el error de red como lo haría normalmente.
+            return networkResponse;
+        } catch (error) {
+            // 3. Si la red falla, busca en la caché
+            console.log('Service Worker: Fallo de red, buscando en caché para:', event.request.url);
+            const cachedResponse = await caches.match(event.request);
+            // --- SOLUCIÓN: Si está en caché, lo devolvemos. Si no, devolvemos una respuesta de error. ---
+            if (cachedResponse) {
                 return cachedResponse;
-            });
-        })
-    );
+            }
+            // Si no está en caché, generamos una respuesta de error para evitar el TypeError.
+            return new Response(`Recurso no encontrado en la red ni en la caché: ${event.request.url}`, { status: 404, statusText: "Not Found" });
+        }
+    })());
 });
 
 // --- NUEVO: Evento 'message' para manejar la lógica de actualización ---
