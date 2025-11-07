@@ -43,17 +43,22 @@
         height: 100%;
         z-index: -1; /* Posiciona el fondo detrás de todo */
         object-fit: cover; /* Asegura que el video cubra el área sin deformarse */
-        opacity: 1; /* Opacidad completa */
-        animation: fadeInBg 2s ease-out forwards;
+        /* --- MODIFICADO: El video empieza invisible y se hará visible con JS --- */
+        /* --- SOLUCIÓN: Evitar que el video se pause al hacer clic rápido en el fondo --- */
+        pointer-events: none; /* El video ignora completamente los clics y toques */
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out; /* Transición suave */
       }
 
-      @keyframes fadeInBg {
-        from { opacity: 0; }
-        to { 
-          /* --- MODIFICADO: La opacidad final puede ser menor si quieres que el video sea más sutil --- */
-          /* Por ejemplo, usa 'opacity: 0.3;' para un fondo más oscuro */
-          opacity: 1; 
-        }
+      /* --- NUEVO: Clase para hacer visible el video --- */
+      #background-video.visible {
+        opacity: 0.4; /* Opacidad final sutil para que no distraiga del contenido */
+      }
+
+      /* --- NUEVO: Clase para hacer el video completamente visible con sonido --- */
+      #background-video.sound-on {
+        opacity: 1; /* Opacidad completa cuando el sonido está activo */
+        transition: opacity 0.5s ease-out; /* Transición más rápida a opacidad total */
       }
       /* --- FIN NUEVO --- */
 

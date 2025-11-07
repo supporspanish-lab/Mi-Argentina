@@ -17,21 +17,25 @@ export const setupBackgroundMusic = () => {
     const randomTrack = backgroundMusicTracks[Math.floor(Math.random() * backgroundMusicTracks.length)];
     const backgroundAudio = new Audio(randomTrack);
     backgroundAudio.loop = true;
-    backgroundAudio.volume = 0.6;
-
-    // --- MODIFICADO: Escuchar la primera interacción del usuario para iniciar la música ---
-    // Esto cumple con las políticas de autoplay de los navegadores.
-    const playMusicOnInteraction = () => {
-        backgroundAudio.play().catch(error => {
-            // El error es esperado si el usuario no ha interactuado aún.
-            // No es necesario mostrar una advertencia en la consola.
-        });
+    backgroundAudio.volume = 0.5; // Bajar un poco el volumen inicial
+    backgroundAudio.muted = true; // --- SOLUCIÓN: Empezar la música silenciada
+    
+    // --- SOLUCIÓN: Intentar la reproducción automática (silenciada) al cargar ---
+    // Esto es permitido por la mayoría de los navegadores.
+    backgroundAudio.play().catch(error => {
+        console.warn("La reproducción automática de música (silenciada) fue bloqueada. Se iniciará con la interacción del usuario.");
+    });
+    
+    // --- SOLUCIÓN: En la primera interacción, solo quitamos el silencio ---
+    const unmuteOnInteraction = () => {
+        backgroundAudio.muted = false;
+        // Si por alguna razón no se estaba reproduciendo, esto lo asegura.
+        backgroundAudio.play(); 
     };
-
-    window.addEventListener('userInteracted', playMusicOnInteraction, { once: true });
+    window.addEventListener('userInteracted', unmuteOnInteraction, { once: true });
 
     muteMusicBtn.addEventListener('click', () => {
-        if (backgroundAudio.muted) {
+        if (backgroundAudio.muted) { // Si el usuario quiere desmutear
             backgroundAudio.muted = false;
             backgroundAudio.play().catch(error => {
                 console.warn("Error al reproducir música después de desmutear:", error);
@@ -39,7 +43,7 @@ export const setupBackgroundMusic = () => {
             muteIcon.style.display = 'block';
             unmuteIcon.style.display = 'none';
         } else {
-            backgroundAudio.muted = true;
+            backgroundAudio.muted = true; // Si el usuario quiere mutear
             muteIcon.style.display = 'none';
             unmuteIcon.style.display = 'block';
         }
