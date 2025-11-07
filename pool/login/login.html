@@ -413,6 +413,12 @@
 </head>
 <body>
 
+    <!-- SOLUCIÓN: Añadir el contenedor para los mensajes de actualización del Service Worker -->
+    <div id="update-message-container">
+        <div class="loading-spinner"></div>
+        <p id="update-message">Cargando aplicación...</p>
+    </div>
+
     <div class="login-container" id="login-container">
         <div class="loading-spinner" id="loading-spinner"></div>
         <div class="login-content" id="login-content">
@@ -439,6 +445,7 @@
                         id="email-input"
                         placeholder="Correo Electrónico" 
                         aria-label="Correo Electrónico"
+                        autocomplete="email"
                         required 
                     />
                 </div>
@@ -450,6 +457,7 @@
                         type="password" 
                         class="form-input" 
                         placeholder="Contraseña" 
+                        autocomplete="current-password"
                         aria-label="Contraseña"
                         required 
                     />
@@ -464,6 +472,7 @@
                         type="password" 
                         class="form-input" 
                         placeholder="Confirmar Contraseña" 
+                        autocomplete="new-password"
                         aria-label="Confirmar Contraseña"
                     />
                 </div>
@@ -668,58 +677,60 @@
         });
     </script>
     <script>
-        const updateMessageContainer = document.getElementById('update-message-container');
-        const updateMessageElement = document.getElementById('update-message');
-        const loginContainer = document.getElementById('login-container');
+        document.addEventListener('DOMContentLoaded', () => {
+            const updateMessageContainer = document.getElementById('update-message-container');
+            const updateMessageElement = document.getElementById('update-message');
+            const loginContainer = document.getElementById('login-container');
 
-        // Initially hide the login container
-        loginContainer.classList.add('hidden');
+            // Initially hide the login container
+            loginContainer.classList.add('hidden');
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('../sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registrado con éxito:', registration);
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('../sw.js')
+                        .then(registration => {
+                            console.log('ServiceWorker registrado con éxito:', registration);
 
-                        // Check for updates immediately after registration
-                        registration.update();
+                            // Check for updates immediately after registration
+                            registration.update();
 
-                        // Listen for messages from the service worker
-                        navigator.serviceWorker.addEventListener('message', event => {
-                            console.log('Mensaje del Service Worker:', event.data);
-                            if (event.data.type === 'UPDATE_CHECKING') {
-                                updateMessageElement.textContent = 'Revisando versiones...';
-                            } else if (event.data.type === 'UPDATE_FOUND') {
-                                updateMessageElement.textContent = 'Actualizando...';
-                            } else if (event.data.type === 'UPDATE_ACTIVATED') {
-                                updateMessageElement.textContent = 'Actualización completa. Recargando...';
-                                setTimeout(() => window.location.reload(), 1000);
-                            } else if (event.data.type === 'NO_UPDATE') {
-                                updateMessageElement.textContent = 'Versión actualizada.';
-                                setTimeout(() => {
-                                    updateMessageContainer.classList.add('hidden');
-                                    loginContainer.classList.remove('hidden');
-                                }, 1000);
+                            // Listen for messages from the service worker
+                            navigator.serviceWorker.addEventListener('message', event => {
+                                console.log('Mensaje del Service Worker:', event.data);
+                                if (event.data.type === 'UPDATE_CHECKING') {
+                                    updateMessageElement.textContent = 'Revisando versiones...';
+                                } else if (event.data.type === 'UPDATE_FOUND') {
+                                    updateMessageElement.textContent = 'Actualizando...';
+                                } else if (event.data.type === 'UPDATE_ACTIVATED') {
+                                    updateMessageElement.textContent = 'Actualización completa. Recargando...';
+                                    setTimeout(() => window.location.reload(), 1000);
+                                } else if (event.data.type === 'NO_UPDATE') {
+                                    updateMessageElement.textContent = 'Versión actualizada.';
+                                    setTimeout(() => {
+                                        updateMessageContainer.classList.add('hidden');
+                                        loginContainer.classList.remove('hidden');
+                                    }, 1000);
+                                }
+                            });
+
+                            // If there's an active service worker, send a message to check for updates
+                            if (navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage({ type: 'CHECK_FOR_UPDATES' });
                             }
+
+                        })
+                        .catch(error => {
+                            console.log('Fallo el registro de ServiceWorker:', error);
+                            updateMessageElement.textContent = 'Error al cargar la aplicación. Inténtalo de nuevo.';
+                            // If SW registration fails, show the login form after a delay
+                            setTimeout(() => {
+                                updateMessageContainer.classList.add('hidden');
+                                loginContainer.classList.remove('hidden');
+                            }, 2000);
                         });
-
-                        // If there's an active service worker, send a message to check for updates
-                        if (navigator.serviceWorker.controller) {
-                            navigator.serviceWorker.controller.postMessage({ type: 'CHECK_FOR_UPDATES' });
-                        }
-
-                    })
-                    .catch(error => {
-                        console.log('Fallo el registro de ServiceWorker:', error);
-                        updateMessageElement.textContent = 'Error al cargar la aplicación. Inténtalo de nuevo.';
-                        // If SW registration fails, show the login form after a delay
-                        setTimeout(() => {
-                            updateMessageContainer.classList.add('hidden');
-                            loginContainer.classList.remove('hidden');
-                        }, 2000);
-                    });
-            });
-        }
+                });
+            }
+        });
     </script>
 </body>
 </html>
