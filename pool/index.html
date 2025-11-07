@@ -718,7 +718,6 @@
             <div id="main-options-view">
                 <h3>Opciones</h3>
                 <button id="modify-ui-btn">Modificar UI</button>
-                <button id="abandon-game-btn" style="background-color: #e74c3c; border-color: #c0392b; margin-top: 1.5vh;">Abandonar</button>
             </div>
             <div id="edit-ui-options-view" style="display: none;">
                 <h3>Ajustar Interfaz</h3>
@@ -859,14 +858,9 @@
 
     <!-- --- MODIFICACIÓN PARA PRUEBAS ONLINE --- -->
     <script type="module">
-        // 1. Forzar la URL para que incluya el ID de la partida de prueba.
-        // Esto simula la redirección desde la pantalla de matchmaking.
-        const testGameId = 'i7IghaYILY4vhePcIJj6';
         const url = new URL(window.location);
         if (!url.searchParams.has('gameId')) {
-            url.searchParams.set('gameId', testGameId);
-            // Reemplazamos el historial para que el usuario no pueda volver atrás a la URL sin ID.
-            window.history.replaceState({}, '', url);
+            window.location.href = 'login/home.html'; // Redirigir a home si no hay gameId
         }
 
         // 2. Importar y ejecutar el script principal del juego.
@@ -877,7 +871,7 @@
     <!-- --- NUEVO: Script para la sincronización en tiempo real del apuntado --- -->
     <script type="module">
         // 1. Importar las funciones necesarias de Firestore y la autenticación.
-        import { db, auth, onSnapshot, doc, updateDoc, runTransaction } from './login/auth.js';
+        import { db, auth, onSnapshot, doc, updateDoc } from './login/auth.js';
 
                     // 2. Obtener el ID de la partida desde la URL.
                     const urlParams = new URLSearchParams(window.location.search);
@@ -889,140 +883,18 @@
                         console.error("No se encontró gameId en la URL. La sincronización no funcionará.");
                     } else {
                         // --- NUEVO: Escuchar cambios en el documento del juego para actualizar las ganancias ---
-                        let gameEnded = false; // Flag to prevent multiple actions on game end
                         onSnapshot(doc(db, "games", gameId), (docSnap) => {
                             if (docSnap.exists()) {
                                 const gameData = docSnap.data();
                                 const betAmount = gameData.betAmount || 0;
                                 const totalWinnings = betAmount * 2; // Apuesta de ambos jugadores
                                 winningsText.textContent = `$${totalWinnings.toLocaleString()}`;
-
-                                // --- NUEVO: Manejar el estado de juego abandonado ---
-                                if (gameData.status === "abandoned" && !gameEnded) {
-                                    gameEnded = true; // Set flag to true
-                                    if (gameData.winnerUid === auth.currentUser.uid) {
-                                        alert(`¡Felicidades! Has ganado la partida porque tu oponente la abandonó. Has recibido $${betAmount.toLocaleString()}.`);
-                                    } else if (gameData.loserUid === auth.currentUser.uid) {
-                                        // This case should ideally be handled by the abandoning player's own logic
-                                        // but as a fallback, if they didn't get the alert, they'd get this.
-                                        alert(`Has perdido la partida porque la abandonaste. Has perdido $${betAmount.toLocaleString()}.`);
-                                    }
-                                    // Communicate to parent (home.html) to return to home screen
-                                    if (window.parent) {
-                                        window.parent.postMessage({ type: 'gameEnded', gameId: gameId, winner: gameData.winnerUid === auth.currentUser.uid }, '*');
-                                    }
-                                }
-
                             } else {
                                 console.log("El documento del juego no existe.");
                                 winningsText.textContent = '$0'; // Resetear si el juego no existe
-                                // --- NUEVO: Si el documento del juego no existe, y no es por abandono, volver a home ---
-                                if (!gameEnded && window.parent) { // Only if game hasn't ended and we have a parent
-                                    alert('La partida ha terminado o ya no existe.');
-                                    window.parent.postMessage({ type: 'gameEnded', gameId: gameId, winner: false }, '*'); // Assume current player didn't win if game just disappeared
-                                } else if (!gameEnded) { // Fallback if no parent
-                                    window.location.reload(); // Recargar la página
-                                }
+                                window.location.reload(); // Recargar la página
                             }
-                        });
-
-                        // --- NUEVO: Lógica para el botón de Abandonar ---
-                        const abandonGameBtn = document.getElementById('abandon-game-btn');
-                        if (abandonGameBtn) {
-                            abandonGameBtn.addEventListener('click', async () => {
-                                if (!confirm('¿Estás seguro de que quieres abandonar la partida? Perderás la apuesta.')) {
-                                    return;
-                                }
-
-                                if (!auth.currentUser || !gameId) {
-                                    alert('No se pudo abandonar la partida. Usuario no autenticado o ID de partida no encontrado.');
-                                    return;
-                                }
-
-                                try {
-                                    await runTransaction(db, async (transaction) => {
-                                        const gameRef = doc(db, "games", gameId);
-                                        const gameSnap = await transaction.get(gameRef);
-
-                                        if (!gameSnap.exists()) {
-                                            throw new Error("La partida ya no existe.");
-                                        }
-
-                                        const gameData = gameSnap.data();
-                                        const betAmount = gameData.betAmount || 0;
-
-                                        let abandoningPlayerUid = auth.currentUser.uid;
-                                        let winningPlayerUid = null;
-
-                                        if (gameData.player1.uid === abandoningPlayerUid) {
-                                            winningPlayerUid = gameData.player2.uid;
-                                        } else if (gameData.player2.uid === abandoningPlayerUid) {
-                                            winningPlayerUid = gameData.player1.uid;
-                                        } else {
-                                            throw new Error("El usuario actual no es parte de esta partida.");
-                                        }
-
-                                        // Update game status to abandoned and record winner/loser
-                                        transaction.update(gameRef, {
-                                            status: "abandoned",
-                                            winnerUid: winningPlayerUid,
-                                            loserUid: abandoningPlayerUid,
-                                            abandonedBy: abandoningPlayerUid,
-                                            endedAt: new Date()
-                                        });
-
-                                        // Transfer bet amount from loser to winner
-                                        const loserRef = doc(db, "saldo", abandoningPlayerUid);
-                                        const winnerRef = doc(db, "saldo", winningPlayerUid);
-
-                                        const loserDoc = await transaction.get(loserRef);
-                                        const winnerDoc = await transaction.get(winnerRef);
-
-                                        if (!loserDoc.exists() || !winnerDoc.exists()) {
-                                            throw new Error("Uno de los perfiles de jugador no existe para actualizar el saldo.");
-                                        }
-
-                                        const loserBalance = loserDoc.data().balance || 0;
-                                        const winnerBalance = winnerDoc.data().balance || 0;
-
-                                        // The betAmount was already deducted at game start.
-                                        // Now, transfer the total pot (betAmount * 2) to the winner.
-                                        // The loser's balance is already reduced by betAmount.
-
-                                        // Add to winner (total pot)
-                                        transaction.update(winnerRef, {
-                                            balance: winnerBalance + (betAmount * 2), // Winner gets the total pot
-                                            transactions: arrayUnion({
-                                                amount: (betAmount * 2),
-                                                type: 'game_abandoned_win',
-                                                gameId: gameId,
-                                                timestamp: new Date()
-                                            })
-                                        });
-
-                                        // For the loser, just record the loss. Their balance was already reduced.
-                                        transaction.update(loserRef, {
-                                            transactions: arrayUnion({
-                                                amount: 0, // No further deduction, just record the event
-                                                type: 'game_abandoned_loss',
-                                                gameId: gameId,
-                                                timestamp: new Date()
-                                            })
-                                        });
-                                    });
-
-                                    alert('Has abandonado la partida. Tu saldo ha sido actualizado.');
-                                    // Communicate to parent (home.html) to return to home screen
-                                    if (window.parent) {
-                                        window.parent.postMessage({ type: 'gameAbandoned', gameId: gameId }, '*');
-                                    }
-
-                                } catch (error) {
-                                    console.error("Error al abandonar la partida:", error);
-                                    alert(`No se pudo abandonar la partida: ${error.message}`);
-                                }
-                            });
-                        }            // 3. Función "throttle" para no sobrecargar Firestore.
+                        });            // 3. Función "throttle" para no sobrecargar Firestore.
             // Limita las actualizaciones a una cada 50ms como máximo.
             function throttle(func, limit) {
                 let inThrottle;

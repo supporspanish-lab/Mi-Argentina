@@ -51,7 +51,10 @@ export const setupAuthListeners = () => {
                 fetchWaitingGames(); // Initial fetch
 
             } else {
-                window.location.href = 'login.html';
+                const { gameStarted } = getState(); // Get current game state
+                if (!gameStarted) { // Only redirect if no game is started
+                    window.location.href = 'login.html';
+                }
             }
         });
     } catch (error) {

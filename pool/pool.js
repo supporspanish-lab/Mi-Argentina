@@ -542,7 +542,7 @@ function connectToGame(gameId) {
             if (!docSnap.exists()) {
                 console.error("La partida no existe o fue eliminada.");
                 if (unsubscribe) unsubscribe();
-                window.location.reload(); // Recargar la página
+                // window.location.reload(); // Recargar la página - REMOVED TO PREVENT INFINITE RELOAD IN IFRAME
                 return;
             }
 

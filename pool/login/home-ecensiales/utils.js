@@ -1,6 +1,6 @@
 import { db, doc, deleteDoc, updateDoc, getDoc } from './firebaseService.js';
 import { maintenanceModal, errorConsoleTextarea, errorConsoleModal, waitingScreen, gameCarousel, player2ChatName, player2ChatAvatar, startGameBtn, cancelWaitBtn, kickOpponentBtn } from './domElements.js';
-import { getState, setUserWaitingGameId, setPollingIntervalId } from './state.js';
+import { getState, setUserWaitingGameId, setPollingIntervalId, setGameStarted } from './state.js';
 
 export let isMaintenanceModalOpen = false;
 export const capturedErrors = [];
@@ -170,6 +170,22 @@ export const setupErrorHandling = () => {
 };
 
 // --- NUEVO: Limpieza de la sala de espera ---
+export const loadGameIntoIframe = (gameId) => {
+    const rootDiv = document.getElementById('root');
+    const gameContainer = document.getElementById('game-container');
+    const gameIframe = document.getElementById('game-iframe');
+
+    if (rootDiv && gameContainer && gameIframe) {
+        rootDiv.style.display = 'none'; // Oculta la interfaz principal de home.html
+        gameContainer.style.display = 'block'; // Muestra el contenedor del juego
+        gameIframe.src = `../index.html?gameId=${gameId}`; // Carga el juego en el iframe
+    } else {
+        console.error('No se encontraron los elementos necesarios para cargar el juego en el iframe.');
+        // Fallback: si no se encuentran los elementos, redirigir como antes
+        window.location.href = `../index.html?gameId=${gameId}`;
+    }
+};
+
 export const cleanupWaitingGame = async () => {
     const { currentUser, userWaitingGameId } = getState();
 
@@ -180,9 +196,13 @@ export const cleanupWaitingGame = async () => {
             if (gameSnap.exists()) {
                 const gameData = gameSnap.data();
                 if (gameData.player1.uid === currentUser.uid) { // Current user is Player 1 (owner)
+                    // Only delete if the game is still in a waiting state, not if it's already starting
                     if (gameData.status === "waiting" || gameData.status === "players_joined") {
                         await deleteDoc(gameDocRef);
                         console.log(`Game ${userWaitingGameId} deleted by owner.`);
+                    } else if (gameData.status === "starting") {
+                        console.log(`Game ${userWaitingGameId} is already starting, not deleting.`);
+                        // Do not delete, just proceed with UI cleanup
                     }
                 } else if (gameData.player2?.uid === currentUser.uid) { // Current user is Player 2 (guest)
                     if (gameData.status === "players_joined") {
@@ -198,6 +218,7 @@ export const cleanupWaitingGame = async () => {
             console.error("Error cleaning up waiting game:", error);
         } finally {
             setUserWaitingGameId(null);
+            setGameStarted(false);
             waitingScreen.style.display = 'none';
             gameCarousel.style.display = 'flex';
             player2ChatName.textContent = 'Oponente';

@@ -4,6 +4,7 @@ let previousBalance = null;
 let userWaitingGameId = null;
 let lastMessageCount = 0;
 let pollingIntervalId = null;
+let gameStarted = false;
 
 export const getState = () => ({
     currentUser,
@@ -11,7 +12,8 @@ export const getState = () => ({
     previousBalance,
     userWaitingGameId,
     lastMessageCount,
-    pollingIntervalId
+    pollingIntervalId,
+    gameStarted
 });
 
 export const setCurrentUser = (user) => { currentUser = user; };
@@ -20,6 +22,7 @@ export const setPreviousBalance = (balance) => { previousBalance = balance; };
 export const setUserWaitingGameId = (gameId) => { userWaitingGameId = gameId; };
 export const setLastMessageCount = (count) => { lastMessageCount = count; };
 export const setPollingIntervalId = (id) => { pollingIntervalId = id; };
+export const setGameStarted = (status) => { gameStarted = status; };
 
 export const stopPolling = () => {
     if (pollingIntervalId) {

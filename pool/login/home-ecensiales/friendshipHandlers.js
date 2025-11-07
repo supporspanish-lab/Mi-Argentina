@@ -24,7 +24,12 @@ export const setupFriendSearch = () => {
             const qById = doc(db, "saldo", searchTerm);
             const querySnapshotById = await getDocFromAuth(qById);
             if (!querySnapshotById.empty) {
-                foundUser = { id: querySnapshotById.docs[0].id, ...querySnapshotById.docs[0].data() };
+                const userDoc = querySnapshotById.docs[0];
+                foundUser = { 
+                    id: userDoc.id, 
+                    uid: userDoc.id, // --- CORRECCIÓN: Añadir uid aquí también
+                    ...userDoc.data() 
+                };
             }
         } catch (error) {
             console.warn("Búsqueda por UID no produjo resultados, buscando por username...", error);
@@ -37,7 +42,11 @@ export const setupFriendSearch = () => {
             const querySnapshotByUsername = await getDocs(qByUsername);
             if (!querySnapshotByUsername.empty) {
                 const userDoc = querySnapshotByUsername.docs[0];
-                foundUser = { id: userDoc.id, ...userDoc.data() };
+                foundUser = { 
+                    id: userDoc.id, 
+                    uid: userDoc.id, // --- CORRECCIÓN: Añadir uid aquí también
+                    ...userDoc.data() 
+                };
             }
         }
 

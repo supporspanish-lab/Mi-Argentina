@@ -70,7 +70,7 @@
                         <div class="chat-header">
                             <div id="chat-action-buttons" class="chat-action-buttons">
                                 <button id="start-game-btn" class="play-button" style="display: none;">Iniciar</button>
-                                <button id="cancel-wait-btn" class="cancel-button">Cancelar</button>
+                                <button id="cancel-wait-btn" class="cancel-button" title="Cancelar">X</button>
                             </div>
                             <button id="minimize-chat-btn" class="minimize-chat-btn" title="Minimizar Chat">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
@@ -143,7 +143,6 @@
                     </div>
                 </div>
             </div>
-            <h3>Amigos</h3>
             <!-- --- MODIFICADO: Contenedor para ambas listas --- -->
             <div id="friends-content-wrapper">
                 <div id="friends-list-container" class="friend-list-panel">
@@ -157,7 +156,7 @@
                     
                 </div>
             </div>
-            <button id="close-friends-modal-btn" class="cancel-button" style="align-self: center; margin-top: 20px;">Cerrar</button>
+            <button id="close-friends-modal-btn" class="cancel-button" style="align-self: center; margin-top: 20px; display: none;">Cerrar</button>
         </div>
     </div>
     <!-- --- NUEVO: Modal para Invitar Amigos a la Sala --- -->
@@ -208,11 +207,11 @@
             <div class="input-group" style="margin: 15px 0;">
                  <input type="number" id="bet-amount-input" class="form-input" placeholder="Monto de la apuesta" min="1000" step="100">
             </div>
-            <p id="bet-error-message" style="color: #e74c3c; min-height: 1em;"></p>
-            <div class="private-room-toggle" style="margin-top: 15px;">
-                <input type="checkbox" id="private-room-checkbox">
-                <label for="private-room-checkbox">Sala Privada</label>
+            <div class="input-group" style="margin: 15px 0; display: flex; align-items: center; justify-content: center;">
+                <input type="checkbox" id="private-room-checkbox" style="margin-right: 10px;">
+                <label for="private-room-checkbox" style="cursor: pointer;">Sala Privada</label>
             </div>
+            <p id="bet-error-message" style="color: #e74c3c; min-height: 1em;"></p>
             <div class="modal-buttons">
                 <button id="cancel-bet-btn" class="cancel-button" style="background-color: #555; border-color: #777;">Cancelar</button>
                 <button id="confirm-bet-btn" class="play-button" style="font-size: 18px; padding: 15px 30px;">Apostar y Crear</button>
@@ -233,26 +232,6 @@
     <script type="module" src="./home-ecensiales/main.js"></script>
   </body>
   <script>
-    // Attempt to lock screen orientation to landscape for mobile devices
-    function lockOrientation() {
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape')
-                .then(() => console.log('Screen orientation locked to landscape.'))
-                .catch((err) => console.warn('Failed to lock screen orientation:', err));
-        } else if (screen.mozOrientation && screen.mozOrientation.lock) { // Firefox specific
-            screen.mozOrientation.lock('landscape');
-        } else if (screen.msOrientation && screen.msOrientation.lock) { // IE/Edge specific
-            screen.msOrientation.lock('landscape');
-        } else {
-            console.warn('Screen orientation locking not supported by this browser.');
-        }
-    }
-
-    // Call lockOrientation when the page loads
-    window.addEventListener('load', lockOrientation);
-    // Also try to lock on orientation change, in case it was unlocked
-    window.addEventListener('orientationchange', lockOrientation);
-
     // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
     // Esta función establece la altura del contenedor principal a la altura
     // de la ventana interna en el momento de la carga. Esto previene que el

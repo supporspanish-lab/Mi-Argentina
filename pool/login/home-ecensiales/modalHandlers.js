@@ -19,7 +19,7 @@ export const setupAvatarModal = () => {
         profilePictureModal.classList.remove('visible');
     });
 
-    const TOTAL_AVATARS = 8;
+    const TOTAL_AVATARS = 11;
     for (let i = 1; i <= TOTAL_AVATARS; i++) {
         const img = document.createElement('img');
         const imgPath = `../imajenes/perfil/${i}.jpg`;
@@ -57,6 +57,7 @@ export const setupBetModal = (createGameCallback) => {
     confirmBetBtn.onclick = async () => {
         const { currentUserProfile } = getState();
         const betAmount = parseFloat(betAmountInput.value);
+        const isPrivate = document.getElementById('private-room-checkbox').checked;
 
         if (isNaN(betAmount) || betAmount < 1000) {
             betErrorMessage.textContent = 'La apuesta mínima es de $1,000.';
@@ -71,7 +72,7 @@ export const setupBetModal = (createGameCallback) => {
         confirmBetBtn.disabled = true;
         confirmBetBtn.textContent = 'Creando...';
 
-        await createGameCallback(betAmount);
+        await createGameCallback(betAmount, isPrivate);
 
         betModal.classList.remove('visible');
         confirmBetBtn.disabled = false;

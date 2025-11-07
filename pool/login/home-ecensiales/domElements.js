@@ -63,3 +63,7 @@ export const closeErrorModalBtn = document.getElementById('close-error-modal-btn
 
 export const friendRequestsContainer = document.getElementById('friend-requests-container');
 export const friendsListContainer = document.getElementById('friends-list-container');
+
+export const gameContainer = document.getElementById('game-container');
+export const gameIframe = document.getElementById('game-iframe');
+export const appContainer = document.querySelector('.app-container');

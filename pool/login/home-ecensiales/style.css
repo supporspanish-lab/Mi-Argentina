@@ -1230,34 +1230,29 @@
 
       /* --- MODIFICADO: Hacer el modal de amigos más ancho --- */
       #friends-modal .modal-box {
-          max-width: 700px; /* Ancho mayor para acomodar las dos listas */
+          max-width: 500px; /* Ancho mayor para acomodar las dos listas */
       }
 
       @media (max-width: 768px) {
+        /* --- CORRECCIÓN: Unificar y simplificar estilos para todas las pantallas pequeñas --- */
         #friends-modal .modal-box {
-          max-width: 80vw; /* Use 80% of viewport width on tablets and smaller */
+          width: 90vw; /* Ocupar el 90% del ancho de la pantalla */
+          max-width: 350px; /* Pero no más de 350px */
+          max-height: 85vh; /* Limitar la altura total */
+          padding: 15px;
+        }
+        #friends-content-wrapper {
+          flex-direction: column; /* Apilar listas verticalmente */
+          gap: 10px;
+        }
+        .friend-list-panel {
+          min-height: 30px; /* Altura mínima para que no se vea vacío */
+          max-height: 7vh; /* Limitar altura de cada panel para permitir scroll */
+          width: 100%; /* Ocupar todo el ancho disponible */
         }
       }
 
       @media (max-width: 480px) {
-        #friends-modal .modal-box {
-          width: 85vw; /* Aseguramos que no sea 100% */
-          max-width: 300px; /* Un valor fijo más pequeño para móviles */
-          max-height: 80vh; /* Limitar la altura para que no ocupe toda la pantalla */
-          padding: 15px; /* Reduce padding */
-        }
-
-        #friends-content-wrapper {
-          flex-direction: column; /* Stack friend lists vertically */
-          gap: 10px; /* Reduce gap for mobile */
-        }
-
-        .friend-list-panel {
-          min-height: auto; /* Allow height to adjust */
-          max-height: 30vh; /* Limit height for scroll */
-          width: 100%; /* Ensure it takes full width */
-        }
-
         #user-id-container,
         #add-friend-container {
           flex-direction: column; /* Stack elements in user ID and add friend sections */
@@ -1294,14 +1289,13 @@
       #friends-content-wrapper {
           display: flex;
           gap: 15px;
-          width: 100%;
       }
 
       /* --- MODIFICADO: Estilos compartidos para las listas --- */
       .friend-list-panel {
           flex: 1; /* Cada lista ocupa la mitad del espacio */
-          min-height: 200px;
-          max-height: 50vh;
+          min-height: 50px;
+          max-height: 25vh;
           overflow-y: auto;
           text-align: left;
           padding: 10px;
@@ -1314,16 +1308,6 @@
           margin-bottom: 10px;
           border-bottom: 1px solid var(--border-color);
           padding-bottom: 5px;
-      }
-      /* --- NUEVO: Estilos para el contenido del modal de amigos --- */
-      #friends-list-container {
-          min-height: 200px;
-          max-height: 50vh;
-          overflow-y: auto;
-          text-align: left;
-          padding: 10px;
-          background-color: var(--input-bg-color);
-          border-radius: 8px;
       }
       /* --- NUEVO: Estilos para el contenedor de ID de amigo --- */
       #user-id-container {
