@@ -122,7 +122,6 @@ export const createGame = async (betAmount, isPrivate = false) => {
 
     setUserWaitingGameId(newGameRef.id);
 
-    setUserWaitingGameId(newGame.id);
     gameCarousel.style.display = 'none';
     waitingScreen.style.display = 'flex';
     player1ChatName.textContent = currentUserProfile.username;
@@ -133,7 +132,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     startGameBtn.style.display = 'none';
     kickOpponentBtn.style.display = 'none';
 
-    onSnapshot(doc(db, "games", newGame.id), (gameSnap) => {
+    onSnapshot(doc(db, "games", newGameRef.id), (gameSnap) => {
         const gameData = gameSnap.data();
         if (gameData) {
             if (gameData.status === "players_joined" && gameData.player2) {
@@ -146,7 +145,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
                 const { gameStarted } = getState();
                 if (!gameStarted) {
                     setGameStarted(true);
-                    startGameFullscreen(newGame.id);
+                    startGameFullscreen(newGameRef.id);
                 }
             } else if (gameData.status === "waiting") {
                 player2ChatName.textContent = 'Oponente';
