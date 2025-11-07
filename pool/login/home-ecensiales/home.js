@@ -8,9 +8,9 @@ export const setupBackgroundMusic = () => {
     const unmuteIcon = document.getElementById('unmute-icon');
     
     // --- Seleccionar una pista de música de fondo aleatoria ---
-    // --- CORRECCIÓN: Usar rutas relativas para que funcionen en GitHub Pages ---
+    // --- CORRECCIÓN: Rutas relativas correctas para GitHub Pages ---
     const backgroundMusicTracks = [
-        '../../audio/home/1.mp3',
+        '../../audio/home/1.mp3', // Sube de 'home-ecensiales/' a 'login/', luego a 'pool/' y entra a 'audio/'
         '../../audio/home/2.mp3',
         '../../audio/home/3.mp3',
         '../../audio/home/4.mp3'
@@ -21,11 +21,13 @@ export const setupBackgroundMusic = () => {
     backgroundAudio.volume = 0.5; // Bajar un poco el volumen inicial
     backgroundAudio.muted = true; // --- SOLUCIÓN: Empezar la música silenciada
     
-    // --- SOLUCIÓN: Intentar la reproducción automática (silenciada) al cargar ---
-    // Esto es permitido por la mayoría de los navegadores.
-    backgroundAudio.play().catch(error => {
-        console.warn("La reproducción automática de música (silenciada) fue bloqueada. Se iniciará con la interacción del usuario.");
-    });
+    // --- CORRECCIÓN: Esperar a que el audio pueda reproducirse antes de llamar a .play() ---
+    // Esto evita el error "The element has no supported sources" si la red es lenta.
+    backgroundAudio.addEventListener('canplaythrough', () => {
+        backgroundAudio.play().catch(error => {
+            console.warn("La reproducción automática de música (silenciada) fue bloqueada. Se iniciará con la interacción del usuario.");
+        });
+    }, { once: true });
     
     // --- SOLUCIÓN: En la primera interacción, solo quitamos el silencio ---
     const unmuteOnInteraction = () => {

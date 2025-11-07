@@ -95,44 +95,47 @@ self.addEventListener('install', (event) => {
  * If not, we fetch it from the network, cache it for next time, and then return it.
  */
 self.addEventListener('fetch', (event) => {
-    // --- NUEVO: Bypassar el Service Worker para las peticiones de Firebase ---
-    const requestUrl = new URL(event.request.url);
-    // --- MODIFICADO: Añadir PocketBase (onrender.com) y Google a la lista de exclusiones ---
-    if (requestUrl.hostname.includes('googleapis.com') || 
-        requestUrl.hostname.includes('firebase') ||
-        requestUrl.hostname.includes('google.com') || // Para evitar errores con cleardot.gif, etc.
-        requestUrl.hostname.includes('onrender.com')) {
-        return fetch(event.request); // Ir directamente a la red para Firebase
-    }
+  const requestUrl = new URL(event.request.url);
 
-    // --- CORRECCIÓN: Estrategia "Network First" para desarrollo ---
-    // Intenta obtener el recurso de la red primero.
-    // Si falla (por ejemplo, sin conexión), recurre a la caché.
-    // Esto asegura que siempre veamos los últimos cambios al recargar.
-    event.respondWith((async () => {
-        try {
-            // 1. Intenta ir a la red primero
-            const networkResponse = await fetch(event.request);
+  // 1. Excluir peticiones a Firebase, Google, etc.
+  if (requestUrl.hostname.includes('googleapis.com') ||
+    requestUrl.hostname.includes('firebase') ||
+    requestUrl.hostname.includes('google.com') || // Para evitar errores con cleardot.gif, etc.
+    requestUrl.hostname.includes('onrender.com')) {
+    return; // Dejar que el navegador maneje la petición
+  }
 
-            // 2. Si tiene éxito, actualiza la caché y devuelve la respuesta de la red
-            // Solo guardar en caché respuestas válidas (status 200) y de nuestro propio dominio
-            if (networkResponse.ok && networkResponse.type === 'basic') {
-                const cache = await caches.open(CACHE_NAME);
-                await cache.put(event.request, networkResponse.clone());
-            }
-            return networkResponse;
-        } catch (error) {
-            // 3. Si la red falla, busca en la caché
-            console.log('Service Worker: Fallo de red, buscando en caché para:', event.request.url);
-            const cachedResponse = await caches.match(event.request);
-            // --- SOLUCIÓN: Si está en caché, lo devolvemos. Si no, devolvemos una respuesta de error. ---
+  // 2. Estrategia "Cache First" para archivos multimedia y modelos 3D
+  if (event.request.url.match(/\.(mp4|mp3|wav|glb|png|jpg|jpeg|gif)$/)) {
+    event.respondWith(
+        caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {
                 return cachedResponse;
             }
-            // Si no está en caché, generamos una respuesta de error para evitar el TypeError.
-            return new Response(`Recurso no encontrado en la red ni en la caché: ${event.request.url}`, { status: 404, statusText: "Not Found" });
-        }
-    })());
+            return fetch(event.request).then(networkResponse => {
+                const responseToCache = networkResponse.clone(); // Clonar la respuesta
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseToCache);
+                });
+                return networkResponse; // Devolver la respuesta original
+            });
+        })
+    );
+    return;
+  }
+
+  // 3. Estrategia "Network First" para el resto de los archivos (HTML, JS, CSS)
+  event.respondWith(
+      fetch(event.request).then(networkResponse => {
+          const responseToCache = networkResponse.clone(); // Clonar la respuesta
+          caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+          });
+          return networkResponse; // Devolver la respuesta original
+      }).catch(() => {
+          return caches.match(event.request);
+      })
+  );
 });
 
 // --- NUEVO: Evento 'message' para manejar la lógica de actualización ---
