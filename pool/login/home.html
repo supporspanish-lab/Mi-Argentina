@@ -285,26 +285,29 @@
     document.addEventListener('DOMContentLoaded', () => {
         const backgroundVideo = document.getElementById('background-video');
         backgroundVideo.volume = 0.04; // Establecer volumen al 4%
-
+ 
         const videos = [
             '../video/video1.mp4',
             '../video/video2.mp4',
             '../video/video3.mp4'
         ];
         const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-
+ 
         backgroundVideo.src = randomVideo;
-
-        // Intentar reproducir con sonido. Si falla, se reproduce silenciado.
-        const playPromise = backgroundVideo.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                // Autoplay con sonido fue bloqueado. Reproducir silenciado.
-                console.log("Autoplay con sonido bloqueado, reproduciendo video silenciado.");
-                backgroundVideo.muted = true;
-                backgroundVideo.play();
-            });
-        }
+ 
+        // --- SOLUCIÓN: Esperar a que el video se pueda reproducir antes de llamar a .play() ---
+        // Esto evita el error "The element has no supported sources" en móviles.
+        backgroundVideo.addEventListener('canplay', () => {
+            // Intentar reproducir con sonido. Si falla, se reproduce silenciado.
+            const playPromise = backgroundVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Autoplay con sonido bloqueado, reproduciendo video silenciado.");
+                    backgroundVideo.muted = true;
+                    backgroundVideo.play();
+                });
+            }
+        });
     });
   </script>
   <!-- NUEVO: Script para manejar el autoplay de la música -->
