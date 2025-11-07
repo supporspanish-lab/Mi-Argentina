@@ -285,10 +285,11 @@
     document.addEventListener('DOMContentLoaded', () => {
         const backgroundVideo = document.getElementById('background-video');
         
+        // --- CORRECCIÓN: Usar rutas absolutas desde la raíz del proyecto ---
         const videos = [
-            '../video/video1.mp4',
-            '../video/video2.mp4',
-            '../video/video3.mp4'
+            '/video/video1.mp4',
+            '/video/video2.mp4',
+            '/video/video3.mp4'
         ];
         const randomVideo = videos[Math.floor(Math.random() * videos.length)];
 
