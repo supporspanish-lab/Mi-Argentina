@@ -16,6 +16,7 @@ import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
 import { shoot } from './shooting.js';
+import { isDraggingSpin } from './spinControls.js';
 
 let lastTime;
 
@@ -127,9 +128,17 @@ window.addEventListener('receiveaim', (event) => {
         // La comprobación de isMovingCueBall() (en inputManager) evitará que esto sobreescriba la posición
         // mientras el jugador arrastra la bola.
         if (!isMovingCueBall()) {
+            // --- SOLUCIÓN: Asegurar que la bola esté activa y visible al recibir una posición del servidor ---
+            cueBall.isActive = true;
+            cueBall.isPocketed = false;
+            cueBall.pocketedState = null;
+            cueBall.mesh.visible = true;
+            
             cueBall.mesh.position.x = gameData.cueBallPosition.x;
             cueBall.mesh.position.y = gameData.cueBallPosition.y;
+            
             if (cueBall.shadowMesh) {
+                cueBall.shadowMesh.visible = true;
                 cueBall.shadowMesh.position.set(gameData.cueBallPosition.x, gameData.cueBallPosition.y, 0.1);
             }
         }
@@ -249,12 +258,15 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
         // Se usa una variable externa (importada de ui.js) para saber si en el frame anterior se estaban moviendo.
         // Esta es la forma más fiable de detectar el fin de un tiro.
         if (window.ballsWereMoving && ballsHaveStopped) {
-            // --- CORRECCIÓN: Lógica de Cliente Autoritativo ---
-            // Solo el jugador cuyo turno acaba de terminar es responsable de actualizar el estado.
-            if (gameRef && currentGameState.currentPlayerUid === auth.currentUser?.uid) {
-                // Este jugador actúa como el árbitro: revisa el estado y actualiza el servidor.
-                // --- CORRECCIÓN: Pasar el estado actual del juego para evitar el error de UID indefinido. ---
-                revisarEstado(false, gameRef, currentGameState);
+            // --- CORRECCIÓN: Lógica de Cliente Autoritativo y modo offline ---
+            if (gameRef) {
+                // MODO ONLINE: Solo el jugador cuyo turno es, revisa el estado.
+                if (currentGameState.currentPlayerUid === auth.currentUser?.uid) {
+                    revisarEstado(false, gameRef, currentGameState);
+                }
+            } else {
+                // MODO OFFLINE: Se revisa el estado localmente.
+                revisarEstado(false, null, getGameState());
             }
             handleTurnEnd(); // Limpiar estado local para ambos jugadores.
         }
@@ -438,7 +450,7 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
 function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     if (areBallsMoving(balls)) return; // No hacer nada si las bolas ya se están moviendo
 
-    const maxPower = 100 * 25;
+    const maxPower = 100 * 50;
     const power = powerPercent * maxPower;
     const velocityFactor = 2.5;
 

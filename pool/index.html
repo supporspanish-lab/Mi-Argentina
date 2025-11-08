@@ -578,13 +578,13 @@
         /* --- NUEVO: Contenedor de recorte (Clipping Mask) --- */
         #powerBarClippingContainer {
             position: relative; /* Necesario para que los elementos absolutos internos se posicionen correctamente */
-            width: 3vw; /* Mismo ancho que la barra */
+            width: 6vw; /* Mismo ancho que la barra */
             height: 40vh; /* Misma altura que la barra */
             overflow: hidden; /* ¡La magia está aquí! Oculta todo lo que se salga. */
         }
 
         #newPowerBarContainer {
-            width: 3vw; /* Ancho de la barra */
+            width: 6vw; /* Ancho de la barra */
             height: 40vh; /* Altura total de la barra */
             /* --- NUEVO: Degradado de fondo con líneas --- */
             background: 
@@ -607,7 +607,7 @@
             object-fit: contain;
             position: absolute;
             left: 50%;
-            left: 55%; /* --- MODIFICADO: Mover un poco a la derecha --- */
+            left: 60%; /* --- MODIFICADO: Mover un poco más a la derecha --- */
             transform: translateX(-50%) rotate(270deg);
             top: 0; /* La posición 'top' será controlada por JS */
             transform-origin: center center; /* Asegurar que la rotación sea desde el centro */
@@ -751,6 +751,7 @@
             <div id="main-options-view">
                 <h3>Opciones</h3>
                 <button id="modify-ui-btn">Modificar UI</button>
+                <button id="abandon-game-btn" style="background-color: #e74c3c; border-color: #c0392b;">Abandonar</button>
             </div>
             <div id="edit-ui-options-view" style="display: none;">
                 <h3>Ajustar Interfaz</h3>
@@ -1207,6 +1208,11 @@
                 
                 // --- CORRECCIÓN: Mostrar la potencia real de disparo (limitada a 100%) ---
                 console.log(`Disparo con potencia: ${Math.round(Math.min(powerPercent, 1) * 100)}%`);
+
+                // --- SOLUCIÓN: Llamar a la función de disparo global ---
+                if (window.shoot) {
+                    window.shoot(powerPercent);
+                }
 
                 // Animar la barra de vuelta a 0%
                 newPowerBarHandle.style.transition = 'top 0.3s ease-out';

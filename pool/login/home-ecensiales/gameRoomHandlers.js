@@ -3,8 +3,14 @@ import { appContainer, gameContainer, gameIframe, gameCarousel, waitingScreen, c
 import { getState, setUserWaitingGameId, setLastMessageCount, setPollingIntervalId, stopPolling, setGameStarted } from './state.js';
 import { setPlayerAvatar, renderMessages, cleanupWaitingGame, fetchUserProfile } from './utils.js';
 import { updateUserProfile } from '../auth.js';
+import { getBackgroundAudio } from './home.js';
 
 const startGameFullscreen = (gameId) => {
+    const audio = getBackgroundAudio();
+    if (audio) {
+        audio.pause();
+    }
+
     appContainer.style.display = 'none'; // Hide the home.html UI
     gameIframe.src = `../index.html?gameId=${gameId}`; // Set iframe source
     gameContainer.style.display = 'block'; // Show the game container
@@ -160,6 +166,63 @@ export const createGame = async (betAmount, isPrivate = false) => {
             cleanupWaitingGame();
         }
     });
+};
+
+export const createPracticeGame = async () => {
+    const { currentUser, currentUserProfile } = getState();
+    if (!currentUser || !currentUserProfile) return;
+
+    const gamesRef = collection(db, "games");
+    const ballPositions = [];
+    const RACK_SPACING_DIAMETER = 24;
+    const TABLE_WIDTH = 1000;
+    const TABLE_HEIGHT = 500;
+    const startX = TABLE_WIDTH * 0.80;
+    const startY = TABLE_HEIGHT / 2;
+    const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
+    let ballIndex = 0;
+
+    for (let i = 0; i < 5; i++) {
+        for (let j = 0; j <= i; j++) {
+            const ballNumber = ballOrder[ballIndex++];
+            ballPositions.push({
+                number: ballNumber,
+                x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
+                isActive: true
+            });
+        }
+    }
+    ballPositions.push({
+        number: null,
+        x: TABLE_WIDTH / 4,
+        y: TABLE_HEIGHT / 2,
+        isActive: true
+    });
+
+    const newGameRef = await addDoc(collection(db, "games"), {
+        player1: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
+        player2: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName }, // Set player2 to be the same as player1 for practice
+        status: "starting", // Immediately set to starting
+        createdAt: new Date(),
+        currentPlayerUid: currentUser.uid, // Set current player to player1,
+        balls: ballPositions,
+        turn: 1,
+        betAmount: 0, // No bet for practice
+        isPrivate: true, // Practice games are always private
+        isPractice: true, // New field to identify practice games
+        practiceMoneyGain: 1, // User wants to earn 1 unit of money
+        twoTurnsAsOne: true, // User wants two turns as one
+        balancesDeducted: false,
+        player1BalanceTransaction: null // No transaction for practice
+    });
+
+    setUserWaitingGameId(newGameRef.id);
+
+    gameCarousel.style.display = 'none'; // Hide the game carousel
+    setGameStarted(true); // Set game started state
+    startGameFullscreen(newGameRef.id); // Directly start the game in fullscreen
+
 };
 
 export const setupStartGameButton = () => {
@@ -320,6 +383,17 @@ export const fetchWaitingGames = async (isPrivate = false) => {
                 betModal.classList.add('visible');
             });
             gameCarousel.appendChild(createCard);
+
+            const practiceCard = document.createElement('div');
+            practiceCard.className = 'game-card practice-game'; // Using a new class for practice games
+            practiceCard.innerHTML = `
+                <div class="create-icon">🎮</div>
+                <span class="create-text">Practica</span>
+            `;
+            practiceCard.addEventListener('click', () => {
+                createPracticeGame();
+            });
+            gameCarousel.appendChild(practiceCard);
         }
     } catch (error) {
         console.error("Error fetching waiting games:", error);

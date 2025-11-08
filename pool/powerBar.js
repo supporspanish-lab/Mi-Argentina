@@ -1,4 +1,6 @@
 
+import { clearPocketedBalls } from './gameState.js';
+
 // --- Módulo de Medidor de Potencia ---
 
 let powerPercent = 0;

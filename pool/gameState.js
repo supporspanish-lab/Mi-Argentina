@@ -254,6 +254,7 @@ export function handleTurnEnd() {
  */
 export function clearPocketedBalls() {
     pocketedThisTurn = [];
+    console.log("RESET OK: 'bolasEntroneradasEsteTurno' se ha reseteado a [].");
 }
 
 /**

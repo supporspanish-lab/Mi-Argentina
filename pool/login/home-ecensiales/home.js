@@ -1,6 +1,8 @@
 // Este archivo ahora solo contiene la lógica para la música de fondo,
 // encapsulada en una función para ser llamada desde main.js.
 
+let backgroundAudio; // Make backgroundAudio accessible in this module
+
 export const setupBackgroundMusic = () => {
     // --- Elementos del botón de música y lógica de audio de fondo ---
     const muteMusicBtn = document.getElementById('mute-music-btn');
@@ -15,7 +17,7 @@ export const setupBackgroundMusic = () => {
         '../audio/home/4.mp3'
     ];
     const randomTrack = backgroundMusicTracks[Math.floor(Math.random() * backgroundMusicTracks.length)];
-    const backgroundAudio = new Audio(randomTrack);
+    backgroundAudio = new Audio(randomTrack); // Assign to the module-level variable
     backgroundAudio.loop = true;
     backgroundAudio.volume = 0.6;
 
@@ -43,3 +45,5 @@ export const setupBackgroundMusic = () => {
         }
     });
 };
+
+export const getBackgroundAudio = () => backgroundAudio;

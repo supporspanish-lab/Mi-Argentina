@@ -18,6 +18,8 @@ export function shoot(powerPercent) {
     // --- LOG: Indica el inicio de la función de disparo.
     if (isShooting) return;
 
+    startShot(); // --- FIX: Reiniciar el estado del tiro aquí.
+
     if (!isFinite(powerPercent) || powerPercent < 0) {
         // console.warn(`Intento de disparo con potencia inválida: ${powerPercent}. Se usará 0.`);
         powerPercent = 0;
@@ -37,7 +39,7 @@ export function shoot(powerPercent) {
     }
 
     // Amortiguar la potencia en tiros extremos para evitar inestabilidad.
-    const maxPower = 100 * 75; // --- AJUSTE: Aumentado de 37.5 a 75 para duplicar la fuerza máxima.
+    const maxPower = 100 * 112.5; // --- AJUSTE: Aumentado de 37.5 a 112.5 para triplicar la fuerza máxima.
     const SAFE_POWER_THRESHOLD = maxPower * 0.9;
     let power = shotPower * maxPower;
 
@@ -71,8 +73,8 @@ export function shoot(powerPercent) {
             return; // No enviar el tiro al servidor
         }
 
-        // --- MODIFICADO: No aplicar el tiro localmente, esperar al servidor ---
-        // window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
+        // --- MODIFICADO: Aplicar el tiro localmente para predicción del lado del cliente ---
+        window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
 
         // --- Enviar los datos del tiro al servidor para el oponente ---
         window.dispatchEvent(new CustomEvent('sendShot', { 

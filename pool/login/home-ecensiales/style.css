@@ -311,6 +311,11 @@
       .create-text {
           font-weight: 700;
       }
+
+      /* Styles for the practice game card */
+      .game-card.practice-game .create-icon {
+          color: #f39c12; /* A distinct color for practice icon */
+      }
       
       /* --- NUEVO: Estilos para mostrar la apuesta en la tarjeta --- */
       .card-bet-amount {
