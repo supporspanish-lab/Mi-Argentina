@@ -284,7 +284,7 @@
         /* --- NUEVO: Estilos para la burbuja de chat debajo del avatar --- */
         .player-chat-bubble {
             position: absolute;
-            bottom: -10px; /* Posicionar debajo del avatar */
+            bottom: -20px; /* Posicionar debajo del avatar, más abajo */
             left: 50%;
             transform: translateX(-50%);
             background-color: rgba(0, 0, 0, 0.7); /* Restaurar color original */
@@ -313,12 +313,12 @@
         }
 
         .player-chat-bubble.fade-out {
-            animation: fadeOutBubble 5s forwards; /* Aumentar duración a 5 segundos */
+            animation: fadeOutBubble 10s forwards; /* Aumentar duración a 10 segundos */
         }
 
         @keyframes fadeOutBubble {
             0% { opacity: 1; }
-            80% { opacity: 1; }
+            80% { opacity: 1; } /* Permanece opaco por 8 segundos */
             100% { opacity: 0; }
         }
 
