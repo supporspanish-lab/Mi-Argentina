@@ -594,6 +594,28 @@
           box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
       }
 
+      .abandon-button {
+          padding: 6px 12px; /* Padding más pequeño */
+          font-size: 13px; /* Fuente más pequeña */
+          font-family: 'Roboto', sans-serif; /* Fuente estándar para consistencia */
+          letter-spacing: 0; /* Sin espaciado extra */
+          min-width: 80px; /* Ancho mínimo para que no se deforme */
+          box-shadow: none; /* Quitar sombra para un look más plano */
+          margin-top: 0;
+          border: 1px solid #e74c3c;
+          background-color: rgba(231, 76, 60, 0.1);
+          color: #e74c3c;
+          border-radius: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+      }
+      .abandon-button:hover {
+          background-color: #e74c3c;
+          color: #fff;
+          box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+      }
+
       .play-button {
         padding: 20px 50px;
         border: none;
@@ -868,18 +890,14 @@
         width: 100%;
         height: 100%;
         background-color: rgba(0, 0, 0, 0.7);
-        display: flex;
+        display: none; /* Hidden by default using display */
         justify-content: center;
         align-items: center;
-        z-index: 999; /* Un z-index ligeramente menor que el modal de errores */
-        visibility: hidden;
-        opacity: 0;
-        transition: visibility 0.3s, opacity 0.3s;
+        z-index: 10001;
       }
 
       .modal-overlay.visible {
-        visibility: visible;
-        opacity: 1;
+        display: flex !important; /* Force display flex when visible */
       }
 
       .modal-box {
@@ -1591,3 +1609,125 @@
     font-size: 16px;
     /* Se elimina el position absolute para que se centre por defecto */
 }
+
+/* --- NUEVO: Estilos para el Modal de Fin de Partida --- */
+#game-over-modal .modal-box {
+    max-width: 550px;
+    padding: 30px;
+}
+
+#game-over-modal h3 {
+    font-size: 28px;
+    margin-bottom: 25px;
+    color: var(--primary-color);
+    text-shadow: 0 0 10px rgba(0, 242, 145, 0.5);
+}
+
+.game-result-players {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+.player-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    padding: 15px;
+    border-radius: 15px;
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.player-result.winner {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(0, 242, 145, 0.4);
+}
+
+.player-result.loser {
+    border-color: #e74c3c;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+}
+
+.result-label {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--text-secondary-color);
+}
+
+.player-result.winner .result-label {
+    color: var(--primary-color);
+}
+
+.player-result.loser .result-label {
+    color: #e74c3c;
+}
+
+.result-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--primary-color); /* Default border */
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.player-result.winner .result-avatar {
+    border-color: var(--primary-color);
+}
+
+.player-result.loser .result-avatar {
+    border-color: #e74c3c;
+}
+
+.result-username {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--text-color);
+    word-break: break-word;
+    text-align: center;
+}
+
+.result-amount {
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFD700; /* Gold color for the amount */
+    margin-top: 5px; /* Space from the username */
+    word-break: break-word;
+    text-align: center;
+}
+
+#close-game-over-modal-btn {
+    margin-top: 20px;
+    padding: 12px 25px;
+    font-size: 18px;
+    background-color: var(--primary-color);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+#close-game-over-modal-btn:hover {
+    background-color: #00d47a;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+    .game-result-players {
+        flex-direction: column;
+        align-items: center;
+    }
+    .player-result {
+        width: 80%;
+    }
+}
+

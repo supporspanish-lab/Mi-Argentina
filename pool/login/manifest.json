@@ -3,9 +3,9 @@
   "short_name": "BlackBall Pool",
   "start_url": "login.html",
   "scope": "./",
-  "display": "fullscreen",
-  "background_color": "#1a1a1a",
-  "theme_color": "#00f291",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "landscape",
   "icons": [
     {

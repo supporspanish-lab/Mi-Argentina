@@ -12,7 +12,7 @@
     <!-- NUEVO: SDK de PocketBase -->
     <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
     <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-orientation" content="landscape">
     <link rel="apple-touch-icon" href="../imajenes/apple-touch-icon.png">
@@ -130,9 +130,9 @@
                     <div id="waiting-screen" class="chat-modal">
                         <div class="chat-header">
                             <div id="chat-action-buttons" class="chat-action-buttons">
-                                <button id="start-game-btn" class="play-button" style="display: none;">Iniciar</button>
-                                <button id="cancel-wait-btn" class="cancel-button" title="Cancelar">X</button>
-                            </div>
+                                                            <button id="start-game-btn" class="play-button" style="display: none;">Iniciar</button>
+                                                            <button id="cancel-wait-btn" class="cancel-button" title="Cancelar">X</button>
+                                                            <button id="abandon-game-btn" class="abandon-button" style="display: none;">Abandonar</button>                            </div>
                             <button id="minimize-chat-btn" class="minimize-chat-btn" title="Minimizar Chat">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                             </button>
@@ -157,6 +157,27 @@
                                 <input type="text" id="chat-message-input" placeholder="Escribe un mensaje...">
                                 <button id="send-chat-message-btn">Enviar</button>
                             </div>
+                        </div>
+                    </div>
+                    <!-- NUEVO: Modal de Fin de Partida -->
+                    <div id="always-visible-modal" class="modal-overlay">
+                        <div class="modal-box">
+                            <h3>¡Partida Terminada!</h3>
+                            <div class="game-result-players">
+                                <div class="player-result winner">
+                                    <span class="result-label">Ganador</span>
+                                    <img id="winner-avatar" src="" alt="Avatar Ganador" class="result-avatar">
+                                    <span id="winner-username" class="result-username"></span>
+                    <span id="winner-amount" class="result-amount"></span> <!-- NUEVO -->
+                                </div>
+                                <div class="player-result loser">
+                                    <span class="result-label">Perdedor</span>
+                                    <img id="loser-avatar" src="" alt="Avatar Perdedor" class="result-avatar">
+                                    <span id="loser-username" class="result-username"></span>
+                    <span id="loser-amount" class="result-amount"></span> <!-- NUEVO -->
+                                </div>
+                                                        </div>
+                                                        
                         </div>
                     </div>
                     <div class="game-carousel" id="game-carousel"></div>
@@ -303,6 +324,7 @@
                 <button id="close-error-modal-btn" class="close-button">Cerrar</button>
             </div>
         </div>
+    </div>
     <!-- CORRECCIÓN: Cargar main.js, que es el punto de entrada principal de la aplicación -->
     <script type="module" src="./home-ecensiales/main.js"></script>
     <!-- NUEVO: Script para el video de fondo aleatorio en canvas -->
@@ -313,17 +335,43 @@
       const video = document.createElement('video');
 
       const videos = [
-        './video/video1.mp4', // Adjusted path for canvas script
         './video/video2.mp4',
         './video/video3.mp4'
       ];
 
       const randomVideo = videos[Math.floor(Math.random() * videos.length)];
 
+      const isIPhone = /iPhone/i.test(navigator.userAgent);
+
+      if (isIPhone) {
+          canvas.style.display = 'none'; // Hide the canvas
+          const backgroundImage = document.createElement('img');
+          backgroundImage.src = './video/iphone.png'; // Imagen para iPhone
+          backgroundImage.style.position = 'fixed';
+          backgroundImage.style.right = '0';
+          backgroundImage.style.bottom = '0';
+          backgroundImage.style.minWidth = '100%';
+          backgroundImage.style.minHeight = '100%';
+          backgroundImage.style.width = 'auto';
+          backgroundImage.style.height = 'auto';
+          backgroundImage.style.zIndex = '-1';
+          backgroundImage.style.objectFit = 'cover';
+          document.body.appendChild(backgroundImage);
+          return; // Exit the script as we're using an image
+      }
+
       video.src = randomVideo;
-      video.loop = true;
       video.muted = true; // Start muted to allow autoplay
       video.playsInline = true; // Important for iOS autoplay
+
+      if (!isIPhone) {
+          video.loop = false; // Play once on Android
+          video.onended = () => {
+              video.pause(); // Pause when ended
+          };
+      } else {
+          video.loop = true; // Keep looping for other devices if not iPhone
+      }
 
       // Ensure video is loaded before attempting to play
       video.load();
@@ -392,7 +440,85 @@
       });
     });
   </script>
-</body>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOMContentLoaded fired in home.html');
+
+      const alwaysVisibleModal = document.getElementById('always-visible-modal');
+      const winnerAvatarImg = document.getElementById('winner-avatar');
+      const winnerUsernameSpan = document.getElementById('winner-username');
+      const winnerAmountSpan = document.getElementById('winner-amount');
+      const loserAvatarImg = document.getElementById('loser-avatar');
+      const loserUsernameSpan = document.getElementById('loser-username');
+      const loserAmountSpan = document.getElementById('loser-amount');
+
+      if (!alwaysVisibleModal) console.error('alwaysVisibleModal not found!');
+      if (!winnerAvatarImg) console.error('winnerAvatarImg not found!');
+      if (!winnerUsernameSpan) console.error('winnerUsernameSpan not found!');
+      if (!winnerAmountSpan) console.error('winnerAmountSpan not found!');
+      if (!loserAvatarImg) console.error('loserAvatarImg not found!');
+      if (!loserUsernameSpan) console.error('loserUsernameSpan not found!');
+      if (!loserAmountSpan) console.error('loserAmountSpan not found!');
+
+      // Function to load game results from localStorage
+      const loadGameResults = () => {
+        const gameEnded = localStorage.getItem('gameEnded');
+
+        if (gameEnded === 'true') {
+          console.log('Game results found in localStorage. Populating modal.');
+          const winnerUsername = localStorage.getItem('winnerUsername');
+          const loserUsername = localStorage.getItem('loserUsername');
+          const winnerAvatar = localStorage.getItem('winnerAvatar') || '../imajenes/perfil/1.jpg';
+          const loserAvatar = localStorage.getItem('loserAvatar') || '../imajenes/perfil/2.jpg';
+          const winnerAmount = localStorage.getItem('winnerAmount');
+          const loserAmount = localStorage.getItem('loserAmount');
+
+          winnerAvatarImg.src = winnerAvatar;
+          winnerUsernameSpan.textContent = winnerUsername || 'Desconocido';
+          winnerAmountSpan.textContent = winnerAmount ? `Ganó: $${winnerAmount}` : '';
+          loserAvatarImg.src = loserAvatar;
+          loserUsernameSpan.textContent = loserUsername || 'Desconocido';
+          loserAmountSpan.textContent = loserAmount ? `Perdió: $${loserAmount}` : '';
+
+          alwaysVisibleModal.style.display = 'flex'; // Force display
+          alwaysVisibleModal.style.opacity = '1'; // Force opacity
+          alwaysVisibleModal.style.visibility = 'visible'; // Force visibility
+          alwaysVisibleModal.style.zIndex = '10000'; // Ensure it's on top
+          console.log('Game Over Modal should now be visible with localStorage data.');
+          console.log('Computed display style of modal:', window.getComputedStyle(alwaysVisibleModal).display);
+        } else {
+          alwaysVisibleModal.classList.remove('visible'); // Ensure it's hidden if no game ended
+          alwaysVisibleModal.style.display = 'none'; // Explicitly hide it
+          console.log('No game results found in localStorage. Modal is hidden.');
+        }
+      };
+
+      // Function to clear game results from localStorage
+      const clearGameResults = () => {
+        localStorage.removeItem('gameEnded');
+        localStorage.removeItem('winnerUsername');
+        localStorage.removeItem('loserUsername');
+        localStorage.removeItem('winnerAvatar');
+        localStorage.removeItem('loserAvatar');
+        localStorage.removeItem('winnerAmount');
+        localStorage.removeItem('loserAmount');
+        console.log('Game results cleared from localStorage.');
+      };
+
+      // Load results on DOMContentLoaded
+      loadGameResults();
+
+      // Add event listener to close modal when clicking outside the modal-box
+      alwaysVisibleModal.addEventListener('click', (event) => {
+        if (event.target === alwaysVisibleModal) {
+          alwaysVisibleModal.classList.remove('visible'); // Hide the modal
+          alwaysVisibleModal.style.display = 'none'; // Explicitly hide it
+          clearGameResults(); // Clear data from localStorage
+          console.log('Game Over Modal closed by clicking outside.');
+        }
+      });
+    });
+  </script></body>
   <script>
     // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
     // Esta función establece la altura del contenedor principal a la altura
