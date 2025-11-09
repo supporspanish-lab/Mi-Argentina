@@ -44,6 +44,24 @@ export const setupBackgroundMusic = () => {
             unmuteIcon.style.display = 'block';
         }
     });
+
+    // --- NUEVO: Escuchar el evento de fin de partida para reanudar la música ---
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'gameEnded' && event.newValue === 'true') {
+            console.log("Game ended, attempting to resume background music.");
+            if (backgroundAudio.muted) {
+                backgroundAudio.muted = false; // Unmute if it was muted
+                muteIcon.style.display = 'block';
+                unmuteIcon.style.display = 'none';
+            }
+            backgroundAudio.play().catch(error => {
+                console.warn("Error al reanudar música de fondo después de fin de partida:", error);
+            });
+            // Clear the flag to prevent re-playing on subsequent page loads/refreshes
+            localStorage.removeItem('gameEnded');
+            localStorage.removeItem('gameEndedTimestamp');
+        }
+    });
 };
 
 export const getBackgroundAudio = () => backgroundAudio;
