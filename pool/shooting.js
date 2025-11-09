@@ -73,8 +73,8 @@ export function shoot(powerPercent) {
             return; // No enviar el tiro al servidor
         }
 
-        // --- MODIFICADO: Aplicar el tiro localmente para predicción del lado del cliente ---
-        window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
+        // --- MODIFICADO: No aplicar el tiro localmente, esperar al servidor ---
+        // window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
 
         // --- Enviar los datos del tiro al servidor para el oponente ---
         window.dispatchEvent(new CustomEvent('sendShot', { 

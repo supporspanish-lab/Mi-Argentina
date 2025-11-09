@@ -16,7 +16,6 @@ import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
 import { shoot } from './shooting.js';
-import { isDraggingSpin } from './spinControls.js';
 
 let lastTime;
 
@@ -450,7 +449,7 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
 function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     if (areBallsMoving(balls)) return; // No hacer nada si las bolas ya se están moviendo
 
-    const maxPower = 100 * 50;
+    const maxPower = 100 * 25;
     const power = powerPercent * maxPower;
     const velocityFactor = 2.5;
 

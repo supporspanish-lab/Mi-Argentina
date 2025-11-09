@@ -10,6 +10,7 @@ import { scene } from './scene.js';
 export let shotInProgress = false;
 export let firstBallHitThisTurn = null; // --- NUEVO: Para registrar la primera bola golpeada
 export let pocketedThisTurn = [];
+export let pocketedLastTurn = []; // --- NUEVO: Para registrar las bolas entroneradas en el turno anterior
 export let shotStartTime = 0; // --- NUEVO: Timestamp del inicio del tiro
 export let isPlacingCueBall = false; // --- NUEVO: Estado para cuando el jugador está colocando la bola blanca
 export let isDampingEnabled = true; // --- NUEVO: Controla si el frenado en la tronera está activo
@@ -248,11 +249,16 @@ export function handleTurnEnd() {
     if (cueBall) cueBall.spin = { x: 0, y: 0 };
 }
 
+export function setPocketedLastTurn(balls) {
+    pocketedLastTurn = balls;
+}
+
 /**
  * --- SOLUCIÓN: Limpia el array de bolas entroneradas.
  * Se llama después de que un turno ha sido completamente revisado.
  */
 export function clearPocketedBalls() {
+    setPocketedLastTurn(pocketedThisTurn);
     pocketedThisTurn = [];
     console.log("RESET OK: 'bolasEntroneradasEsteTurno' se ha reseteado a [].");
 }
@@ -292,6 +298,7 @@ export function getGameState() {
         gameOver, // --- SOLUCIÓN: Exponer el estado de fin de partida
         firstBallHitThisTurn, // --- SOLUCIÓN: Exponer la primera bola golpeada para que revisar.js pueda consultarla
         pocketedThisTurn, // --- SOLUCIÓN: Exponer las bolas entroneradas para que revisar.js pueda consultarlas
+        pocketedLastTurn, // --- NUEVO: Exponer las bolas entroneradas en el turno anterior
         isFirstTurn, // --- NUEVO: Exponer la bandera del primer turno.
         ...onlineData,
         currentPlayer: derivedCurrentPlayer // Asegurarse de que derivedCurrentPlayer siempre tenga precedencia

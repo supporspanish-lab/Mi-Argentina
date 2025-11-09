@@ -112,16 +112,14 @@ self.addEventListener('fetch', (event) => {
             if (cachedResponse) {
                 return cachedResponse;
             }
-                            return fetch(event.request).then(networkResponse => {
-                                // Solo cachear respuestas exitosas (status 200)
-                                if (networkResponse.status === 200) {
-                                    const responseToCache = networkResponse.clone(); // Clonar la respuesta
-                                    caches.open(CACHE_NAME).then(cache => {
-                                        cache.put(event.request, responseToCache);
-                                    });
-                                }
-                                return networkResponse; // Devolver la respuesta original
-                            });        })
+            return fetch(event.request).then(networkResponse => {
+                const responseToCache = networkResponse.clone(); // Clonar la respuesta
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseToCache);
+                });
+                return networkResponse; // Devolver la respuesta original
+            });
+        })
     );
     return;
   }

@@ -183,8 +183,8 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                     // --- MODIFICACIÓN: Lógica de entronerado en dos fases ---
                     if (isInside) {
                         // --- MODIFICACIÓN: La bola se entronera instantáneamente ---
-                        // Si la bola no ha sido entronerada aún en este turno, la procesamos.
-                        if (!ball.isPocketed) {
+                        // --- FIX: Usar 'pocketedState' para una guarda más robusta y evitar dobles entronerados.
+                        if (ball.pocketedState !== 'collected') {
                             ball.isPocketed = true; // Marcar como entronerada para no procesarla de nuevo
                             pocketedInFrame.push({ number: ball.number }); // Añadir a la lista del turno
                             playSound('pocket', 0.7); // Reproducir sonido

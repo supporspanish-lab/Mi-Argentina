@@ -9,7 +9,6 @@ import { loadingManager } from './loadingManager.js'; // --- SOLUCIÓN: Importar
 import { initializeAiming, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
 import { initializeInputManager, isPointerDown, isPullingBack, isMovingCueBall, getCurrentShotAngle } from './inputManager.js';
 import { initializeSpinControls, wasDraggingSpin } from './spinControls.js'; // --- NUEVO: Importar el inicializador de los controles de efecto
-import { auth, updateDoc, doc, getDoc, db } from './login/auth.js'; // --- NUEVO: Importar auth, updateDoc, doc, getDoc, db
 
 
 // --- Referencias a elementos del DOM ---
@@ -52,48 +51,7 @@ function updateToggleBtnPosition() {
 export function initializeUI() {
     initializeAiming();
     initializeInputManager();
-initializeSpinControls(); // --- NUEVO: Inicializar los eventos para el control de efecto
-    const abandonGameBtn = document.getElementById('abandon-game-btn');
-    if (abandonGameBtn) {
-        abandonGameBtn.addEventListener('click', async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const gameId = urlParams.get('gameId');
-            const currentUser = auth.currentUser;
-
-            if (!gameId || !currentUser) {
-                console.error("No se pudo abandonar el juego: gameId o usuario no disponibles.");
-                window.location.href = 'login/home.html'; // Redirigir de todas formas si no hay datos
-                return;
-            }
-
-            const gameRef = doc(db, "games", gameId);
-            try {
-                const gameSnap = await getDoc(gameRef);
-                if (gameSnap.exists()) {
-                    const gameData = gameSnap.data();
-                    let winnerUid = null;
-
-                    if (gameData.player1 && gameData.player1.uid === currentUser.uid) {
-                        winnerUid = gameData.player2 ? gameData.player2.uid : null;
-                    } else if (gameData.player2 && gameData.player2.uid === currentUser.uid) {
-                        winnerUid = gameData.player1 ? gameData.player1.uid : null;
-                    }
-
-                    await updateDoc(gameRef, {
-                        juegoTerminado: true,
-                        winnerUid: winnerUid,
-                        abandonedBy: currentUser.uid,
-                        terminationReason: `Juego abandonado por ${currentUser.displayName || currentUser.email || 'un jugador'}.`
-                    });
-                    console.log('Juego abandonado y estado actualizado en Firebase.');
-                }
-            } catch (error) {
-                console.error("Error al abandonar el juego en Firebase:", error);
-            } finally {
-                window.location.href = 'login/home.html';
-            }
-        });
-    }
+    initializeSpinControls(); // --- NUEVO: Inicializar los eventos para el control de efecto
 
     // --- SOLUCIÓN: Reintroducir los listeners para la barra de potencia deslizable ---
     if (powerBarContainer) {

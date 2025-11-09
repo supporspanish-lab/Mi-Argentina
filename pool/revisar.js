@@ -22,6 +22,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             firstBallHitThisTurn: primeraBolaGolpeadaEsteTurno, 
             ballsAssigned: bolasAsignadasAlInicioTurno, 
             playerAssignments: playerAssignmentsAlInicioTurno,
+            pocketedLastTurn: bolasEntroneradasTurnoAnterior, // --- NUEVO: Obtener las bolas entroneradas del turno anterior
             isLoading: estaCargando, 
             gameOver: juegoTerminado, // --- NUEVO: Obtener el estado de fin de partida
             isFirstTurn: esPrimerTurno // --- NUEVO: Obtener la bandera del primer turno.
@@ -387,11 +388,167 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        console.log("DEBUG: Valor final de jugadorEntroneroSuBola:", jugadorEntroneroSuBola);
+                                                console.log("DEBUG: Valor final de jugadorEntroneroSuBola:", jugadorEntroneroSuBola);
 
-                        // --- NUEVO: Falta por no entronar una bola válida ---
+        
 
-                        if (primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida) {
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                // --- NUEVO: Falta por turno infinito (entronerar las mismas bolas) ---
+
+        
+
+
+
+        
+
+                                                if (jugadorEntroneroSuBola && !faltaCometida) {
+
+        
+
+
+
+        
+
+                                                    const currentPocketedNumbers = bolasEntroneradasEsteTurno.map(b => b.number).sort();
+
+        
+
+
+
+        
+
+                                                    const lastPocketedNumbers = bolasEntroneradasTurnoAnterior.map(b => b.number).sort();
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                    // Comprobar si los arrays son idénticos (misma longitud y mismos elementos en orden)
+
+        
+
+
+
+        
+
+                                                    if (currentPocketedNumbers.length > 0 &&
+
+        
+
+
+
+        
+
+                                                        currentPocketedNumbers.length === lastPocketedNumbers.length &&
+
+        
+
+
+
+        
+
+                                                        currentPocketedNumbers.every((val, index) => val === lastPocketedNumbers[index])) {
+
+        
+
+
+
+        
+
+                                                        
+
+        
+
+
+
+        
+
+                                                        faltaCometida = true;
+
+        
+
+
+
+        
+
+                                                        const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+        
+
+
+
+        
+
+                                                        motivoFalta = `${currentUsernameForFoul} ha entronerado las mismas bolas que en el turno anterior, lo que se considera una falta para evitar turnos infinitos.`;
+
+        
+
+
+
+        
+
+                                                        console.log("Falta detectada: Turno infinito por entronerar las mismas bolas.");
+
+        
+
+
+
+        
+
+                                                    }
+
+        
+
+
+
+        
+
+                                                }
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                // --- NUEVO: Falta por no entronar una bola válida ---
+
+        
+
+
+
+        
+
+                                                if (primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida) {
 
                             console.log("DEBUG: Falta por no entronar bola válida detectada.");
 
@@ -592,6 +749,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                             // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
                             setGameOver(true);
                             const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid; // Define winnerUid here
                             const betAmount = onlineGameData.betAmount || 0;
                             const totalWinnings = betAmount * 2;
         
@@ -669,14 +827,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                 setGameOver(true);
                 const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
                 const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
-                let winnings = 0;
-
-                if (onlineGameData.isPractice) {
-                    winnings = onlineGameData.practiceMoneyGain || 0; // Earn 1 unit for practice games
-                } else {
-                    const betAmount = onlineGameData.betAmount || 0;
-                    winnings = betAmount * 2;
-                }
+                const betAmount = onlineGameData.betAmount || 0;
+                const totalWinnings = betAmount * 2;
 
                 if (winnerUid) {
                     const winnerDocRef = doc(db, "saldo", winnerUid);
@@ -684,9 +836,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                     if (winnerSnap.exists()) {
                         const currentBalance = winnerSnap.data().balance || 0;
                         await updateDoc(winnerDocRef, {
-                            balance: currentBalance + winnings
+                            balance: currentBalance + totalWinnings
                         });
-                        console.log(`Winner ${winnerUid} received ${winnings}. New balance: ${currentBalance + winnings}`);
+                        console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
                     }
                 }
 
@@ -747,9 +899,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         const playerActuallyPocketedBall = bolasEntroneradasEsteTurno.length > 0 && jugadorEntroneroSuBola;
 
         let shouldSwitchTurn = false;
-        if (onlineGameData.isPractice && onlineGameData.twoTurnsAsOne) {
-            shouldSwitchTurn = false; // In practice mode with twoTurnsAsOne, the turn never switches (unless game ends)
-        } else if (faltaCometida || !playerActuallyPocketedBall) {
+        if (faltaCometida || !playerActuallyPocketedBall) {
             shouldSwitchTurn = true;
         }
         console.log("DEBUG: 'jugadorEntroneroSuBola' se ha reseteado a false para la lógica de cambio de turno si no se entroneró ninguna bola.");
@@ -809,7 +959,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             cueBallPosition: bolaBlancaEntronerada ? { x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2 } : null,
 
             turnTimestamp: Date.now(), // Marcar el momento de la actualización del turno
-            pocketedThisTurn: [], // --- FIX: Asegurar que se limpia en Firestore
         };
 
         // --- SOLUCIÓN DEFINITIVA: Actualización de UI Optimista ---
@@ -837,8 +986,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     // de que toda la lógica de revisión y actualización de Firebase se haya completado.
     // Esto previene errores como turnos infinitos o faltas incorrectas en la siguiente jugada.
     handleTurnEnd();
-    clearPocketedBalls();
     clearFirstHitBall();
+    clearPocketedBalls(); // --- SOLUCIÓN: Limpiar las bolas entroneradas para el siguiente turno.
 
     // Reiniciar variables locales para mayor claridad, aunque se reinician en cada llamada.
     faltaCometida = false;
