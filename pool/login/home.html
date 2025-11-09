@@ -321,19 +321,24 @@
       const randomVideo = videos[Math.floor(Math.random() * videos.length)];
 
       video.src = randomVideo;
-      video.loop = false;
+      video.loop = true;
       video.muted = true; // Start muted to allow autoplay
       video.playsInline = true; // Important for iOS autoplay
 
-      // Attempt to play the video
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          // Autoplay was prevented. Show a UI element to let the user manually start playback.
-          console.warn('Autoplay prevented:', error);
-          // Optionally, you could show a play button here.
-        });
-      }
+      // Ensure video is loaded before attempting to play
+      video.load();
+
+      // Attempt to play the video with a slight delay to ensure DOM is ready
+      setTimeout(() => {
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            // Autoplay was prevented. Show a UI element to let the user manually start playback.
+            console.warn('Autoplay prevented:', error);
+            // Optionally, you could show a play button here.
+          });
+        }
+      }, 100);
 
       function drawVideo() {
         if (video.paused || video.ended) {
