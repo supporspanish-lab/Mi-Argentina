@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>BlackBall</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +12,10 @@
     <!-- NUEVO: SDK de PocketBase -->
     <script src="https://unpkg.com/pocketbase/dist/pocketbase.umd.js"></script>
     <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-orientation" content="landscape">
+    <link rel="apple-touch-icon" href="../imajenes/apple-touch-icon.png">
     <link rel="stylesheet" href="./home-ecensiales/style.css">
     <!-- NUEVO: Estilos para la pantalla de rotación en iOS -->
     <style>
@@ -47,7 +51,7 @@
     </style>
     <!-- NUEVO: Estilos para el video de fondo -->
     <style>
-      #background-video {
+      #background-video-canvas {
         position: fixed;
         right: 0;
         bottom: 0;
@@ -70,7 +74,7 @@
   </head>
   <body>
     <!-- NUEVO: Elemento para el video de fondo -->
-    <video autoplay muted id="background-video"></video>
+    <canvas id="background-video-canvas"></canvas>
 
     <div id="root">
         <div class="app-container">
@@ -301,7 +305,89 @@
         </div>
     <!-- CORRECCIÓN: Cargar main.js, que es el punto de entrada principal de la aplicación -->
     <script type="module" src="./home-ecensiales/main.js"></script>
-  </body>
+    <!-- NUEVO: Script para el video de fondo aleatorio en canvas -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('background-video-canvas');
+      const ctx = canvas.getContext('2d');
+      const video = document.createElement('video');
+
+      const videos = [
+        './video/video1.mp4', // Adjusted path for canvas script
+        './video/video2.mp4',
+        './video/video3.mp4'
+      ];
+
+      const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+
+      video.src = randomVideo;
+      video.loop = false;
+      video.muted = true; // Start muted to allow autoplay
+      video.playsInline = true; // Important for iOS autoplay
+
+      // Attempt to play the video
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          // Autoplay was prevented. Show a UI element to let the user manually start playback.
+          console.warn('Autoplay prevented:', error);
+          // Optionally, you could show a play button here.
+        });
+      }
+
+      function drawVideo() {
+        if (video.paused || video.ended) {
+          return;
+        }
+
+        // Ensure canvas matches video dimensions for proper scaling
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Calculate aspect ratios
+        const videoRatio = video.videoWidth / video.videoHeight;
+        const canvasRatio = canvas.width / canvas.height;
+
+        let drawWidth, drawHeight, offsetX, offsetY;
+
+        if (videoRatio > canvasRatio) {
+          // Video is wider than canvas, fit height and center horizontally
+          drawHeight = canvas.height;
+          drawWidth = drawHeight * videoRatio;
+          offsetX = (canvas.width - drawWidth) / 2;
+          offsetY = 0;
+        } else {
+          // Video is taller than canvas, fit width and center vertically
+          drawWidth = canvas.width;
+          drawHeight = drawWidth / videoRatio;
+          offsetX = 0;
+          offsetY = (canvas.height - drawHeight) / 2;
+        }
+
+        ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+        requestAnimationFrame(drawVideo);
+      }
+
+      video.addEventListener('loadedmetadata', () => {
+        // Set initial canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        drawVideo(); // Start drawing once metadata is loaded
+      });
+
+      video.addEventListener('play', () => {
+        drawVideo();
+      });
+
+      // Handle window resize to adjust canvas size
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        drawVideo(); // Redraw on resize
+      });
+    });
+  </script>
+</body>
   <script>
     // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
     // Esta función establece la altura del contenedor principal a la altura
@@ -348,12 +434,12 @@
 
       // Intenta bloquear la pantalla (funcionará en Android)
       try {
-        if (screen.orientation && typeof screen.orientation.lock === 'function') {
-          await screen.orientation.lock('landscape');
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock('landscape').catch(() => {}); // Empty catch as requested
           console.log('Orientación bloqueada a horizontal.');
         }
       } catch (error) {
-        console.warn('No se pudo bloquear la orientación (esperado en iOS):', error.message);
+        // Silencio, esperado en iOS y algunos navegadores.
       }
 
       // Ejecuta la comprobación al cargar y cada vez que cambie la orientación
@@ -363,23 +449,5 @@
     }
     window.addEventListener('load', lockOrientation);
   </script>
-  <!-- NUEVO: Script para el video de fondo aleatorio -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const videoElement = document.getElementById('background-video');
-      // Nota: Asumo que 'video2.mp3' fue un error y debería ser 'video2.mp4'.
-      const videos = [
-        '../video/video1.mp4',
-        '../video/video2.mp4',
-        '../video/video3.mp4'
-      ];
 
-      // Elige un video al azar
-      const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-
-      // Asigna la fuente al elemento de video y lo carga
-      videoElement.src = randomVideo;
-      videoElement.load();
-    });
-  </script>
 </html>
