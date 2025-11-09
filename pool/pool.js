@@ -11,7 +11,7 @@ import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './f
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
 import { initCueBallEffects, updateCueBallEffects, showShotEffect } from './cueBallEffects.js';
 import { prepareAimingResources, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
-import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData } from './gameState.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, INACTIVITY_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData } from './gameState.js';
 import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
@@ -22,12 +22,37 @@ let lastTime;
 // --- NUEVO: Variables para el efecto de vibración de la cámara ---
 let gameRef = null; // --- NUEVO: Referencia global a la partida online
 let localPlayerNumber = 0; // --- SOLUCIÓN: 1 o 2, para saber quiénes somos en esta partida
-window.getGameRef = (gameId) => { // --- NUEVO: Función global para obtener la referencia
+export function getGameRef(gameId) { // --- NUEVO: Función global para obtener la referencia
     if (!gameRef) gameRef = doc(db, "games", gameId);
     // --- NUEVO: Variables para sincronización de apuntado ---
     let opponentAimAngle = null;
     return gameRef;
-};
+}
+
+// --- NEW: Throttle function (moved from index.html) ---
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
+
+// --- NEW: Function to send spin update to Firestore (moved from index.html) ---
+export const sendSpinUpdate = throttle(async (spin) => {
+    // gameRef is already available globally in pool.js
+    if (gameRef) { // Check if gameRef is initialized
+        try {
+            await updateDoc(gameRef, { aimingSpin: spin });
+        } catch (error) {
+            console.error("Error al sincronizar el efecto:", error);
+        }
+    }
+}, 100); // Reduced throttle limit for smoother updates
+
 let shakeIntensity = 0;
 let shakeDuration = 0;
 let originalCameraPosition = new THREE.Vector3();
@@ -397,36 +422,39 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
 
     // --- CORRECCIÓN: Actualizar la posición del punto de efecto (spin) en cada frame ---
     // Esta lógica se ejecuta para ambos jugadores, basándose en los datos del servidor.
-    if (currentGameState.aimingSpin) {
-        const spin = currentGameState.aimingSpin;
+    // --- NUEVO: Solo aplicar el spin del servidor si el jugador local NO está arrastrando el control. ---
+    import('./spinControls.js').then(({ isDraggingSpin }) => { // Import dynamically to avoid circular dependency
+        if (currentGameState.aimingSpin && !isDraggingSpin()) {
+            const spin = currentGameState.aimingSpin;
 
-        // 1. Actualizar el punto rojo en la bola 3D
-        if (cueBallRedDot && cueBall) {
-            cueBallRedDot.position.x = spin.x * (cueBall.radius * 0.8);
-            cueBallRedDot.position.y = spin.y * (cueBall.radius * 0.8);
-        }
+            // 1. Actualizar el punto rojo en la bola 3D
+            if (cueBallRedDot && cueBall) {
+                cueBallRedDot.position.x = spin.x * (cueBall.radius * 0.8);
+                cueBallRedDot.position.y = spin.y * (cueBall.radius * 0.8);
+            }
 
-        // 2. Actualizar el punto en la miniatura de la UI
-        const miniSpinSelectorDot = document.getElementById('miniSpinSelectorDot');
-        if (miniSpinSelectorDot) {
-            miniSpinSelectorDot.style.left = `${50 + (spin.x * 40)}%`;
-            miniSpinSelectorDot.style.top = `${50 - (spin.y * 40)}%`;
-        }
+            // 2. Actualizar el punto en la miniatura de la UI
+            const miniSpinSelectorDot = document.getElementById('miniSpinSelectorDot');
+            if (miniSpinSelectorDot) {
+                miniSpinSelectorDot.style.left = `${50 + (spin.x * 40)}%`;
+                miniSpinSelectorDot.style.top = `${50 - (spin.y * 40)}%`;
+            }
 
-        // 3. Actualizar el punto en el modal grande
-        const spinSelectorDot = document.getElementById('spinSelectorDot');
-        const largeSpinSelector = document.getElementById('largeSpinSelector');
-        if (spinSelectorDot && largeSpinSelector) {
-            const rect = largeSpinSelector.getBoundingClientRect();
-            // Solo actualizar si el modal es visible (tiene dimensiones)
-            if (rect.width > 0) {
-                const selectorRadius = rect.width / 2;
-                const dx = spin.x * selectorRadius;
-                const dy = -spin.y * selectorRadius;
-                spinSelectorDot.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+            // 3. Actualizar el punto en el modal grande
+            const spinSelectorDot = document.getElementById('spinSelectorDot');
+            const largeSpinSelector = document.getElementById('largeSpinSelector');
+            if (spinSelectorDot && largeSpinSelector) {
+                const rect = largeSpinSelector.getBoundingClientRect();
+                // Solo actualizar si el modal es visible (tiene dimensiones)
+                if (rect.width > 0) {
+                    const selectorRadius = rect.width / 2;
+                    const dx = spin.x * selectorRadius;
+                    const dy = -spin.y * selectorRadius;
+                    spinSelectorDot.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+                }
             }
         }
-    }
+    });
 
     // --- NUEVO: Actualizar la UI de la barra de potencia desde el servidor ---
     // Esta lógica se ejecuta para ambos jugadores.
@@ -563,6 +591,44 @@ function connectToGame(gameId) {
                 return;
             }
             setOnlineGameData(gameData);
+
+            // --- NUEVO: Lógica de detección de inactividad del oponente ---
+            const myUid = auth.currentUser?.uid;
+            if (gameData.status !== "ended" && gameData.currentPlayerUid !== myUid && gameData.turnTimestamp) {
+                const elapsedTimeSinceTurn = Date.now() - gameData.turnTimestamp;
+                if (elapsedTimeSinceTurn > INACTIVITY_TIME_LIMIT) {
+                    console.log("Oponente inactivo. Declarando victoria.");
+                    const winnerUid = myUid;
+                    const loserUid = gameData.currentPlayerUid;
+                    const betAmount = gameData.betAmount || 0;
+                    const totalWinnings = betAmount * 2;
+
+                    // Actualizar el saldo del ganador
+                    if (winnerUid) {
+                        const winnerDocRef = doc(db, "saldo", winnerUid);
+                        const winnerSnap = await getDoc(winnerDocRef);
+                        if (winnerSnap.exists()) {
+                            const currentBalance = winnerSnap.data().balance || 0;
+                            await updateDoc(winnerDocRef, {
+                                balance: currentBalance + totalWinnings
+                            });
+                            console.log(`Winner ${winnerUid} received ${totalWinnings} due to inactivity. New balance: ${currentBalance + totalWinnings}`);
+                        }
+                    }
+
+                    // Actualizar el estado del juego en Firestore
+                    await updateDoc(gameRef, {
+                        status: "ended",
+                        winner: winnerUid,
+                        loser: loserUid,
+                        endedAt: Date.now(),
+                        juegoTerminado: true,
+                        endReason: "Oponente inactivo"
+                    });
+                    showFoulMessage(`¡Has ganado! El oponente se desconectó o estuvo inactivo.`, winnerUid);
+                    return; // Salir para evitar procesar más el estado del juego si ya terminó
+                }
+            }
 
             // --- NUEVO: Asegurar que el username del jugador 1 esté correctamente establecido ---
             if (gameData.player1 && gameData.player1.uid === localUserId && gameData.player1.username !== localUsername) {

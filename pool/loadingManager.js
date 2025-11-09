@@ -1,6 +1,7 @@
 // --- Módulo de Gestión de Carga ---
 import * as THREE from 'three';
 import { startFirstTurn, setLoadingState } from './gameState.js';
+import { getGameRef } from './pool.js';
 
 const loadingScreen = document.getElementById('loading-screen');
 const progressBar = document.getElementById('progress-bar');
@@ -110,7 +111,7 @@ function tryStartGame() {
 
                 // --- CORRECCIÓN CRÍTICA: Sincronizar el estado de la partida al finalizar la carga ---
                 const gameId = new URLSearchParams(window.location.search).get('gameId');
-                const gameRef = gameId ? window.getGameRef(gameId) : null;
+                const gameRef = gameId ? getGameRef(gameId) : null;
 
                 if (gameRef) {
                     // Si es una partida online, obtenemos el estado una vez.

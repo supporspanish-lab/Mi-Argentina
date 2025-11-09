@@ -32,11 +32,6 @@ const ASSETS_TO_CACHE = [
     'audio/cushionHit.wav',
     'audio/EntrarPelotaTronera.mp3',
     'audio/cueHit.wav',
-    // --- NUEVO: Añadir las pistas de música de fondo a la caché ---
-    'audio/home/1.mp3',
-    'audio/home/2.mp3',
-    'audio/home/3.mp3',
-    'audio/login.mp3', // Add login sound
     'modelos/billiard_balls.glb',
     // Login page assets
     'login/login.html',
@@ -54,11 +49,6 @@ const ASSETS_TO_CACHE = [
     'login/home-ecensiales/state.js',
     'login/home-ecensiales/style.css',
     'login/home-ecensiales/utils.js',
-    // --- NUEVO: Añadir los videos de fondo a la caché ---
-    'video/video1.mp4',
-    'video/video2.mp4',
-    'video/video3.mp4',
-    'audio/home/4.mp3', // --- NUEVO: Añadir la cuarta pista de música de fondo
     // External dependencies from unpkg
     'https://unpkg.com/three@0.160.0/build/three.module.js',
     'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js',
@@ -105,22 +95,11 @@ self.addEventListener('fetch', (event) => {
     return; // Dejar que el navegador maneje la petición
   }
 
-  // 2. Estrategia "Cache First" para archivos multimedia y modelos 3D
+  // 2. Estrategia "Network Only" para archivos multimedia y modelos 3D
+  // Esto evita el error "Partial response (status code 206) is unsupported"
+  // al no intentar cachear estos recursos.
   if (event.request.url.match(/\.(mp4|mp3|wav|glb|png|jpg|jpeg|gif)$/)) {
-    event.respondWith(
-        caches.match(event.request).then(cachedResponse => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-            return fetch(event.request).then(networkResponse => {
-                const responseToCache = networkResponse.clone(); // Clonar la respuesta
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseToCache);
-                });
-                return networkResponse; // Devolver la respuesta original
-            });
-        })
-    );
+    event.respondWith(fetch(event.request));
     return;
   }
 
@@ -129,7 +108,9 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request).then(networkResponse => {
           const responseToCache = networkResponse.clone(); // Clonar la respuesta
           caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, responseToCache);
+              if (networkResponse.status === 200) { // Only cache full responses
+                  cache.put(event.request, responseToCache);
+              }
           });
           return networkResponse; // Devolver la respuesta original
       }).catch(() => {

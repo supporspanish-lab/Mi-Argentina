@@ -2,11 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Juego de BlackBal con Canvas</title>
     <!-- NUEVO: Evita el error 404 de favicon.ico en la consola -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <link rel="manifest" href="login/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-orientation" content="landscape">
+    <link rel="apple-touch-icon" href="imajenes/apple-touch-icon.png">
     <style>
         /* Reinicio CSS para asegurar que el HTML y el Body ocupen el 100% */
         html, body {
@@ -277,6 +281,47 @@
             stroke: #2ecc71; /* Borde verde vibrante para el temporizador */
         }
 
+        /* --- NUEVO: Estilos para la burbuja de chat debajo del avatar --- */
+        .player-chat-bubble {
+            position: absolute;
+            bottom: -10px; /* Posicionar debajo del avatar */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7); /* Restaurar color original */
+            border: none; /* Eliminar borde temporal */
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9vw;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px; /* Limitar el ancho de la burbuja */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none; /* Para que no interfiera con los clics */
+            z-index: 5; /* Restaurar z-index original */
+        }
+
+        /* --- SOLUCIÓN: Contrarrestar la inversión del contenedor padre para la burbuja del jugador 1 --- */
+        #player1PocketedContainer .player-chat-bubble {
+            transform: translateX(-50%) scaleX(-1); /* Invertir solo la burbuja para contrarrestar el padre */
+        }
+
+        .player-chat-bubble.show {
+            opacity: 1;
+        }
+
+        .player-chat-bubble.fade-out {
+            animation: fadeOutBubble 5s forwards; /* Aumentar duración a 5 segundos */
+        }
+
+        @keyframes fadeOutBubble {
+            0% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
         /* --- NUEVO: Estilos para la animación de aparición de avatares --- */
         .player-avatar-img.fade-in {
             opacity: 0;
@@ -356,8 +401,8 @@
         }
         /* --- NUEVO: Estilos para la miniatura del selector de efecto --- */
         #miniSpinSelector {
-            width: 7vh; /* Tamaño relativo a la altura de la pantalla */
-            height: 7vh; 
+            width: 10vh; /* Tamaño relativo a la altura de la pantalla */
+            height: 10vh; 
             position: absolute; /* --- CORRECCIÓN: Posicionamiento absoluto para ser editable --- */
             cursor: pointer;
             /* --- MODIFICACIÓN: Usar una imagen para la miniatura del efecto --- */
@@ -711,6 +756,256 @@
                 margin-right: 0;
             }
         }
+
+        /* --- NUEVO: Estilos para el botón de chat en el juego --- */
+        #game-chat-button-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100; /* Asegurarse de que esté por encima de otros elementos */
+        }
+
+        .game-chat-button {
+            background-color: transparent; /* Eliminar color de fondo */
+            color: white;
+            border: none;
+            border-radius: 50%; /* Botón redondo */
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: none; /* Eliminar sombra */
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .game-chat-button:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Añadir un ligero hover para interactividad */
+            transform: scale(1.05);
+        }
+
+        .game-chat-button svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+        /* --- NUEVO: Estilos para el botón de abandonar sala fuera del panel --- */
+        #leave-game-btn {
+            position: fixed;
+            top: 0;
+            left: 5vw; /* Position it next to the options button */
+            transform: none;
+            width: 5vw;
+            height: 5vh;
+            background-color: #e74c3c; /* Red color for abandon */
+            border: none;
+            border-bottom-right-radius: 10px;
+            border-bottom-left-radius: 10px; /* Add border-bottom-left-radius for consistency */
+            cursor: pointer;
+            z-index: 201;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5vw;
+            transition: background-color 0.2s ease-in-out;
+        }
+        #leave-game-btn:hover {
+            background-color: #c0392b;
+        }
+        #leave-game-btn span {
+            color: white;
+            font-size: 2.5vw;
+        }
+        /* --- NUEVO: Estilos para el modal de chat en el juego (copia de home.html) --- */
+        #game-chat-modal {
+            display: none; /* Oculto por defecto */
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background-color: rgba(35, 35, 35, 0.85); /* var(--container-bg-color) */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* var(--border-color) */
+            border-radius: 24px;
+            width: 700px;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: fixed; /* Posicionamiento fijo */
+            bottom: 20px; /* Ajustar posición */
+            right: 20px; /* Ajustar posición */
+            z-index: 100; /* Asegurarse de que esté por encima de otros elementos */
+        }
+        #game-chat-modal .chat-header {
+            width: 100%;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        #game-chat-modal .player-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            flex-grow: 1;
+            text-align: center;
+        }
+        #game-chat-modal .player-name {
+            color: #00f291; /* var(--primary-color) */
+        }
+        #game-chat-modal .chat-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 5px;
+            border: 2px solid #00f291; /* var(--primary-color) */
+        }
+        #game-chat-modal .vs-text {
+            color: #ffffff; /* var(--text-color) */
+            font-size: 16px;
+        }
+        #game-chat-modal .chat-messages {
+            width: 100%;
+            height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #2c2c2c; /* var(--input-bg-color) */
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            text-align: left;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        #game-chat-modal .chat-messages::-webkit-scrollbar {
+            display: none;
+        }
+        #game-chat-modal .chat-message {
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        #game-chat-modal .chat-message.self {
+            background-color: #00f291; /* var(--primary-color) */
+            color: #000;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        #game-chat-modal .chat-message.opponent {
+            background-color: #444;
+            color: #ffffff; /* var(--text-color) */
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        #game-chat-modal .message-sender {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        #game-chat-modal .chat-controls-container {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #game-chat-modal .chat-input-area {
+            flex-grow: 1;
+            display: flex;
+            gap: 10px;
+        }
+        #game-chat-modal .chat-input-area input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: #2c2c2c;
+            color: #ffffff;
+            outline: none;
+        }
+        #game-chat-modal .chat-input-area button {
+            padding: 0; /* Eliminar padding */
+            border-radius: 0; /* Eliminar border-radius */
+            border: none; /* Eliminar borde */
+            background-color: transparent; /* Eliminar color de fondo */
+            color: white; /* Asegurar que el color del SVG sea blanco */
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex; /* Usar flexbox para centrar el SVG */
+            align-items: center;
+            justify-content: center;
+            width: 40px; /* Ajustar ancho para el icono */
+            height: 40px; /* Ajustar alto para el icono */
+        }
+        #game-chat-modal .chat-input-area button:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Añadir un ligero hover para interactividad */
+        }
+        #game-chat-modal .minimize-chat-btn {
+            background: none;
+            border: none;
+            color: #a0a0a0; /* var(--text-secondary-color) */
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s, transform 0.3s ease;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+        #game-chat-modal .minimize-chat-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: #00f291; /* var(--primary-color) */
+        }
+        #game-chat-modal.minimized .chat-messages,
+        #game-chat-modal.minimized .chat-input-area,
+        #game-chat-modal.minimized .player-info {
+            display: none;
+        }
+        #game-chat-modal.minimized {
+            height: 50px;
+            width: 280px;
+            bottom: 20px;
+            right: 20px;
+            left: auto;
+            top: auto;
+            position: fixed;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
+        }
+        #game-chat-modal.minimized .chat-header {
+            border-bottom: none;
+            padding-bottom: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #game-chat-modal.minimized .minimize-chat-btn {
+            transform: rotate(180deg);
+            top: 50%;
+            right: 10px;
+            margin-top: -16px;
+        }
+        #game-chat-modal.minimized .chat-header::before {
+            content: "Chat de Partida";
+            color: #ffffff; /* var(--text-color) */
+            font-weight: 700;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -751,6 +1046,7 @@
             <div id="main-options-view">
                 <h3>Opciones</h3>
                 <button id="modify-ui-btn">Modificar UI</button>
+                <button id="abandon-game-btn" class="abandon-button">Abandonar Sala</button>
             </div>
             <div id="edit-ui-options-view" style="display: none;">
                 <h3>Ajustar Interfaz</h3>
@@ -766,11 +1062,12 @@
         </div>
         <button id="options-toggle-btn"><span>&#9881;</span></button>
 
+
         <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->
 
         <!-- --- NUEVO: Modal para el selector de efecto en grande --- -->
         <div id="spinModalOverlay">
-            <div id="largeSpinSelector">
+            <div id="largeSpinSelector" class="editable-ui">
                 <div id="spinSelectorDot" class="spin-selector-dot"></div>
             </div>
         </div>
@@ -803,6 +1100,7 @@
                         </g>
                     </svg>
                     <img id="player1-avatar-img" src="" class="player-avatar" style="display: none; position: absolute; top: 0; left: 0; border-radius: 50%; object-fit: cover; width: 100%; height: 100%; z-index: 1;">
+                    <div id="player1-chat-bubble" class="player-chat-bubble"></div>
                 </div>
                 <div class="pocketed-ball-placeholder"></div>
                 <div class="pocketed-ball-placeholder"></div>
@@ -834,6 +1132,7 @@
                         </g>
                     </svg>
                     <img id="player2-avatar-img" src="" class="player-avatar" style="display: none; position: absolute; top: 0; left: 0; border-radius: 50%; object-fit: cover; width: 100%; height: 100%; z-index: 1;">
+                    <div id="player2-chat-bubble" class="player-chat-bubble"></div>
                 </div>
                 <div class="pocketed-ball-placeholder"></div>
                 <div class="pocketed-ball-placeholder"></div>
@@ -904,30 +1203,294 @@
     <!-- --- NUEVO: Script para la sincronización en tiempo real del apuntado --- -->
     <script type="module">
         // 1. Importar las funciones necesarias de Firestore y la autenticación.
-        import { db, auth, onSnapshot, doc, updateDoc } from './login/auth.js';
+        import { db, auth, onSnapshot, doc, updateDoc, deleteDoc, getDoc } from './login/auth.js';
+        import { arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // --- NUEVO: Elementos del chat en el juego ---
+        const gameChatModal = document.getElementById('game-chat-modal');
+        const toggleGameChatBtn = document.getElementById('toggle-game-chat-btn');
+        const minimizeGameChatBtn = document.getElementById('minimize-game-chat-btn');
+        const gameChatMessages = document.getElementById('game-chat-messages');
+        const gameChatMessageInput = document.getElementById('game-chat-message-input');
+        const sendGameChatMessageBtn = document.getElementById('send-game-chat-message-btn');
+        const gameChatPlayer1Name = document.getElementById('game-chat-player1-name');
+        const gameChatPlayer2Name = document.getElementById('game-chat-player2-name');
+        const gameChatPlayer1Avatar = document.getElementById('game-chat-player1-avatar');
+        const gameChatPlayer2Avatar = document.getElementById('game-chat-player2-avatar');
+
+        // --- NUEVO: Referencias a las burbujas de chat ---
+        const player1ChatBubble = document.getElementById('player1-chat-bubble');
+        const player2ChatBubble = document.getElementById('player2-chat-bubble');
+
+        // --- NUEVO: Objeto de audio para el sonido de mensaje ---
+        const messageSound = new Audio('login/audio/mensaje.mp3');
+        messageSound.volume = 0.5; // Ajusta el volumen si es necesario
+
+        // --- NUEVO: Función para mostrar la burbuja de chat ---
+        function displayChatBubble(messageText, bubbleElement) {
+            bubbleElement.textContent = messageText;
+            bubbleElement.classList.add('show');
+            bubbleElement.classList.remove('fade-out'); // Reiniciar animación si ya estaba activa
+
+            // Iniciar la animación de desvanecimiento después de un breve retraso
+            setTimeout(() => {
+                bubbleElement.classList.add('fade-out');
+                // Ocultar completamente después de la animación
+                setTimeout(() => {
+                    bubbleElement.classList.remove('show');
+                    bubbleElement.textContent = '';
+                }, 3000); // Duración de la animación fadeOutBubble
+            }, 100); // Pequeño retraso para asegurar que la clase 'show' se aplique primero
+        }
+
+        // --- NUEVO: Funciones de utilidad para el chat (simplificadas de home-ecensiales/utils.js) ---
+        function renderMessages(messages, container, currentUserUid) {
+            const previousMessageCount = container.children.length; // Obtener el número de mensajes actuales
+            container.innerHTML = '';
+            if (messages && messages.length > 0) {
+                messages.forEach(msg => {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('chat-message');
+                    messageElement.classList.add(msg.uid === currentUserUid ? 'self' : 'opponent');
+                    messageElement.innerHTML = `<span class="message-sender">${msg.username}:</span> ${msg.text}`;
+                    container.appendChild(messageElement);
+                });
+                container.scrollTop = container.scrollHeight; // Scroll to bottom
+
+                // Reproducir sonido si hay un nuevo mensaje y no es del usuario actual
+                const lastMessage = messages[messages.length - 1];
+                if (messages.length > previousMessageCount && lastMessage.uid !== currentUserUid) {
+                    messageSound.play().catch(e => console.error("Error al reproducir sonido de mensaje:", e));
+                }
+            }
+        }
+
+        function setPlayerAvatar(imgElement, profileImageName) {
+            if (profileImageName) {
+                imgElement.src = `imajenes/perfil/${profileImageName}`;
+                imgElement.style.display = 'block';
+            } else {
+                imgElement.style.display = 'none'; // Hide if no image
+            }
+        }
+
+        // --- NUEVO: Lógica para mostrar/ocultar el chat ---
+        toggleGameChatBtn.addEventListener('click', () => {
+            gameChatModal.style.display = gameChatModal.style.display === 'flex' ? 'none' : 'flex';
+            if (gameChatModal.style.display === 'flex') {
+                gameChatMessages.scrollTop = gameChatMessages.scrollHeight; // Scroll to bottom when opened
+            }
+        });
+
+        // --- NUEVO: Lógica para cerrar el chat ---
+        minimizeGameChatBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evitar que el clic se propague al modal y lo abra
+            gameChatModal.style.display = 'none'; // Ocultar completamente el modal
+        });
+
+        gameChatModal.addEventListener('click', (e) => {
+            if (gameChatModal.classList.contains('minimized')) {
+                gameChatModal.classList.remove('minimized');
+            }
+        });
+
+        // --- NUEVO: Función para enviar mensajes en el juego ---
+        const sendGameMessage = async () => {
+            const messageText = gameChatMessageInput.value.trim();
+            const currentUser = auth.currentUser; // Get current user from Firebase auth
+            if (messageText && gameId && currentUser) {
+                const gameRef = doc(db, "games", gameId);
+                // Fetch current user's profile to get username and avatar
+                const userProfileSnap = await getDoc(doc(db, "saldo", currentUser.uid));
+                const currentUserProfile = userProfileSnap.exists() ? userProfileSnap.data() : { username: 'Anónimo' };
+
+                const message = {
+                    uid: currentUser.uid,
+                    username: currentUserProfile.username,
+                    text: messageText,
+                    timestamp: Date.now()
+                };
+
+                await updateDoc(gameRef, {
+                    messages: arrayUnion(message)
+                });
+
+                // --- NUEVO: Determinar qué burbuja de chat usar para el jugador actual ---
+                const gameSnap = await getDoc(gameRef);
+                if (gameSnap.exists()) {
+                    const gameData = gameSnap.data();
+                    if (gameData.player1 && gameData.player1.uid === currentUser.uid) {
+                        displayChatBubble(messageText, player1ChatBubble);
+                    } else if (gameData.player2 && gameData.player2.uid === currentUser.uid) {
+                        displayChatBubble(messageText, player2ChatBubble);
+                    }
+                }
+
+                gameChatMessageInput.value = '';
+            }
+        };
+
+        sendGameChatMessageBtn.addEventListener('click', sendGameMessage);
+        gameChatMessageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendGameMessage();
+            }
+        });
 
                     // 2. Obtener el ID de la partida desde la URL.
                     const urlParams = new URLSearchParams(window.location.search);
                     const gameId = urlParams.get('gameId');
                     const winningsText = document.getElementById('winnings-text');
+                    let isGameActive = true; // --- NUEVO: Bandera para controlar si el juego está activo
         
                     // --- CORRECCIÓN: Envolver la lógica en un 'if' para evitar el 'Illegal return statement' ---
                     if (!gameId) {
                         console.error("No se encontró gameId en la URL. La sincronización no funcionará.");
+                        isGameActive = false; // Si no hay gameId, el juego no está activo
                     } else {
                         // --- NUEVO: Escuchar cambios en el documento del juego para actualizar las ganancias ---
-                        onSnapshot(doc(db, "games", gameId), (docSnap) => {
+                        const unsubscribe = onSnapshot(doc(db, "games", gameId), (docSnap) => {
                             if (docSnap.exists()) {
                                 const gameData = docSnap.data();
                                 const betAmount = gameData.betAmount || 0;
                                 const totalWinnings = betAmount * 2; // Apuesta de ambos jugadores
                                 winningsText.textContent = `$${totalWinnings.toLocaleString()}`;
+
+                                // --- NUEVO: Actualizar información de los jugadores en el chat ---
+                                const currentUserUid = auth.currentUser.uid;
+                                let currentPlayerIsPlayer1 = false;
+                                let currentPlayerIsPlayer2 = false;
+
+                                if (gameData.player1 && gameData.player1.uid === currentUserUid) {
+                                    currentPlayerIsPlayer1 = true;
+                                } else if (gameData.player2 && gameData.player2.uid === currentUserUid) {
+                                    currentPlayerIsPlayer2 = true;
+                                }
+
+                                if (gameData.player1) {
+                                    gameChatPlayer1Name.textContent = gameData.player1.username;
+                                    setPlayerAvatar(gameChatPlayer1Avatar, gameData.player1.profileImageName);
+                                }
+                                if (gameData.player2) {
+                                    gameChatPlayer2Name.textContent = gameData.player2.username;
+                                    setPlayerAvatar(gameChatPlayer2Avatar, gameData.player2.profileImageName);
+                                }
+
+                                // --- NUEVO: Renderizar mensajes del chat ---
+                                renderMessages(gameData.messages, gameChatMessages, currentUserUid);
+
+                                // --- NUEVO: Mostrar burbujas de chat para mensajes nuevos ---
+                                if (gameData.messages && gameData.messages.length > 0) {
+                                    const lastMessage = gameData.messages[gameData.messages.length - 1];
+                                    if (lastMessage.uid !== currentUserUid) {
+                                        // Es un mensaje del oponente
+                                        // Determinar si el oponente es player1 o player2
+                                        if (gameData.player1 && gameData.player1.uid === lastMessage.uid) {
+                                            displayChatBubble(lastMessage.text, player1ChatBubble);
+                                        } else if (gameData.player2 && gameData.player2.uid === lastMessage.uid) {
+                                            displayChatBubble(lastMessage.text, player2ChatBubble);
+                                        }
+                                    } else {
+                                        // Es un mensaje del usuario actual, ya se mostró en sendGameMessage
+                                        // Pero si el mensaje se envió desde otro dispositivo del mismo usuario,
+                                        // también debería mostrarse aquí.
+                                        if (currentPlayerIsPlayer1) {
+                                            displayChatBubble(lastMessage.text, player1ChatBubble);
+                                        } else if (currentPlayerIsPlayer2) {
+                                            displayChatBubble(lastMessage.text, player2ChatBubble);
+                                        }
+                                    }
+                                }
+
+                                // --- NUEVO: Redirigir a home.html si el juego ha terminado ---
+                                if (gameData.juegoTerminado) {
+                                    const winnerUid = gameData.winner;
+                                    const loserUid = gameData.loser;
+
+                                    const winnerUsername = gameData.player1.uid === winnerUid ? gameData.player1.username : gameData.player2.username;
+                                    const loserUsername = gameData.player1.uid === loserUid ? gameData.player1.username : gameData.player2.username;
+
+                                    const winnerAvatar = encodeURIComponent(`../imajenes/perfil/${gameData.player1.uid === winnerUid ? gameData.player1.profileImageName : gameData.player2.profileImageName}`);
+                                    const loserAvatar = encodeURIComponent(`../imajenes/perfil/${gameData.player1.uid === loserUid ? gameData.player1.profileImageName : gameData.player2.profileImageName}`);
+
+                                    localStorage.setItem('gameEnded', 'true');
+                                    localStorage.setItem('winnerUid', winnerUid);
+                                    localStorage.setItem('loserUid', loserUid);
+                                    localStorage.setItem('winnerUsername', winnerUsername);
+                                    localStorage.setItem('loserUsername', loserUsername);
+                                    localStorage.setItem('winnerAvatar', winnerAvatar);
+                                    localStorage.setItem('loserAvatar', loserAvatar);
+                                    localStorage.setItem('winnerAmount', totalWinnings); // Asumiendo que totalWinnings es la cantidad ganada
+                                    localStorage.setItem('loserAmount', betAmount); // Asumiendo que betAmount es la cantidad perdida
+
+                                    window.parent.location.href = 'login/home.html';
+                                    isGameActive = false; // El juego ha terminado
+                                    unsubscribe(); // Unsubscribe from further updates
+                                    return; // Detener el procesamiento posterior
+                                }
+
                             } else {
                                 console.log("El documento del juego no existe.");
                                 winningsText.textContent = '$0'; // Resetear si el juego no existe
-                                window.location.reload(); // Recargar la página
+                                window.location.href = 'login/home.html'; // Redirigir a home si el juego no existe
+                                isGameActive = false; // El juego ya no está activo
+                                unsubscribe(); // Unsubscribe from further updates
                             }
-                        });            // 3. Función "throttle" para no sobrecargar Firestore.
+                        });
+
+                        // --- NUEVO: Función para manejar el abandono de la sala ---
+                        async function handleAbandonGame() {
+                            if (confirm('¿Estás seguro de que quieres abandonar la sala? El otro jugador ganará la partida.')) {
+                                try {
+                                    const gameRef = doc(db, "games", gameId);
+                                    const gameSnap = await getDoc(gameRef);
+
+                                    if (gameSnap.exists()) {
+                                        const gameData = gameSnap.data();
+                                        const currentUserUid = auth.currentUser.uid;
+                                        let winnerUid = null;
+
+                                        if (gameData.player1 && gameData.player1.uid === currentUserUid) {
+                                            winnerUid = gameData.player2 ? gameData.player2.uid : null;
+                                        } else if (gameData.player2 && gameData.player2.uid === currentUserUid) {
+                                            winnerUid = gameData.player1 ? gameData.player1.uid : null;
+                                        }
+
+                                        if (winnerUid) {
+                                            await updateDoc(gameRef, {
+                                                juegoTerminado: true,
+                                                winner: winnerUid,
+                                                loser: currentUserUid,
+                                            });
+                                            alert('Has abandonado la sala. El otro jugador ha ganado. Serás redirigido a la página principal.');
+                                        } else {
+                                            await deleteDoc(gameRef);
+                                            alert('Has abandonado la sala. No se pudo determinar un ganador, la sala ha sido eliminada. Serás redirigido a la página principal.');
+                                        }
+                                    } else {
+                                        alert('La sala ya no existe. Serás redirigido a la página principal.');
+                                    }
+                                    window.location.href = 'login/home.html';
+                                } catch (error) {
+                                    console.error("Error al abandonar la sala:", error);
+                                    alert('Hubo un error al intentar abandonar la sala. Por favor, inténtalo de nuevo.');
+                                }
+                            }
+                        }
+
+                        // --- NUEVO: Lógica para el botón "Abandonar Sala" (dentro del panel de opciones) ---
+                        const abandonGameBtn = document.getElementById('abandon-game-btn');
+                        if (abandonGameBtn) {
+                            abandonGameBtn.addEventListener('click', handleAbandonGame);
+                        }
+
+                        // --- NUEVO: Lógica para el nuevo botón "Abandonar Sala" (fuera del panel) ---
+                        const leaveGameBtn = document.getElementById('leave-game-btn');
+                        if (leaveGameBtn) {
+                            leaveGameBtn.addEventListener('click', handleAbandonGame);
+                        }
+
+            // 3. Función "throttle" para no sobrecargar Firestore.
             // Limita las actualizaciones a una cada 50ms como máximo.
             function throttle(func, limit) {
                 let inThrottle;
@@ -942,6 +1505,7 @@
 
             // 4. Función para enviar la actualización del ángulo a Firestore.
             const sendAimUpdate = throttle(async (angle) => {
+                if (!isGameActive || !gameId) return; // --- NUEVO: No enviar actualizaciones si el juego no está activo
                 if (gameId) {
                     try {
                         const gameRef = doc(db, "games", gameId);
@@ -954,6 +1518,7 @@
 
             // --- NUEVO: Función para enviar la actualización de la potencia a Firestore ---
             const sendPowerUpdate = throttle(async (power) => {
+                if (!isGameActive || !gameId) return; // --- NUEVO: No enviar actualizaciones si el juego no está activo
                 if (gameId) {
                     try {
                         const gameRef = doc(db, "games", gameId);
@@ -969,6 +1534,7 @@
 
             // --- NUEVO: Función para enviar la posición de la bola blanca durante "bola en mano" ---
             const sendCueBallPositionUpdate = throttle(async (position) => {
+                if (!isGameActive || !gameId) return; // --- NUEVO: No enviar actualizaciones si el juego no está activo
                 // Convertir el objeto de posición a una cadena para una comparación sencilla
                 const currentPositionString = JSON.stringify(position);
                 const lastPositionString = JSON.stringify(lastSentCueBallPosition);
@@ -987,21 +1553,11 @@
                 }
             }, 1000); // Límite de 1000ms.
 
-            // --- NUEVO: Función para enviar la actualización del efecto (spin) ---
-            const sendSpinUpdate = throttle(async (spin) => {
-                if (gameId) {
-                    try {
-                        const gameRef = doc(db, "games", gameId);
-                        // Usamos un nuevo campo 'aimingSpin'
-                        await updateDoc(gameRef, { aimingSpin: spin });
-                    } catch (error) {
-                        console.error("Error al sincronizar el efecto:", error);
-                    }
-                }
-            }, 1000); // Mismo límite
+
 
             // --- NUEVO: Función para enviar el estado de visibilidad del modal de efecto ---
             const sendSpinModalUpdate = async (isVisible) => {
+                if (!isGameActive || !gameId) return; // --- NUEVO: No enviar actualizaciones si el juego no está activo
                 if (gameId) {
                     try {
                         const gameRef = doc(db, "games", gameId);
@@ -1030,12 +1586,7 @@
                 }
             });
 
-            // --- NUEVO: Listener para el evento de efecto (spin) ---
-            window.addEventListener('sendspin', (event) => {
-                if (event.detail && event.detail.spin) {
-                    sendSpinUpdate(event.detail.spin);
-                }
-            });
+
 
             // --- NUEVO: Listener para el evento de visibilidad del modal de efecto ---
             window.addEventListener('setspinmodal', (event) => {
@@ -1053,6 +1604,7 @@
 
             // --- NUEVO: Listener para limpiar la posición de la bola blanca en el servidor ---
             window.addEventListener('clearcueballpositionrequest', async () => {
+                if (!isGameActive || !gameId) return; // --- NUEVO: No enviar actualizaciones si el juego no está activo
                 if (gameId) {
                     try {
                         const gameRef = doc(db, "games", gameId);
@@ -1067,6 +1619,7 @@
 
             // --- NUEVO: Listener para enviar los datos del tiro al servidor ---
             window.addEventListener('sendShot', async (event) => {
+                if (!isGameActive || !gameId) return; // --- NUEVO: No enviar actualizaciones si el juego no está activo
                 if (gameId && event.detail) {
                     const { gameState: gameData, ...shotData } = event.detail; // Separar gameState del resto de los datos del tiro
                     const gameRef = doc(db, "games", gameId);
@@ -1250,6 +1803,11 @@
         async function lockOrientation() {
           const rotateOverlay = document.getElementById('rotate-device-overlay');
           const gameContainer = document.getElementById('gameContainer');
+          const rotateTitle = rotateOverlay.querySelector('h2');
+          const rotateParagraph = rotateOverlay.querySelector('p');
+    
+          // Detectar si es iOS
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     
           // Función para comprobar y mostrar/ocultar el overlay
           const checkOrientation = () => {
@@ -1257,6 +1815,14 @@
             if (isPortrait) {
               rotateOverlay.classList.add('visible');
               if(gameContainer) gameContainer.style.display = 'none';
+              // Mensaje específico para iOS
+              if (isIOS) {
+                rotateTitle.textContent = 'Gira tu iPhone/iPad';
+                rotateParagraph.textContent = 'Por favor, gira manualmente tu dispositivo a modo horizontal para jugar.';
+              } else {
+                rotateTitle.textContent = 'Gira tu dispositivo';
+                rotateParagraph.textContent = 'Para una mejor experiencia, por favor, usa el modo horizontal.';
+              }
             } else {
               rotateOverlay.classList.remove('visible');
               if(gameContainer) gameContainer.style.display = 'block';
@@ -1277,25 +1843,43 @@
         }
         window.addEventListener('load', lockOrientation);
     </script>
-    <!-- NUEVO: Script para la música de fondo del juego -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const backgroundAudio = new Audio('audio/lofi.mp3');
-            backgroundAudio.loop = true;
-            backgroundAudio.volume = 0.04; // Volumen al 4%
 
-            // Función para iniciar la música en la primera interacción del usuario.
-            const playMusicOnFirstInteraction = () => {
-                backgroundAudio.play().catch(error => {
-                    console.warn("La reproducción de música de fondo fue bloqueada por el navegador hasta la interacción del usuario.", error);
-                });
-                // Eliminar los listeners una vez que la música ha comenzado.
-                document.body.removeEventListener('click', playMusicOnFirstInteraction);
-                document.body.removeEventListener('touchstart', playMusicOnFirstInteraction);
-            };
+    <!-- --- NUEVO: Botón para el chat en el juego --- -->
+    <div id="game-chat-button-container">
+        <button id="toggle-game-chat-btn" class="game-chat-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+            </svg>
+        </button>
+    </div>
 
-            document.body.addEventListener('click', playMusicOnFirstInteraction, { once: true });
-            document.body.addEventListener('touchstart', playMusicOnFirstInteraction, { once: true });
-        });
-    </script>
+    <!-- --- NUEVO: Modal de Chat en el Juego --- -->
+    <div id="game-chat-modal" class="chat-modal">
+        <div class="chat-header">
+            <div class="player-info">
+                <span id="game-chat-player1-name" class="player-name"></span>
+                <img id="game-chat-player1-avatar" class="chat-avatar" src="" alt="Avatar Jugador 1" style="display: none;">
+                <span class="vs-text">vs</span>
+                <img id="game-chat-player2-avatar" class="chat-avatar" src="" alt="Avatar Jugador 2" style="display: none;">
+                <span id="game-chat-player2-name" class="player-name opponent"></span>
+            </div>
+            <button id="minimize-game-chat-btn" class="minimize-chat-btn" title="Minimizar Chat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+            </button>
+        </div>
+        <div id="game-chat-messages" class="chat-messages">
+            <!-- Los mensajes del chat se cargarán aquí -->
+        </div>
+        <div class="chat-controls-container">
+            <div class="chat-input-area">
+                <input type="text" id="game-chat-message-input" placeholder="Escribe un mensaje...">
+                <button id="send-game-chat-message-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body></html>

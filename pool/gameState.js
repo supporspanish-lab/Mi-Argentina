@@ -23,6 +23,7 @@ let onlineGameData = null;
 
 // --- SOLUCIÓN: Estado del temporizador de turno ---
 export const TURN_TIME_LIMIT = 30000; // 30 segundos en milisegundos
+export const INACTIVITY_TIME_LIMIT = TURN_TIME_LIMIT + 60000; // 30 segundos de turno + 1 minuto adicional
 export let turnStartTime = 0;
 let isTurnTimerActiveState = false; // --- SOLUCIÓN: Renombrar la variable de estado interna
 let tickSoundPlayed = false; // Para asegurar que el sonido de alerta suene solo una vez

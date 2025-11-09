@@ -6,7 +6,8 @@ import { playSound } from './audioManager.js';
 import { cueBall, getSceneBalls } from './ballManager.js';
 import { animateCueShot } from './aiming.js';
 import { getCurrentShotAngle } from './inputManager.js';
-import { auth } from './login/auth.js';
+import { auth, updateDoc, doc } from './login/auth.js'; // Importar auth, updateDoc, doc
+import { getGameRef } from './pool.js'; // Importar getGameRef desde pool.js
 
 let isShooting = false;
 
@@ -39,51 +40,45 @@ export function shoot(powerPercent) {
     }
 
     // Amortiguar la potencia en tiros extremos para evitar inestabilidad.
-    const maxPower = 100 * 112.5; // --- AJUSTE: Aumentado de 37.5 a 112.5 para triplicar la fuerza máxima.
+    const maxPower = 5; // Potencia máxima ajustada a 1 para una fuerza mínima.
     const SAFE_POWER_THRESHOLD = maxPower * 0.9;
     let power = shotPower * maxPower;
 
-    if (power > SAFE_POWER_THRESHOLD && shotPower < 1.0) {
-        const excessPower = power - SAFE_POWER_THRESHOLD;
-        power = SAFE_POWER_THRESHOLD + Math.log1p(excessPower) * (maxPower / 50);
-    }
+   
 
     const currentShotAngle = getCurrentShotAngle();
     const impulseDirection = new THREE.Vector2(Math.cos(currentShotAngle), Math.sin(currentShotAngle));
-    const velocityFactor = 2.5;
+    const velocityFactor = 2.5; // Use this factor
     isShooting = true;
 
-    // --- CORRECCIÓN: Enviar los datos del tiro al servidor en lugar de aplicarlos localmente ---
+    // Apply the shot locally for testing
+    cueBall.vx = impulseDirection.x * power * velocityFactor;
+    cueBall.vy = impulseDirection.y * power * velocityFactor;
+
+    // Store initial velocities for spin calculations in fisicas.js
+    cueBall.initialVx = cueBall.vx;
+    cueBall.initialVy = cueBall.vy;
+
+    // Apply spin if any
     import('./spinControls.js').then(({ getSpinOffset }) => {
         const spin = getSpinOffset();
+        cueBall.spin = { x: spin.x, y: spin.y };
 
-        const shotData = {
-            angle: currentShotAngle,
-            power: shotPower,
-            spin: spin,
-            cueBallStartPos: { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y }
-        };
-
-        // --- NUEVO: Verificar si es el turno del jugador actual antes de enviar el tiro al servidor ---
-        const onlineGameData = getOnlineGameData();
-        const myUid = auth.currentUser?.uid;
-        if (onlineGameData.currentPlayerUid !== myUid) {
-            console.warn("Intento de disparo de un jugador que no tiene el turno. Tiro no enviado al servidor.");
-            isShooting = false; // Reseteamos el estado de disparo
-            return; // No enviar el tiro al servidor
+        // --- NUEVO: Enviar los datos del tiro a Firebase ---
+        const gameRef = getGameRef(getOnlineGameData().gameId); // Obtener la referencia del juego
+        if (gameRef && auth.currentUser) {
+            const shotData = {
+                angle: currentShotAngle,
+                power: powerPercent,
+                spin: spin,
+                cueBallStartPos: { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y },
+                playerUid: auth.currentUser.uid,
+                timestamp: Date.now()
+            };
+            updateDoc(gameRef, { lastShot: shotData }).catch(err => console.error("Error al enviar lastShot a Firebase:", err));
         }
-
-        // --- MODIFICADO: No aplicar el tiro localmente, esperar al servidor ---
-        // window.applyLocalShot(shotData.angle, shotData.power, shotData.spin, shotData.cueBallStartPos);
-
-        // --- Enviar los datos del tiro al servidor para el oponente ---
-        window.dispatchEvent(new CustomEvent('sendShot', { 
-            detail: {
-                ...shotData,
-                gameState: gameState
-            } 
-        }));
-
-        isShooting = false; // Reseteamos el estado de disparo
     });
+
+    playSound('cueHit', 1.0); // Play sound for local shot
+    isShooting = false; // Reset shooting state
 }

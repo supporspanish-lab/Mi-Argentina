@@ -491,6 +491,12 @@ function setupUIEditListeners() {
                     const onEditStart = (e) => {
                         if (!isUIEditMode) return;
             
+                        // --- NUEVO: Si el objetivo es el selector de efecto grande, no hacer nada aquí.
+                        // Permitir que spinControls.js maneje el arrastre.
+                        if (e.target.closest('#largeSpinSelector')) {
+                            return;
+                        }
+            
                         const target = e.target;
                         const editableEl = target.closest('.editable-ui.editing');
                         const clientX = e.touches ? e.touches[0].clientX : e.clientX;

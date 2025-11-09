@@ -1,6 +1,8 @@
 // --- Módulo de Controles de Efecto (Spin) ---
 
 import { isUIEditModeActive } from './ui.js'; // --- NUEVO: Para no interferir con la edición de la UI
+import { sendSpinUpdate } from './pool.js'; // NUEVO: Importar sendSpinUpdate
+
 // --- Estado Interno ---
 let spinOffsetState = { x: 0, y: 0 };
 let isDraggingSpinState = false;
@@ -154,6 +156,9 @@ export function dragSpin({ clientX, clientY }) {
 export function stopSpinDrag() {
     isDraggingSpinState = false;
     wasDraggingSpinFlag = true; // Marcar que la acción de arrastre ha terminado
+
+    // --- NUEVO: Enviar la posición final del spin a Firebase sin throttling ---
+    sendSpinUpdate(spinOffsetState);
 }
 
 // --- NUEVO: Función para resetear el efecto al centro ---

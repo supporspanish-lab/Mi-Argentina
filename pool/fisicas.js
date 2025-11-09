@@ -30,7 +30,7 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
     const ROLLING_FRICTION = 0.010; // --- CORRECCIÓN: Reducida para que las bolas rueden más
     const SPIN_FRICTION_THRESHOLD = 0.1; // Velocidad por debajo de la cual el deslizamiento se convierte en rodadura
     const CUSHION_RESTITUTION = 0.80; // Coeficiente de restitución para los bordes (80% de la energía se conserva).
-    const BALL_RESTITUTION = 0.95;    // Coeficiente de restitución para colisiones entre bolas. 0.98 es casi perfectamente elástico. Un valor más bajo como 0.95 disipará más energía.
+    const BALL_RESTITUTION = 0.99;    // Coeficiente de restitución para colisiones entre bolas. 0.98 es casi perfectamente elástico. Un valor más bajo como 0.95 disipará más energía.
     const IMPACT_THRESHOLD = 0.01;    // Umbral mínimo de fuerza de impacto para reproducir un sonido.
     const MAX_BALL_SPEED = 12.0;      // --- CORRECCIÓN: Aumentamos el límite para que los rebotes sean más realistas.
 
@@ -44,7 +44,7 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
     
     // Si el movimiento máximo en un frame es mayor que una fracción del radio de la bola,
     // dividimos el frame en sub-pasos para evitar que las bolas atraviesen las paredes.
-    const numSubSteps = Math.ceil(maxMovement / (BALL_RADIUS * 0.25)); // --- MEJORA: Mayor granularidad para los sub-pasos para evitar tunneling
+    const numSubSteps = Math.ceil(maxMovement / (BALL_RADIUS * 0.1)); // --- MEJORA: Mayor granularidad para los sub-pasos para evitar tunneling
     const subTimeStep = timeStep / numSubSteps;
 
     // --- LOG: Bucle de sub-pasos de la física.
@@ -258,7 +258,7 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                         if (speedAfterCollision > 0.01) {
                             // --- SOLUCIÓN: Aplicar efecto vertical (corrido/retroceso) ---
                             if (cueBall.spin.y !== 0) {
-                                const verticalSpinForce = cueBall.spin.y * impactForce * 0.8 * shotPowerFactor;
+                                const verticalSpinForce = cueBall.spin.y * impactForce * 0.1 * shotPowerFactor;
                                 const dirX = cueBall.vx / speedAfterCollision;
                                 const dirY = cueBall.vy / speedAfterCollision;
                                 cueBall.vx += dirX * verticalSpinForce;
@@ -268,7 +268,7 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
 
                             // --- SOLUCIÓN: Aplicar efecto lateral, también dependiente de la potencia ---
                             if (cueBall.spin.x !== 0) {
-                                const sideSpinForce = cueBall.spin.x * impactForce * 0.4 * shotPowerFactor;
+                                const sideSpinForce = cueBall.spin.x * impactForce * 0.1 * shotPowerFactor;
                                 // La fuerza se aplica de forma perpendicular a la dirección del movimiento
                                 const perpDirX = -cueBall.vy / speedAfterCollision;
                                 const perpDirY = cueBall.vx / speedAfterCollision;

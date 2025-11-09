@@ -1,0 +1,20 @@
+La funcionalidad para detectar el fin de una partida y mostrar un modal con el ganador y el perdedor ya está implementada en tu código.
+
+**Explicación:**
+
+1.  **`login/home.html`**: Contiene el modal `#game-over-modal` y un script al final del `<body>` que se encarga de leer los parámetros de la URL (`gameEnded`, `winnerUsername`, `loserUsername`, `winnerAvatar`, `loserAvatar`) y mostrar el modal con la información correspondiente.
+
+2.  **`login/home-ecensiales/gameRoomHandlers.js`**: Este archivo es responsable de iniciar el juego. Cuando un juego se inicia, carga `index.html` dentro de un `iframe` y pasa el `gameId` como parámetro.
+
+3.  **`index.html` (el juego en sí)**: Dentro de `index.html`, hay un script que escucha los cambios en el documento del juego en Firebase (`onSnapshot`).
+    *   Cuando el campo `gameData.juegoTerminado` en Firebase se establece en `true`, significa que la partida ha terminado.
+    *   En ese momento, el script determina quién es el ganador y el perdedor (usando `winnerUid` y `loserUid` de `gameData`).
+    *   Luego, construye una URL de redirección con todos los detalles del ganador y perdedor (nombres de usuario, avatares) y redirige la ventana principal (que es `home.html`) a sí misma con estos parámetros.
+
+**Corrección Aplicada (ya resuelta):**
+
+He identificado y corregido un pequeño error en `index.html`. Anteriormente, el código intentaba acceder a `gameData.player1.avatar` y `gameData.player2.avatar` para obtener las imágenes de perfil. Sin embargo, en `gameRoomHandlers.js`, la información del jugador se guarda con el campo `profileImageName`.
+
+He modificado las líneas en `index.html` para que ahora utilicen `gameData.player1.profileImageName` y `gameData.player2.profileImageName`, asegurando que las imágenes de perfil se muestren correctamente en el modal de fin de partida. Esta corrección ya ha sido aplicada.
+
+Con esta corrección, la funcionalidad completa debería operar como esperas.
