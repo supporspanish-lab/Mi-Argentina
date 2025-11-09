@@ -74,7 +74,17 @@
   </head>
   <body>
     <!-- NUEVO: Elemento para el video de fondo -->
-    <canvas id="background-video-canvas"></canvas>
+    <video id="background-video" autoplay muted loop playsinline style="
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        z-index: -1;
+        object-fit: cover;
+    "></video>
 
     <div id="root">
         <div class="app-container">
@@ -330,9 +340,7 @@
     <!-- NUEVO: Script para el video de fondo aleatorio en canvas -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const canvas = document.getElementById('background-video-canvas');
-      const ctx = canvas.getContext('2d');
-      const video = document.createElement('video');
+      const videoElement = document.getElementById('background-video');
 
       const videos = [
         './video/video2.mp4',
@@ -340,11 +348,12 @@
       ];
 
       const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+      videoElement.src = randomVideo;
 
       const isIPhone = /iPhone/i.test(navigator.userAgent);
 
       if (isIPhone) {
-          canvas.style.display = 'none'; // Hide the canvas
+          videoElement.style.display = 'none'; // Hide video
           const backgroundImage = document.createElement('img');
           backgroundImage.src = './video/iphone.png'; // Imagen para iPhone
           backgroundImage.style.position = 'fixed';
@@ -360,84 +369,43 @@
           return; // Exit the script as we're using an image
       }
 
-      video.src = randomVideo;
-      video.muted = true; // Start muted to allow autoplay
-      video.playsInline = true; // Important for iOS autoplay
+      const isMobile = /Android|iPad|iPod/i.test(navigator.userAgent); // isIPhone already handled
 
-      if (!isIPhone) {
-          video.loop = false; // Play once on Android
-          video.onended = () => {
-              video.pause(); // Pause when ended
+      if (isMobile) {
+          // For mobile, try to play, but if it fails, use a fallback image
+          videoElement.loop = false; // Play once on Android
+          videoElement.onended = () => {
+              videoElement.pause(); // Pause when ended
           };
+          const playPromise = videoElement.play();
+          if (playPromise !== undefined) {
+              playPromise.catch(error => {
+                  console.warn('Autoplay prevented on mobile, falling back to image:', error);
+                  videoElement.style.display = 'none'; // Hide video
+                  const backgroundImage = document.createElement('img');
+                  backgroundImage.src = './video/iphone.png'; // Use a generic mobile fallback image
+                  backgroundImage.style.position = 'fixed';
+                  backgroundImage.style.right = '0';
+                  backgroundImage.style.bottom = '0';
+                  backgroundImage.style.minWidth = '100%';
+                  backgroundImage.style.minHeight = '100%';
+                  backgroundImage.style.width = 'auto';
+                  backgroundImage.style.height = 'auto';
+                  backgroundImage.style.zIndex = '-1';
+                  backgroundImage.style.objectFit = 'cover';
+                  document.body.appendChild(backgroundImage);
+              });
+          }
       } else {
-          video.loop = true; // Keep looping for other devices if not iPhone
-      }
-
-      // Ensure video is loaded before attempting to play
-      video.load();
-
-      // Attempt to play the video with a slight delay to ensure DOM is ready
-      setTimeout(() => {
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            // Autoplay was prevented. Show a UI element to let the user manually start playback.
-            console.warn('Autoplay prevented:', error);
-            // Optionally, you could show a play button here.
+          // For desktop, play once and pause at the end
+          videoElement.loop = false;
+          videoElement.onended = () => {
+              videoElement.pause(); // Pause when ended
+          };
+          videoElement.play().catch(error => {
+              console.warn('Autoplay prevented on desktop:', error);
           });
-        }
-      }, 100);
-
-      function drawVideo() {
-        if (video.paused || video.ended) {
-          return;
-        }
-
-        // Ensure canvas matches video dimensions for proper scaling
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        // Calculate aspect ratios
-        const videoRatio = video.videoWidth / video.videoHeight;
-        const canvasRatio = canvas.width / canvas.height;
-
-        let drawWidth, drawHeight, offsetX, offsetY;
-
-        if (videoRatio > canvasRatio) {
-          // Video is wider than canvas, fit height and center horizontally
-          drawHeight = canvas.height;
-          drawWidth = drawHeight * videoRatio;
-          offsetX = (canvas.width - drawWidth) / 2;
-          offsetY = 0;
-        } else {
-          // Video is taller than canvas, fit width and center vertically
-          drawWidth = canvas.width;
-          drawHeight = drawWidth / videoRatio;
-          offsetX = 0;
-          offsetY = (canvas.height - drawHeight) / 2;
-        }
-
-        ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
-        requestAnimationFrame(drawVideo);
       }
-
-      video.addEventListener('loadedmetadata', () => {
-        // Set initial canvas size
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        drawVideo(); // Start drawing once metadata is loaded
-      });
-
-      video.addEventListener('play', () => {
-        drawVideo();
-      });
-
-      // Handle window resize to adjust canvas size
-      window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        drawVideo(); // Redraw on resize
-      });
     });
   </script>
   <script>

@@ -313,8 +313,61 @@
       }
 
       /* Styles for the practice game card */
+      .game-card.practice-game {
+          background-image: url('../video/practica.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          position: relative; /* Necesario para el pseudo-elemento */
+          overflow: hidden; /* Asegura que el pseudo-elemento no se desborde */
+      }
+
+      .game-card.practice-game::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.1); /* Capa oscura para mejorar la legibilidad del texto */
+          z-index: 1;
+      }
+
+      .game-card.practice-game .create-icon,
+      .game-card.practice-game .create-text {
+          position: relative; /* Asegura que el texto esté por encima de la capa oscura */
+          z-index: 2;
+          color: var(--primary-color); /* Asegura que el texto sea visible */
+      }
+
+      .game-card:has(.create-text):not(.practice-game) .create-icon,
       .game-card.practice-game .create-icon {
-          color: #f39c12; /* A distinct color for practice icon */
+          display: none; /* Ocultar el icono */
+      }
+
+      /* --- SOLUCIÓN: Asegurar que la tarjeta de práctica no tenga opacidad ni filtro de escala de grises --- */
+      .game-card.practice-game {
+          opacity: 1 !important;
+          filter: none !important;
+      }
+      
+      /* --- NUEVO: Estilos para la tarjeta de "Crear Partida" con imagen de fondo --- */
+      .game-card:has(.create-text):not(.practice-game) {
+          background-image: url('../video/online.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          position: relative; /* Necesario para el pseudo-elemento */
+          overflow: hidden; /* Asegura que el pseudo-elemento no se desborde */
+      }
+
+          background-color: rgba(0, 0, 0, 0.3); /* Capa oscura para mejorar la legibilidad del texto */
+
+      .game-card:has(.create-text):not(.practice-game) .create-icon,
+      .game-card:has(.create-text):not(.practice-game) .create-text {
+          position: relative; /* Asegura que el texto esté por encima de la capa oscura */
+          z-index: 2;
+          color: var(--primary-color); /* Asegura que el texto sea visible */
       }
       
       /* --- NUEVO: Estilos para mostrar la apuesta en la tarjeta --- */
@@ -1253,7 +1306,7 @@
 
       /* --- MODIFICADO: Hacer el modal de amigos más ancho --- */
       #friends-modal .modal-box {
-          max-width: 500px; /* Ancho mayor para acomodar las dos listas */
+          max-width: 700px; /* Ancho mayor para acomodar las dos listas */
       }
 
       @media (max-width: 768px) {
@@ -1270,7 +1323,7 @@
         }
         .friend-list-panel {
           min-height: 30px; /* Altura mínima para que no se vea vacío */
-          max-height: 7vh; /* Limitar altura de cada panel para permitir scroll */
+          max-height: 15vh; /* Increased height for smaller screens */
           width: 100%; /* Ocupar todo el ancho disponible */
         }
         /* --- NUEVO: Ocultar el panel de invitaciones si no tiene contenido --- */
@@ -1322,7 +1375,7 @@
       .friend-list-panel {
           flex: 1; /* Cada lista ocupa la mitad del espacio */
           min-height: 50px;
-          max-height: 25vh;
+          max-height: 40vh; /* Increased height */
           overflow-y: auto;
           text-align: left;
           padding: 10px;
