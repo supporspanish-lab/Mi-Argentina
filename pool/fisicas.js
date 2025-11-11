@@ -30,7 +30,7 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
     const ROLLING_FRICTION = 0.010; // --- CORRECCIÓN: Reducida para que las bolas rueden más
     const SPIN_FRICTION_THRESHOLD = 0.1; // Velocidad por debajo de la cual el deslizamiento se convierte en rodadura
     const CUSHION_RESTITUTION = 0.80; // Coeficiente de restitución para los bordes (80% de la energía se conserva).
-    const BALL_RESTITUTION = 0.99;    // Coeficiente de restitución para colisiones entre bolas. 0.98 es casi perfectamente elástico. Un valor más bajo como 0.95 disipará más energía.
+    const BALL_RESTITUTION = 0.95;    // Coeficiente de restitución para colisiones entre bolas. 0.98 es casi perfectamente elástico. Un valor más bajo como 0.95 disipará más energía.
     const IMPACT_THRESHOLD = 0.01;    // Umbral mínimo de fuerza de impacto para reproducir un sonido.
     const MAX_BALL_SPEED = 12.0;      // --- CORRECCIÓN: Aumentamos el límite para que los rebotes sean más realistas.
 
@@ -150,8 +150,13 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                             let volume = Math.pow(normalizedImpact, 2);
                             // --- CORRECCIÓN: Asegurarse de que el volumen sea un número finito ---
                             if (!isFinite(volume)) volume = 0;
-                            
+
                             playSound('cushionHit', volume * 0.8);
+
+                            // --- NUEVO: Vibración fuerte si es la bola blanca ---
+                            if (ball.number === null && 'vibrate' in navigator) {
+                                navigator.vibrate(300);
+                            }
                         }
 
                         ball.vx = new_v_normal * collisionNormal.x + new_v_tangent * collisionNormal.y;

@@ -4,7 +4,7 @@ import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
-import { db, doc, getDoc, updateDoc } from './login/auth.js';
+import { db, doc, getDoc, updateDoc, addDoc, collection } from './login/auth.js';
 
 /**
  * Función de prueba para revisar el estado antes de mostrar la UI.
@@ -748,6 +748,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                         if (faltaCometida) {
                             // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
                             setGameOver(true);
+                            localStorage.setItem('gameEnded', 'true'); // Signal game end
+                            localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
                             const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
                             const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid; // Define winnerUid here
                             const betAmount = onlineGameData.betAmount || 0;
@@ -767,6 +769,45 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                     console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
                                 }
                             }
+
+                            // Deduct from loser
+                            if (loserUid) {
+                                const loserDocRef = doc(db, "saldo", loserUid);
+                                const loserSnap = await getDoc(loserDocRef);
+                                if (loserSnap.exists()) {
+                                    const currentBalance = loserSnap.data().balance || 0;
+                                    await updateDoc(loserDocRef, {
+                                        balance: currentBalance - betAmount
+                                    });
+                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
+                                }
+                            }
+
+                            // Deduct from loser
+                            if (loserUid) {
+                                const loserDocRef = doc(db, "saldo", loserUid);
+                                const loserSnap = await getDoc(loserDocRef);
+                                if (loserSnap.exists()) {
+                                    const currentBalance = loserSnap.data().balance || 0;
+                                    await updateDoc(loserDocRef, {
+                                        balance: currentBalance - betAmount
+                                    });
+                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
+                                }
+                            }
+            
+                            // Deduct from loser
+                            if (loserUid) {
+                                const loserDocRef = doc(db, "saldo", loserUid);
+                                const loserSnap = await getDoc(loserDocRef);
+                                if (loserSnap.exists()) {
+                                    const currentBalance = loserSnap.data().balance || 0;
+                                    await updateDoc(loserDocRef, {
+                                        balance: currentBalance - betAmount
+                                    });
+                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
+                                }
+                            }
         
                             // Update game status in Firestore
                             if (gameRef) {
@@ -776,6 +817,15 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                     loser: loserUid,
                                     endedAt: Date.now(),
                                     juegoTerminado: true
+                                });
+                                // Save game history
+                                await addDoc(collection(db, "gameHistory"), {
+                                    winnerUid: winnerUid,
+                                    loserUid: loserUid,
+                                    amountWon: totalWinnings,
+                                    amountLost: betAmount,
+                                    date: Date.now(),
+                                    gameId: gameRef.id
                                 });
                             }
                         } else {
@@ -792,6 +842,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                 if (jugadorTieneBolasRestantes || !bolasAsignadasAlInicioTurno) {
                                     // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
                                     setGameOver(true);
+                                    localStorage.setItem('gameEnded', 'true'); // Signal game end
+                                    localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
                             const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
                             const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
                             const betAmount = onlineGameData.betAmount || 0;
@@ -821,10 +873,21 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                             endedAt: Date.now(),
                                             juegoTerminado: true
                                         });
-                                    }            
+                                        // Save game history
+                                        await addDoc(collection(db, "gameHistory"), {
+                                            winnerUid: winnerUid,
+                                            loserUid: loserUid,
+                                            amountWon: totalWinnings,
+                                            amountLost: betAmount,
+                                            date: Date.now(),
+                                            gameId: gameRef.id
+                                        });
+                                    }
                                 } else {
                 // ¡El jugador ha ganado!
                 setGameOver(true);
+                localStorage.setItem('gameEnded', 'true'); // Signal game end
+                localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
                 const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
                 const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
                 const betAmount = onlineGameData.betAmount || 0;
@@ -850,6 +913,15 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                         loser: loserUid,
                         endedAt: Date.now(),
                         juegoTerminado: true
+                    });
+                    // Save game history
+                    await addDoc(collection(db, "gameHistory"), {
+                        winnerUid: winnerUid,
+                        loserUid: loserUid,
+                        amountWon: totalWinnings,
+                        amountLost: betAmount,
+                        date: Date.now(),
+                        gameId: gameRef.id
                     });
                 }
                 showFoulMessage(`¡Felicidades, ${currentUsername} has ganado la partida!`, winnerUid);

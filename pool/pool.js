@@ -502,11 +502,8 @@ function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
         });
     });
 
-    const shakeIntensity = Math.pow(powerPercent, 2) * 2.5;
-    window.triggerScreenShake(shakeIntensity, 0.15);
-
     if ('vibrate' in navigator) {
-        navigator.vibrate(Math.max(50, Math.floor(powerPercent * 150)));
+        navigator.vibrate(Math.max(100, Math.floor(powerPercent * 200)));
     }
 
     startShot(); // Marcar que un tiro está en progreso

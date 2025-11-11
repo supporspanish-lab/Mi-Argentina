@@ -834,8 +834,9 @@
             overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             position: fixed; /* Posicionamiento fijo */
-            bottom: 20px; /* Ajustar posición */
-            right: 20px; /* Ajustar posición */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 100; /* Asegurarse de que esté por encima de otros elementos */
         }
         #game-chat-modal .chat-header {
@@ -1203,7 +1204,7 @@
     <!-- --- NUEVO: Script para la sincronización en tiempo real del apuntado --- -->
     <script type="module">
         // 1. Importar las funciones necesarias de Firestore y la autenticación.
-        import { db, auth, onSnapshot, doc, updateDoc, deleteDoc, getDoc } from './login/auth.js';
+        import { db, auth, onSnapshot, doc, updateDoc, deleteDoc, getDoc, addDoc, collection } from './login/auth.js';
         import { arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         // --- NUEVO: Elementos del chat en el juego ---
@@ -1410,8 +1411,8 @@
                                     const winnerUsername = gameData.player1.uid === winnerUid ? gameData.player1.username : gameData.player2.username;
                                     const loserUsername = gameData.player1.uid === loserUid ? gameData.player1.username : gameData.player2.username;
 
-                                    const winnerAvatar = encodeURIComponent(`../imajenes/perfil/${gameData.player1.uid === winnerUid ? gameData.player1.profileImageName : gameData.player2.profileImageName}`);
-                                    const loserAvatar = encodeURIComponent(`../imajenes/perfil/${gameData.player1.uid === loserUid ? gameData.player1.profileImageName : gameData.player2.profileImageName}`);
+                                    const winnerAvatar = `../imajenes/perfil/${gameData.player1.uid === winnerUid ? gameData.player1.profileImageName : gameData.player2.profileImageName}`;
+                                    const loserAvatar = `../imajenes/perfil/${gameData.player1.uid === loserUid ? gameData.player1.profileImageName : gameData.player2.profileImageName}`;
 
                                     localStorage.setItem('gameEnded', 'true');
                                     localStorage.setItem('winnerUid', winnerUid);
@@ -1449,6 +1450,7 @@
                                         const gameData = gameSnap.data();
                                         const currentUserUid = auth.currentUser.uid;
                                         let winnerUid = null;
+                                        let loserUid = currentUserUid;
 
                                         if (gameData.player1 && gameData.player1.uid === currentUserUid) {
                                             winnerUid = gameData.player2 ? gameData.player2.uid : null;
@@ -1457,20 +1459,60 @@
                                         }
 
                                         if (winnerUid) {
-                                            await updateDoc(gameRef, {
-                                                juegoTerminado: true,
-                                                winner: winnerUid,
-                                                loser: currentUserUid,
-                                            });
-                                            alert('Has abandonado la sala. El otro jugador ha ganado. Serás redirigido a la página principal.');
+                                            // --- INICIO DE LA MODIFICACIÓN ---
+                                            const betAmount = gameData.betAmount || 0;
+                                            const totalWinnings = betAmount * 2;
+
+                                            // --- CORRECCIÓN: Obtener la información del perdedor (el usuario actual) correctamente ---
+                                            const winnerPlayerInfo = gameData.player1.uid === winnerUid ? gameData.player1 : gameData.player2;
+                                            const loserPlayerInfo = gameData.player1.uid === loserUid ? gameData.player1 : (gameData.player2.uid === loserUid ? gameData.player2 : null);
+
+                                            const winnerUsername = winnerPlayerInfo?.username || 'Ganador';
+                                            const loserUsername = loserPlayerInfo.username;
+                                            const winnerAvatar = `../imajenes/perfil/${winnerPlayerInfo.profileImageName}`;
+                                            const loserAvatar = `../imajenes/perfil/${loserPlayerInfo.profileImageName}`;
+                                            
+                                            // --- CORRECCIÓN: Guardar en localStorage ANTES de actualizar la base de datos ---
+                                            // Esto asegura que los datos se guarden antes de que la página se redirija.
+                                            localStorage.setItem('gameEnded', 'true');
+                                            localStorage.setItem('winnerUsername', winnerUsername);
+                                            localStorage.setItem('loserUsername', loserUsername);
+                                            localStorage.setItem('winnerAvatar', winnerAvatar);
+                                            localStorage.setItem('loserAvatar', loserAvatar);
+                                            localStorage.setItem('winnerAmount', totalWinnings.toString());
+                                            localStorage.setItem('loserAmount', betAmount.toString());
+
+                                            // --- NUEVO: Verificar que los datos se guardaron antes de continuar ---
+                                            if (localStorage.getItem('gameEnded') === 'true') {
+                                                console.log('Verificación exitosa: Los datos se guardaron en localStorage.');
+                                                await updateDoc(gameRef, {
+                                                    juegoTerminado: true,
+                                                    winner: winnerUid,
+                                                    loser: currentUserUid,
+                                                });
+                                                // Save game history
+                                                await addDoc(collection(db, "gameHistory"), {
+                                                    winnerUid: winnerUid,
+                                                    loserUid: currentUserUid,
+                                                    amountWon: totalWinnings,
+                                                    amountLost: betAmount,
+                                                    date: Date.now(),
+                                                    gameId: gameId
+                                                });
+                                                // La redirección ocurrirá automáticamente cuando onSnapshot detecte juegoTerminado: true
+                                            } else {
+                                                console.error('Error crítico: No se pudieron guardar los datos en localStorage.');
+                                                alert('Hubo un error al guardar el resultado de la partida. Por favor, inténtalo de nuevo.');
+                                            }
                                         } else {
                                             await deleteDoc(gameRef);
                                             alert('Has abandonado la sala. No se pudo determinar un ganador, la sala ha sido eliminada. Serás redirigido a la página principal.');
+                                            window.parent.location.href = 'login/home.html';
                                         }
                                     } else {
                                         alert('La sala ya no existe. Serás redirigido a la página principal.');
+                                        window.parent.location.href = 'login/home.html';
                                     }
-                                    window.location.href = 'login/home.html';
                                 } catch (error) {
                                     console.error("Error al abandonar la sala:", error);
                                     alert('Hubo un error al intentar abandonar la sala. Por favor, inténtalo de nuevo.');
