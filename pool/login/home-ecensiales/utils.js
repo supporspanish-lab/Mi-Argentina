@@ -189,43 +189,74 @@ export const loadGameIntoIframe = (gameId) => {
 export const cleanupWaitingGame = async () => {
     const { currentUser, userWaitingGameId } = getState();
 
-    if (userWaitingGameId && currentUser) {
-        try {
-            const gameDocRef = doc(db, "games", userWaitingGameId);
-            const gameSnap = await getDoc(gameDocRef);
-            if (gameSnap.exists()) {
-                const gameData = gameSnap.data();
-                if (gameData.player1.uid === currentUser.uid) { // Current user is Player 1 (owner)
-                    // Only delete if the game is still in a waiting state, not if it's already starting
-                    if (gameData.status === "waiting" || gameData.status === "players_joined") {
-                        await deleteDoc(gameDocRef);
-                        console.log(`Game ${userWaitingGameId} deleted by owner.`);
-                    } else if (gameData.status === "starting") {
-                        console.log(`Game ${userWaitingGameId} is already starting, not deleting.`);
-                        // Do not delete, just proceed with UI cleanup
-                    }
-                } else if (gameData.player2?.uid === currentUser.uid) { // Current user is Player 2 (guest)
-                    if (gameData.status === "players_joined") {
-                        await updateDoc(gameDocRef, {
-                            player2: null,
-                            status: "waiting"
-                        });
-                        console.log(`Player 2 left game ${userWaitingGameId}. Game status reverted to waiting.`);
-                    }
+    if (!userWaitingGameId || !currentUser) {
+        return;
+    }
+
+    const resetUI = () => {
+        setUserWaitingGameId(null);
+        setGameStarted(false);
+        waitingScreen.style.display = 'none';
+        gameCarousel.style.display = 'flex';
+        player2ChatName.textContent = 'Oponente';
+        player2ChatAvatar.style.display = 'none';
+        startGameBtn.style.display = 'none';
+        cancelWaitBtn.textContent = 'Cancelar Sala';
+        kickOpponentBtn.style.display = 'none';
+    };
+
+    try {
+        const gameDocRef = doc(db, "games", userWaitingGameId);
+        const gameSnap = await getDoc(gameDocRef);
+
+        if (gameSnap.exists()) {
+            const gameData = gameSnap.data();
+            const isPlayer1 = gameData.player1.uid === currentUser.uid;
+            const isPlayer2 = gameData.player2?.uid === currentUser.uid;
+
+            // Case 1: Two players are in the room. The one who leaves makes the other the winner.
+            if (gameData.status === "players_joined" && (isPlayer1 || isPlayer2)) {
+                const winner = isPlayer1 ? gameData.player2 : gameData.player1;
+                const loser = isPlayer1 ? gameData.player1 : gameData.player2;
+                
+                if (winner && loser) {
+                    await updateDoc(gameDocRef, {
+                        juegoTerminado: true,
+                        winner: winner.uid,
+                        loser: loser.uid,
+                        status: 'finished'
+                    });
+
+                    const betAmount = gameData.betAmount || 0;
+                    const totalWinnings = betAmount * 2;
+
+                    localStorage.setItem('gameEnded', 'true');
+                    localStorage.setItem('winnerUid', winner.uid);
+                    localStorage.setItem('loserUid', loser.uid);
+                    localStorage.setItem('winnerUsername', winner.username);
+                    localStorage.setItem('loserUsername', loser.username);
+                    localStorage.setItem('winnerAvatar', `../imajenes/perfil/${winner.profileImageName}`);
+                    localStorage.setItem('loserAvatar', `../imajenes/perfil/${loser.profileImageName}`);
+                    localStorage.setItem('winnerAmount', totalWinnings.toString());
+                    localStorage.setItem('loserAmount', betAmount.toString());
+
+                    window.location.reload();
+                    return; // Exit after starting reload
                 }
             }
-        } catch (error) {
-            console.error("Error cleaning up waiting game:", error);
-        } finally {
-            setUserWaitingGameId(null);
-            setGameStarted(false);
-            waitingScreen.style.display = 'none';
-            gameCarousel.style.display = 'flex';
-            player2ChatName.textContent = 'Oponente';
-            player2ChatAvatar.style.display = 'none';
-            startGameBtn.style.display = 'none';
-            cancelWaitBtn.textContent = 'Cancelar Sala';
-            kickOpponentBtn.style.display = 'none';
+
+            // Case 2: Player 1 is alone in a "waiting" room and cancels.
+            if (isPlayer1 && gameData.status === "waiting") {
+                await deleteDoc(gameDocRef);
+            }
         }
+        
+        // If we reach here, it means we didn't reload. So, reset the UI.
+        resetUI();
+
+    } catch (error) {
+        console.error("Error cleaning up waiting game:", error);
+        // Also reset UI on error
+        resetUI();
     }
 };

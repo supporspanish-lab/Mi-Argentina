@@ -68,7 +68,99 @@
         height: 100%;
         margin: 0;
         padding: 0;
-        overflow: hidden; /* La clave para evitar el scroll */
+        overflow-y: auto; /* --- CORREGIDO: Permite el scroll vertical cuando es necesario --- */
+      }
+      /* --- NUEVO: Estilos para la sección de salas activas --- */
+      .active-games-section {
+        width: 100%;
+        max-width: 1200px; /* Coincide con el ancho del header */
+        margin: 0 auto 20px auto; /* Margen inferior para separar del carrusel */
+        padding: 0 20px;
+        box-sizing: border-box;
+      }
+      .section-title {
+        font-family: 'Righteous', cursive;
+        color: var(--primary-color);
+        font-size: 24px;
+        margin-bottom: 15px;
+        text-align: left;
+        padding-left: 10px;
+        border-left: 4px solid var(--primary-color);
+      }
+      .active-games-list {
+        display: flex;
+        flex-direction: column; /* --- MODIFICADO: Apila las salas verticalmente --- */
+        gap: 10px; /* --- MODIFICADO: Espacio entre las salas en la lista --- */
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 15px;
+        border-radius: 12px;
+        max-height: 250px; /* --- NUEVO: Altura máxima para la lista --- */
+        overflow-y: auto; /* --- NUEVO: Habilita el scroll vertical si es necesario --- */
+      }
+      /* --- NUEVO: Estilos para la barra de desplazamiento de la lista --- */
+      .active-games-list::-webkit-scrollbar {
+        width: 8px;
+      }
+      .active-games-list::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 10px;
+      }
+      .active-games-list::-webkit-scrollbar-thumb {
+        background: rgba(0, 242, 145, 0.5); /* Color primario con transparencia */
+        border-radius: 10px;
+      }
+      /* --- NUEVO: Estilos para las tarjetas de salas activas --- */
+      .game-card.active {
+        display: flex;
+        flex-direction: row; /* --- CORRECCIÓN: Forzar la dirección horizontal --- */
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        height: auto; /* --- NUEVO: Permitir que la altura se ajuste al contenido --- */
+        flex: 0 0 auto; /* --- NUEVO: Permitir que el flex-basis se ajuste al contenido --- */
+        padding: 0; /* --- ELIMINADO: El padding se manejará en un contenedor interno --- */
+      }
+      /* --- NUEVO: Contenedor interno para controlar el padding sin afectar la altura --- */
+      .active-card-content {
+        display: flex;
+        width: 100%;
+        align-items: center; /* --- CORRECCIÓN DEFINITIVA: Centra verticalmente y permite que la tarjeta se encoja --- */
+        padding: 2px 15px; /* --- CORRECCIÓN: Padding vertical mínimo para achicar la tarjeta --- */
+      }
+      .card-active-players {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .player-avatar-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .player-avatar-card {
+        width: 28px;  /* --- REDUCIDO AÚN MÁS: Tamaño del avatar --- */
+        height: 28px; /* --- REDUCIDO AÚN MÁS: Tamaño del avatar --- */
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--primary-color);
+      }
+      /* --- NUEVO: Estilos para el contenedor de detalles de la partida (apuesta y estado) --- */
+      .card-game-details {
+        display: flex;
+        align-items: center;
+        gap: 15px; /* Espacio entre la apuesta y el estado */
+        margin-left: auto; /* Empuja este contenedor a la derecha */
+      }
+      /* --- NUEVO: Reducir el tamaño de la fuente para achicar la tarjeta --- */
+      .player-name-active,
+      .vs-separator,
+      .card-status-active {
+        font-size: 14px; /* Tamaño de fuente más pequeño */
+        color: var(--text-secondary-color);
+      }
+      .player-name-active {
+        color: var(--text-color); /* Mantener el nombre del jugador en blanco */
+        font-weight: 700;
       }
     </style>
   </head>
@@ -136,6 +228,15 @@
                 </div>
             </header>
             <main class="main-content">
+                <!-- --- NUEVO: Sección para mostrar las salas de juego activas --- -->
+                <div id="active-games-section" class="active-games-section">
+                    <h2 class="section-title">Salas Activas</h2>
+                    <div id="active-games-list" class="active-games-list">
+                        <!-- Las tarjetas de las salas de juego se cargarán aquí dinámicamente -->
+                        <!-- El JavaScript deberá apuntar a este contenedor -->
+                    </div>
+                </div>
+
                 <div class="game-carousel-container">
                     <div id="waiting-screen" class="chat-modal">
                         <div class="chat-header">
@@ -336,7 +437,7 @@
         </div>
     </div>
     <!-- CORRECCIÓN: Cargar main.js, que es el punto de entrada principal de la aplicación -->
-    <script type="module" src="./home-ecensiales/main.js"></script>
+    <script type="module" src="./home-ecensiales/main.js" defer></script>
     <!-- NUEVO: Script para el video de fondo aleatorio en canvas -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -430,8 +531,23 @@
 
       // Function to load game results from localStorage
       const loadGameResults = () => {
+        // --- MODIFICADO: Forzar la visibilidad del modal con datos de ejemplo ---
+        console.log('Forzando la visibilidad del modal de ganador.');
+        
+        // Datos de ejemplo
+        winnerAvatarImg.src = '../imajenes/perfil/1.jpg';
+        winnerUsernameSpan.textContent = 'Ganador';
+        winnerAmountSpan.textContent = 'Ganó: $2,000';
+        loserAvatarImg.src = '../imajenes/perfil/2.jpg';
+        loserUsernameSpan.textContent = 'Perdedor';
+        loserAmountSpan.textContent = 'Perdió: -$1,000';
         const gameEnded = localStorage.getItem('gameEnded');
 
+        // Hacer el modal visible
+        alwaysVisibleModal.style.display = 'flex';
+        alwaysVisibleModal.style.opacity = '1';
+        alwaysVisibleModal.style.visibility = 'visible';
+        alwaysVisibleModal.style.zIndex = '10000';
         if (gameEnded === 'true') {
           console.log('Game results found in localStorage. Populating modal.');
           const winnerUsername = localStorage.getItem('winnerUsername');
@@ -448,15 +564,17 @@
           loserUsernameSpan.textContent = loserUsername || 'Desconocido';
           loserAmountSpan.textContent = loserAmount ? `Perdió: $${loserAmount}` : '';
 
-          alwaysVisibleModal.style.display = 'flex'; // Force display
-          alwaysVisibleModal.style.opacity = '1'; // Force opacity
-          alwaysVisibleModal.style.visibility = 'visible'; // Force visibility
-          alwaysVisibleModal.style.zIndex = '10000'; // Ensure it's on top
-          console.log('Game Over Modal should now be visible with localStorage data.');
-          console.log('Computed display style of modal:', window.getComputedStyle(alwaysVisibleModal).display);
+          alwaysVisibleModal.style.display = 'flex';
+          alwaysVisibleModal.style.opacity = '1';
+          alwaysVisibleModal.style.visibility = 'visible';
+
+          // Auto-hide the modal after 5 seconds and clear data
+          setTimeout(() => {
+            alwaysVisibleModal.style.display = 'none';
+            clearGameResults();
+          }, 5000);
         } else {
-          alwaysVisibleModal.classList.remove('visible'); // Ensure it's hidden if no game ended
-          alwaysVisibleModal.style.display = 'none'; // Explicitly hide it
+          alwaysVisibleModal.style.display = 'none';
           console.log('No game results found in localStorage. Modal is hidden.');
         }
       };

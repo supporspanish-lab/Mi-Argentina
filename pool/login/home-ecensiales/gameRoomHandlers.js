@@ -59,7 +59,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
 
     const gamesRef = collection(db, "games");
     const ballPositions = [];
-    const RACK_SPACING_DIAMETER = 24;
+    const RACK_SPACING_DIAMETER = 28;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
     const startX = TABLE_WIDTH * 0.80;
@@ -247,116 +247,206 @@ export const setupStartGameButton = () => {
     };
 };
 
-export const fetchWaitingGames = async (isPrivate = false) => {
+export const updateGameLists = async (isPrivate = false) => {
     const { currentUser, userWaitingGameId, currentUserProfile } = getState();
     if (!currentUser || !currentUserProfile) return;
 
     if (waitingScreen.style.display === 'flex' && userWaitingGameId) {
         return; 
     }
+
+    // --- CORRECCIÓN: Crear las tarjetas estáticas PRIMERO ---
+    // Esto asegura que "Crear Partida" y "Práctica" aparezcan inmediatamente.
+    if (!gameCarousel.querySelector('.create-new')) {
+        const createCard = document.createElement('div');
+        createCard.className = 'game-card create-new';
+        createCard.innerHTML = `
+            <div class="create-icon">+</div>
+            <span class="create-text">Crear Partida</span>
+        `;
+        createCard.addEventListener('click', async () => {
+            betAmountInput.value = '1000';
+            betErrorMessage.textContent = '';
+            betModal.classList.add('visible');
+        });
+        gameCarousel.appendChild(createCard);
+    }
+    if (!gameCarousel.querySelector('.practice-game')) {
+        const practiceCard = document.createElement('div');
+        practiceCard.className = 'game-card practice-game';
+        practiceCard.innerHTML = `
+            <div class="create-icon">🎮</div>
+            <span class="create-text">Practica</span>
+        `;
+        practiceCard.addEventListener('click', () => createPracticeGame());
+        gameCarousel.appendChild(practiceCard);
+    }
+
     try {
+        // --- MODIFICADO: Ahora buscamos partidas en espera Y partidas que ya comenzaron ---
         const gamesRef = collection(db, "games");
-        const waitingGamesQuery = query(gamesRef, where("status", "==", "waiting"), where("player2", "==", null), where("isPrivate", "==", isPrivate));
-        const querySnapshot = await getDocs(waitingGamesQuery);
-        gameCarousel.innerHTML = '';
+        const gamesQuery = query(gamesRef, where("status", "in", ["waiting", "starting"]), where("isPrivate", "==", isPrivate));
+        const querySnapshot = await getDocs(gamesQuery);
+        
+        const activeGamesList = document.getElementById('active-games-list');
+        
+        // --- SOLUCIÓN: Lógica de actualización inteligente ---
+        const serverGameIds = new Set();
+        querySnapshot.docs.forEach(doc => serverGameIds.add(doc.id));
+
+        // Eliminar salas que ya no existen en el servidor
+        document.querySelectorAll('.game-card[data-game-id]').forEach(card => {
+            const gameId = card.dataset.gameId;
+            if (!serverGameIds.has(gameId)) {
+                card.remove();
+            }
+        });
+
         let userIsWaiting = false;
 
-        querySnapshot.forEach(docSnap => {
+        for (const docSnap of querySnapshot.docs) {
             const gameData = docSnap.data();
             const gameId = docSnap.id;
 
-            if (gameData.player1.uid === currentUser.uid) {
+            if (document.querySelector(`.game-card[data-game-id="${gameId}"]`)) continue; // Si la tarjeta ya existe, no hacer nada.
+            // --- CORRECCIÓN: Solo considerar que el usuario está esperando si la partida
+            // que él creó está en estado 'waiting' o 'players_joined'.
+            // Esto evita que se meta en una sala de una partida que ya empezó.
+            if (gameData.player1.uid === currentUser.uid && (gameData.status === 'waiting' || gameData.status === 'players_joined')) {
                 userIsWaiting = true;
-                setUserWaitingGameId(gameId);
+                setUserWaitingGameId(gameId); // Guardar el ID de la sala en la que está esperando
             } else {
-                const card = document.createElement('div');
-                card.className = 'game-card waiting';
-                card.dataset.gameId = gameId;
-                card.innerHTML = `
-                    <div class="card-player-info">
-                        <span class="player-name-waiting">${gameData.player1.username}</span>
-                        <span class="status-text">está esperando...</span>
-                    </div>
-                    ${gameData.betAmount > 0 ? `
-                    <div class="card-bet-amount">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm1.5-3.845V11h-3v-1.034c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825V12.5h3v-1.033c-.967-.125-1.51-.28-1.51-.795 0-.515.543-.69 1.51-.825V8.5h-3V7.5h3v1.033c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825z"/></svg>
-                        <span>$${gameData.betAmount.toLocaleString()}</span>
-                    </div>
-                    ` : ''}
-                    <div class="card-player-count">1/2</div>
-                `;
-                card.addEventListener('click', async () => {
-                    const gameDocRef = doc(db, "games", gameId);
-                    const gameSnap = await getDoc(gameDocRef);
+                if (gameData.status === 'waiting' && gameData.player2 === null) {
+                    // --- Lógica para partidas en espera (sin cambios) ---
+                    const card = document.createElement('div');
+                    card.className = 'game-card waiting';
+                    card.dataset.gameId = gameId;
+                    card.innerHTML = `
+                        <div class="card-player-info">
+                            <span class="player-name-waiting">${gameData.player1.username}</span>
+                            <span class="status-text">está esperando...</span>
+                        </div>
+                        ${gameData.betAmount > 0 ? `
+                        <div class="card-bet-amount">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm1.5-3.845V11h-3v-1.034c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825V12.5h3v-1.033c-.967-.125-1.51-.28-1.51-.795 0-.515.543-.69 1.51-.825V8.5h-3V7.5h3v1.033c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825z"/></svg>
+                            <span>$${gameData.betAmount.toLocaleString()}</span>
+                        </div>
+                        ` : ''}
+                        <div class="card-player-count">1/2</div>
+                    `;
+                    card.addEventListener('click', async () => {
+                        const gameDocRef = doc(db, "games", gameId);
+                        const gameSnap = await getDoc(gameDocRef);
 
-                    if (!gameSnap.exists() || gameSnap.data().status !== 'waiting') {
-                        alert('Esta partida ya no está disponible o alguien más se unió primero.');
-                        return;
-                    }
-
-                    if (currentUserProfile && gameData.betAmount > currentUserProfile.balance) {
-                        alert('No tienes saldo suficiente para unirte a esta partida.');
-                        return;
-                    }
-
-                    const random = Math.random();
-                    const player1Uid = gameData.player1.uid;
-                    const player2Uid = currentUser.uid;
-                    const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
-
-                    console.log(`Player 2 (${currentUser.uid}) is joining a game with bet amount: ${gameData.betAmount}. Balance will be deducted upon game start.`);
-
-                    await updateDoc(doc(db, "games", gameId), {
-                        player2: { uid: player2Uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
-                        status: "players_joined",
-                        currentPlayerUid: startingPlayerUid,
-                        turn: 1,
-                        player2BalanceTransaction: {
-                            amount: -gameData.betAmount,
-                            type: 'bet',
-                            gameId: gameId,
-                            timestamp: new Date()
+                        if (!gameSnap.exists() || gameSnap.data().status !== 'waiting') {
+                            alert('Esta partida ya no está disponible o alguien más se unió primero.');
+                            return;
                         }
+
+                        if (currentUserProfile && gameData.betAmount > currentUserProfile.balance) {
+                            alert('No tienes saldo suficiente para unirte a esta partida.');
+                            return;
+                        }
+
+                        const random = Math.random();
+                        const player1Uid = gameData.player1.uid;
+                        const player2Uid = currentUser.uid;
+                        const startingPlayerUid = random < 0.5 ? player1Uid : player2Uid;
+
+                        console.log(`Player 2 (${currentUser.uid}) is joining a game with bet amount: ${gameData.betAmount}. Balance will be deducted upon game start.`);
+
+                        await updateDoc(doc(db, "games", gameId), {
+                            player2: { uid: player2Uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
+                            status: "players_joined",
+                            currentPlayerUid: startingPlayerUid,
+                            turn: 1,
+                            player2BalanceTransaction: {
+                                amount: -gameData.betAmount,
+                                type: 'bet',
+                                gameId: gameId,
+                                timestamp: new Date()
+                            }
+                        });
+
+                        setUserWaitingGameId(gameId);
+                        gameCarousel.style.display = 'none';
+                        waitingScreen.style.display = 'flex';
+                        player1ChatName.textContent = gameData.player1.username;
+                        setPlayerAvatar(player1ChatAvatar, gameData.player1.profileImageName);
+                        player2ChatName.textContent = currentUserProfile.username;
+                        setPlayerAvatar(player2ChatAvatar, currentUserProfile.profileImageName);
+                        startGameBtn.style.display = 'none';
+                        cancelWaitBtn.textContent = 'Abandonar Sala';
+
+                        onSnapshot(doc(db, "games", gameId), (gameSnap) => {
+                            const gameData = gameSnap.data();
+                            if (gameData) {
+                                renderMessages(gameData.messages, chatMessagesContainer);
+                                setLastMessageCount(gameData.messages ? gameData.messages.length : 0);
+
+                                if (gameData.status === "starting") {
+                                    const { gameStarted } = getState();
+                                    if (!gameStarted) {
+                                        setGameStarted(true);
+                                        startGameFullscreen(gameId);
+                                    }
+                                }
+                                else if (gameData.player2 === null && gameData.status !== "starting") {
+                                    cleanupWaitingGame();
+                                }
+                            } else {
+                                cleanupWaitingGame();
+                            }
+                        });
                     });
+                    gameCarousel.appendChild(card);
+                } else if (gameData.status === 'starting' && activeGamesList) {
+                    // --- NUEVO: Lógica para partidas en curso ---
+                    const card = document.createElement('div');
+                    card.className = 'game-card active'; // CORRECCIÓN: Asegurarse que la clase 'active' esté presente
+                    card.dataset.gameId = gameId;
 
-                    setUserWaitingGameId(gameId);
-                    gameCarousel.style.display = 'none';
-                    waitingScreen.style.display = 'flex';
-                    player1ChatName.textContent = gameData.player1.username;
-                    setPlayerAvatar(player1ChatAvatar, gameData.player1.profileImageName);
-                    player2ChatName.textContent = currentUserProfile.username;
-                    setPlayerAvatar(player2ChatAvatar, currentUserProfile.profileImageName);
-                    startGameBtn.style.display = 'none';
-                    cancelWaitBtn.textContent = 'Abandonar Sala';
+                    // Fetch de perfiles para obtener avatares
+                    const p1Profile = await fetchUserProfile(gameData.player1.uid);
+                    const p2Profile = gameData.player2 ? await fetchUserProfile(gameData.player2.uid) : null;
 
-                    onSnapshot(doc(db, "games", gameId), (gameSnap) => {
-        const gameData = gameSnap.data();
-        if (gameData) {
-            renderMessages(gameData.messages, chatMessagesContainer);
-            setLastMessageCount(gameData.messages ? gameData.messages.length : 0);
+                    const p1Avatar = p1Profile?.profileImageName ? `../imajenes/perfil/${p1Profile.profileImageName}` : './home-ecensiales/avatar-placeholder.svg';
+                    const p2Avatar = p2Profile?.profileImageName ? `../imajenes/perfil/${p2Profile.profileImageName}` : './home-ecensiales/avatar-placeholder.svg';
 
-            // Si el juego comienza, redirigir.
-            if (gameData.status === "starting") {
-                const { gameStarted } = getState();
-                if (!gameStarted) {
-                    setGameStarted(true);
-                    startGameFullscreen(gameId);
+                    card.innerHTML = `
+                        <div class="active-card-content">
+                            <div class="card-active-players">
+                                <div class="player-avatar-container">
+                                    <img src="${p1Avatar}" alt="${gameData.player1.username}" class="player-avatar-card">
+                                    <span class="player-name-active">${gameData.player1.username}</span>
+                                </div>
+                                <span class="vs-separator">vs</span>
+                                <div class="player-avatar-container">
+                                    <img src="${p2Avatar}" alt="${gameData.player2?.username || '??'}" class="player-avatar-card">
+                                    <span class="player-name-active">${gameData.player2?.username || 'Jugador 2'}</span>
+                                </div>
+                            </div>
+                            <!-- --- MODIFICADO: Agrupado para alineación horizontal --- -->
+                            <div class="card-game-details">
+                                ${gameData.betAmount > 0 ? `
+                                <div class="card-bet-amount">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm1.5-3.845V11h-3v-1.034c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825V12.5h3v-1.033c-.967-.125-1.51-.28-1.51-.795 0-.515.543-.69 1.51-.825V8.5h-3V7.5h3v1.033c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825z"/></svg>
+                                    <span>$${gameData.betAmount.toLocaleString()}</span>
+                                </div>
+                                ` : ''}
+                                <div class="card-status-active">En Partida</div>
+                            </div>
+                        </div>
+                    `;
+                    card.addEventListener('click', () => {
+                        // TODO: Implementar lógica de espectador.
+                        // Por ahora, solo mostramos una alerta.
+                        alert(`Partida en curso entre ${gameData.player1.username} y ${gameData.player2?.username || 'Jugador 2'}. La función de espectador aún no está implementada.`);
+                    });
+                    activeGamesList.appendChild(card);
                 }
             }
-            // Si el jugador 2 (el que se unió) ya no está en la partida,
-            // y el juego NO está en estado "starting", entonces limpiar la sala de espera.
-            else if (gameData.player2 === null && gameData.status !== "starting") {
-                cleanupWaitingGame();
-            }
-        } else {
-            // Si el documento del juego se elimina, limpiar la sala de espera.
-            cleanupWaitingGame();
         }
-    });
-                });
-                gameCarousel.appendChild(card);
-            }
-        });
 
         if (userIsWaiting) {
             gameCarousel.style.display = 'none';
@@ -372,31 +462,10 @@ export const fetchWaitingGames = async (isPrivate = false) => {
             waitingScreen.style.display = 'none';
 
             const createCard = document.createElement('div');
-            createCard.className = 'game-card create-new';
-            createCard.innerHTML = `
-                <div class="create-icon">+</div>
-                <span class="create-text">Crear Partida</span>
-            `;
-            createCard.addEventListener('click', async () => {
-                betAmountInput.value = '1000';
-                betErrorMessage.textContent = '';
-                betModal.classList.add('visible');
-            });
-            gameCarousel.appendChild(createCard);
-
             const practiceCard = document.createElement('div');
-            practiceCard.className = 'game-card practice-game'; // Using a new class for practice games
-            practiceCard.innerHTML = `
-                <div class="create-icon">🎮</div>
-                <span class="create-text">Practica</span>
-            `;
-            practiceCard.addEventListener('click', () => {
-                createPracticeGame();
-            });
-            gameCarousel.appendChild(practiceCard);
         }
     } catch (error) {
-        console.error("Error fetching waiting games:", error);
+        console.error("Error al obtener la lista de partidas:", error);
     }
 };
 
@@ -542,5 +611,5 @@ export const setupGameRoomListeners = () => {
 };
 
 export const startPollingWaitingGames = () => {
-    setPollingIntervalId(setInterval(fetchWaitingGames, 5000));
+    setPollingIntervalId(setInterval(updateGameLists, 5000));
 };

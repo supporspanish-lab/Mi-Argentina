@@ -21,6 +21,14 @@ export const setupBackgroundMusic = () => {
     backgroundAudio.loop = true;
     backgroundAudio.volume = 0.6;
 
+    // --- NUEVO: Cargar el estado de silencio desde localStorage ---
+    const savedMuteState = localStorage.getItem('musicMuted');
+    if (savedMuteState === 'true') {
+        backgroundAudio.muted = true;
+        muteIcon.style.display = 'none';
+        unmuteIcon.style.display = 'block';
+    }
+
     // Intentar reproducir la música automáticamente al cargar la página
     // Esto puede ser bloqueado por las políticas de autoplay de los navegadores
     // Se reproducirá cuando el usuario interactúe con la página (ej. clic en el botón de mute)
@@ -43,20 +51,23 @@ export const setupBackgroundMusic = () => {
             muteIcon.style.display = 'none';
             unmuteIcon.style.display = 'block';
         }
+        // --- NUEVO: Guardar el estado de silencio en localStorage ---
+        localStorage.setItem('musicMuted', backgroundAudio.muted);
     });
 
     // --- NUEVO: Escuchar el evento de fin de partida para reanudar la música ---
     window.addEventListener('storage', (event) => {
         if (event.key === 'gameEnded' && event.newValue === 'true') {
             console.log("Game ended, attempting to resume background music.");
-            if (backgroundAudio.muted) {
-                backgroundAudio.muted = false; // Unmute if it was muted
+            // --- MODIFICADO: Respetar el estado de silencio guardado ---
+            if (localStorage.getItem('musicMuted') !== 'true') {
+                backgroundAudio.muted = false;
                 muteIcon.style.display = 'block';
                 unmuteIcon.style.display = 'none';
+                backgroundAudio.play().catch(error => {
+                    console.warn("Error al reanudar música de fondo después de fin de partida:", error);
+                });
             }
-            backgroundAudio.play().catch(error => {
-                console.warn("Error al reanudar música de fondo después de fin de partida:", error);
-            });
             // Clear the flag to prevent re-playing on subsequent page loads/refreshes
             localStorage.removeItem('gameEnded');
             localStorage.removeItem('gameEndedTimestamp');

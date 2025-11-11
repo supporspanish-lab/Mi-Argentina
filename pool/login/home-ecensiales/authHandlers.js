@@ -3,7 +3,7 @@ import { userDisplayName, userBalanceSpan, profileImg, profileSvg, configureUiBt
 import { getState, setCurrentUser, setCurrentUserProfile, setPreviousBalance, stopPolling } from './state.js';
 import { requestNotificationPermission, animateBalance, showBalanceUpdateNotification, setPlayerAvatar, cleanupWaitingGame } from './utils.js';
 import { setupFriendRequestsListener, setupFriendsListListener } from './friendshipHandlers.js';
-import { startPollingWaitingGames, fetchWaitingGames } from './gameRoomHandlers.js';
+import { startPollingWaitingGames, updateGameLists } from './gameRoomHandlers.js';
 
 export const setupAuthListeners = () => {
     try {
@@ -47,8 +47,8 @@ export const setupAuthListeners = () => {
 
                 setupFriendRequestsListener();
                 setupFriendsListListener();
-                startPollingWaitingGames();
-                fetchWaitingGames(); // Initial fetch
+                startPollingWaitingGames(); // Inicia la actualización periódica
+                updateGameLists(); // Llama a la función una vez al iniciar sesión
 
             } else {
                 const { gameStarted } = getState(); // Get current game state
