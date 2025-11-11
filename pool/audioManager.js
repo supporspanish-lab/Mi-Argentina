@@ -46,8 +46,9 @@ export function loadSound(name, path) {
  * Reproduce un sonido previamente cargado.
  * @param {string} name - El nombre clave del sonido a reproducir.
  * @param {number} [volume=0.5] - El volumen de reproducción (0.0 a 1.0).
+ * @param {number} [rate=1] - La velocidad de reproducción (0.5 a 2.0, por ejemplo).
  */
-export function playSound(name, volume = 0.5) {
+export function playSound(name, volume = 0.5, rate = 1) {
     if (!listener || !sounds[name] || isMutedGlobally) { // --- MODIFICACIÓN: No reproducir si está silenciado globalmente
         // console.warn(`El sonido '${name}' no se puede reproducir. ¿Está cargado y el audio inicializado?`);
         return;
@@ -59,9 +60,16 @@ export function playSound(name, volume = 0.5) {
         volume = 0;
     }
 
+    // --- CORRECCIÓN: Asegurarse de que el rate sea válido ---
+    if (!isFinite(rate) || rate <= 0) {
+        console.warn(`Intento de reproducir sonido '${name}' con rate inválido: ${rate}. Se usará 1.`);
+        rate = 1;
+    }
+
     // Creamos una nueva fuente de audio para cada reproducción para permitir sonidos superpuestos (polifonía)
     const sound = new THREE.Audio(listener);
     sound.setBuffer(sounds[name]);
     sound.setVolume(volume);
+    sound.setPlaybackRate(rate);
     sound.play();
 }

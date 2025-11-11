@@ -217,6 +217,22 @@
           font-size: 10px;
         }
       }
+
+      /* Notification bar styles */
+      .notification-bar {
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 5px 10px;
+        font-size: 14px;
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        animation: slideIn 1s ease-out;
+      }
+      @keyframes slideIn {
+        0% { transform: translateX(-100%); opacity: 0; }
+        100% { transform: translateX(0); opacity: 1; }
+      }
     </style>
   </head>
   <body>
@@ -629,101 +645,125 @@
       }
     });
   </script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('DOMContentLoaded fired in home.html');
+  <script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+  import { getFirestore, collection, query, where, orderBy, limit, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+  import { getState } from './home-ecensiales/state.js';
 
-      const alwaysVisibleModal = document.getElementById('always-visible-modal');
-      const winnerAvatarImg = document.getElementById('winner-avatar');
-      const winnerUsernameSpan = document.getElementById('winner-username');
-      const winnerAmountSpan = document.getElementById('winner-amount');
-      const loserAvatarImg = document.getElementById('loser-avatar');
-      const loserUsernameSpan = document.getElementById('loser-username');
-      const loserAmountSpan = document.getElementById('loser-amount');
+  const firebaseConfig = {
+      apiKey: "AIzaSyARtudlNYekKYm3zDl1r4RsinP1b3GUlu4",
+      authDomain: "blackball-93ed0.firebaseapp.com",
+      projectId: "blackball-93ed0",
+      storageBucket: "blackball-93ed0.firebasestorage.app",
+      messagingSenderId: "25368743673",
+      appId: "1:25368743673:web:2702ce575622ceb7341c28",
+      measurementId: "G-MSX7ELVR48"
+  };
 
-      if (!alwaysVisibleModal) console.error('alwaysVisibleModal not found!');
-      if (!winnerAvatarImg) console.error('winnerAvatarImg not found!');
-      if (!winnerUsernameSpan) console.error('winnerUsernameSpan not found!');
-      if (!winnerAmountSpan) console.error('winnerAmountSpan not found!');
-      if (!loserAvatarImg) console.error('loserAvatarImg not found!');
-      if (!loserUsernameSpan) console.error('loserUsernameSpan not found!');
-      if (!loserAmountSpan) console.error('loserAmountSpan not found!');
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-      // Function to load game results from localStorage
-      const loadGameResults = () => {
-        // --- MODIFICADO: Forzar la visibilidad del modal con datos de ejemplo ---
-        console.log('Forzando la visibilidad del modal de ganador.');
-        
-        // Datos de ejemplo
-        winnerAvatarImg.src = '../imajenes/perfil/1.jpg';
-        winnerUsernameSpan.textContent = 'Ganador';
-        winnerAmountSpan.textContent = 'Ganó: $2,000';
-        loserAvatarImg.src = '../imajenes/perfil/2.jpg';
-        loserUsernameSpan.textContent = 'Perdedor';
-        loserAmountSpan.textContent = 'Perdió: -$1,000';
-        const gameEnded = localStorage.getItem('gameEnded');
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded fired in home.html');
 
-        // Hacer el modal visible
+    const alwaysVisibleModal = document.getElementById('always-visible-modal');
+    const winnerAvatarImg = document.getElementById('winner-avatar');
+    const winnerUsernameSpan = document.getElementById('winner-username');
+    const winnerAmountSpan = document.getElementById('winner-amount');
+    const loserAvatarImg = document.getElementById('loser-avatar');
+    const loserUsernameSpan = document.getElementById('loser-username');
+    const loserAmountSpan = document.getElementById('loser-amount');
+    const notificationBar = document.getElementById('notification-bar');
+
+    if (!alwaysVisibleModal) console.error('alwaysVisibleModal not found!');
+    if (!winnerAvatarImg) console.error('winnerAvatarImg not found!');
+    if (!winnerUsernameSpan) console.error('winnerUsernameSpan not found!');
+    if (!winnerAmountSpan) console.error('winnerAmountSpan not found!');
+    if (!loserAvatarImg) console.error('loserAvatarImg not found!');
+    if (!loserUsernameSpan) console.error('loserUsernameSpan not found!');
+    if (!loserAmountSpan) console.error('loserAmountSpan not found!');
+
+    // Function to load game results from Firebase
+    const loadGameResults = async () => {
+      const { currentUser } = getState();
+      if (!currentUser) return;
+
+      const q = query(collection(db, "gameResults"), where("userUid", "==", currentUser.uid));
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        console.log('Game results found in Firebase. Populating modal.');
+        const docs = snapshot.docs.sort((a, b) => b.data().timestamp - a.data().timestamp);
+        const data = docs[0].data();
+
+        winnerAvatarImg.src = data.winnerAvatar;
+        winnerUsernameSpan.textContent = data.winnerUsername || 'Desconocido';
+        winnerAmountSpan.textContent = data.winnerAmount ? `Ganó: $${data.winnerAmount}` : '';
+        loserAvatarImg.src = data.loserAvatar;
+        loserUsernameSpan.textContent = data.loserUsername || 'Desconocido';
+        loserAmountSpan.textContent = data.loserAmount ? `Perdió: $${data.loserAmount}` : '';
+
         alwaysVisibleModal.style.display = 'flex';
         alwaysVisibleModal.style.opacity = '1';
         alwaysVisibleModal.style.visibility = 'visible';
         alwaysVisibleModal.style.zIndex = '10000';
-        if (gameEnded === 'true') {
-          console.log('Game results found in localStorage. Populating modal.');
-          const winnerUsername = localStorage.getItem('winnerUsername');
-          const loserUsername = localStorage.getItem('loserUsername');
-          const winnerAvatar = localStorage.getItem('winnerAvatar') || '../imajenes/perfil/1.jpg';
-          const loserAvatar = localStorage.getItem('loserAvatar') || '../imajenes/perfil/2.jpg';
-          const winnerAmount = localStorage.getItem('winnerAmount');
-          const loserAmount = localStorage.getItem('loserAmount');
+        alwaysVisibleModal.dataset.docId = docs[0].id;
+      } else {
+        alwaysVisibleModal.style.display = 'none';
+        console.log('No game results found in Firebase. Modal is hidden.');
+      }
+    };
 
-          winnerAvatarImg.src = winnerAvatar;
-          winnerUsernameSpan.textContent = winnerUsername || 'Desconocido';
-          winnerAmountSpan.textContent = winnerAmount ? `Ganó: $${winnerAmount}` : '';
-          loserAvatarImg.src = loserAvatar;
-          loserUsernameSpan.textContent = loserUsername || 'Desconocido';
-          loserAmountSpan.textContent = loserAmount ? `Perdió: $${loserAmount}` : '';
+    // Function to load global notifications
+    const loadNotifications = async () => {
+      const q = query(collection(db, "globalNotifications"));
+      const snapshot = await getDocs(q);
 
-          alwaysVisibleModal.style.display = 'flex';
-          alwaysVisibleModal.style.opacity = '1';
-          alwaysVisibleModal.style.visibility = 'visible';
+      if (!snapshot.empty) {
+        const docs = snapshot.docs.sort((a, b) => b.data().timestamp - a.data().timestamp).slice(0, 5);
+        const messages = docs.map(doc => doc.data().message);
+        notificationBar.innerHTML = messages.join(' | ');
 
-          // Auto-hide the modal after 5 seconds and clear data
-          setTimeout(() => {
-            alwaysVisibleModal.style.display = 'none';
-            clearGameResults();
-          }, 5000);
-        } else {
-          alwaysVisibleModal.style.display = 'none';
-          console.log('No game results found in localStorage. Modal is hidden.');
-        }
-      };
+        // Delete notifications older than 1.5 minutes
+        const cutoff = Date.now() - 90000;
+        docs.forEach(async (doc) => {
+          if (doc.data().timestamp < cutoff) {
+            await deleteDoc(doc.ref);
+          }
+        });
+      } else {
+        notificationBar.textContent = '';
+      }
+    };
 
-      // Function to clear game results from localStorage
-      const clearGameResults = () => {
-        localStorage.removeItem('gameEnded');
-        localStorage.removeItem('winnerUsername');
-        localStorage.removeItem('loserUsername');
-        localStorage.removeItem('winnerAvatar');
-        localStorage.removeItem('loserAvatar');
-        localStorage.removeItem('winnerAmount');
-        localStorage.removeItem('loserAmount');
-        console.log('Game results cleared from localStorage.');
-      };
+    // Function to clear game results from Firebase
+    const clearGameResults = async () => {
+      const docId = alwaysVisibleModal.dataset.docId;
+      if (docId) {
+        await deleteDoc(doc(db, "gameResults", docId));
+        console.log('Game results deleted from Firebase.');
+      }
+    };
 
-      // Load results on DOMContentLoaded
-      loadGameResults();
+    // Load results on DOMContentLoaded
+    loadGameResults();
+    loadNotifications();
 
-      // Add event listener to close modal when clicking outside the modal-box
-      alwaysVisibleModal.addEventListener('click', (event) => {
-        if (event.target === alwaysVisibleModal) {
-          alwaysVisibleModal.classList.remove('visible'); // Hide the modal
-          alwaysVisibleModal.style.display = 'none'; // Explicitly hide it
-          clearGameResults(); // Clear data from localStorage
-          console.log('Game Over Modal closed by clicking outside.');
-        }
-      });
+    // Load results when window gains focus (e.g., when returning from game)
+    window.addEventListener('focus', () => { loadGameResults(); loadNotifications(); });
+
+    // Load results periodically in a loop
+    setInterval(() => { loadGameResults(); loadNotifications(); }, 2000);
+
+    // Add event listener to close modal when clicking outside the modal-box
+    alwaysVisibleModal.addEventListener('click', async (event) => {
+      if (event.target === alwaysVisibleModal) {
+        alwaysVisibleModal.style.display = 'none'; // Explicitly hide it
+        await clearGameResults(); // Clear data from Firebase
+        console.log('Game Over Modal closed by clicking outside.');
+      }
     });
+  });
   </script>
 </body>
   <script>

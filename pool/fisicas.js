@@ -247,7 +247,13 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                     const impactForce = Math.abs(k);
                     if (impactForce > IMPACT_THRESHOLD) {
                         const normalizedImpact = Math.min(impactForce / 25, 1.0);
-                        playSound('ball_hit', Math.pow(normalizedImpact, 3) * 0.8);
+                        const volume = normalizedImpact * 0.8; // Volumen proporcional a la fuerza del impacto
+                        playSound('ball_hit', volume, 1.0);
+
+                        // --- NUEVO: Vibración cuando la bola blanca golpea otra bola ---
+                        if (cueBall && 'vibrate' in navigator) {
+                            navigator.vibrate(50);
+                        }
                     }
 
                     // --- NUEVO: Aplicar efecto de corrido (follow) y retroceso (draw) ---

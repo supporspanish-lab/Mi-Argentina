@@ -61,7 +61,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     const RACK_SPACING_DIAMETER = 28;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
-    const startX = TABLE_WIDTH * 0.75;
+    const startX = TABLE_WIDTH * 0.78;
     const startY = TABLE_HEIGHT / 2;
     const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
     let ballIndex = 0;
@@ -169,7 +169,7 @@ export const createPracticeGame = async () => {
     const RACK_SPACING_DIAMETER = 28;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
-    const startX = TABLE_WIDTH * 0.75;
+    const startX = TABLE_WIDTH * 0.78;
     const startY = TABLE_HEIGHT / 2;
     const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
     let ballIndex = 0;
@@ -303,6 +303,10 @@ const createGameCard = (gameData) => {
             statusText = isUserInGame ? 'En tu sala' : 'En Partida';
             statusColor = isUserInGame ? '#3498db' : '#bdc3c7';
             cursor = 'default';
+        } else if (gameData.status === 'ended') {
+            statusText = 'Terminada';
+            statusColor = '#95a5a6';
+            cursor = 'default';
         } else { // waiting
             statusText = isUserInGame ? 'En tu sala' : 'Esperando';
             statusColor = '#bdc3c7';
@@ -330,6 +334,7 @@ const createGameCard = (gameData) => {
                     </div>
                     ` : ''}
                     <div class="card-status-active" style="color: ${statusColor}; font-weight: bold; cursor: ${cursor};">${statusText}</div>
+                    ${gameData.status === 'ended' ? `<div style="color: #27ae60; font-size: 12px;">Ganador: ${gameData.winnerUsername}</div>` : ''}
                 </div>
             </div>
         `;
@@ -402,7 +407,7 @@ export const updateGameLists = async () => {
 
     try {
         const gamesRef = collection(db, "games");
-        const q = query(gamesRef, where("isPrivate", "==", false), where("isPractice", "==", false), where("status", "in", ["waiting", "starting", "players_joined"]));
+        const q = query(gamesRef, where("isPrivate", "==", false), where("isPractice", "==", false), where("status", "in", ["waiting", "starting", "players_joined", "ended"]));
         
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const realGames = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
