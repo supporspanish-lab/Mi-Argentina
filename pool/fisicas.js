@@ -153,9 +153,9 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
 
                             playSound('cushionHit', volume * 0.8);
 
-                            // --- NUEVO: Vibración fuerte si es la bola blanca ---
+                            // --- NUEVO: Vibración sutil si es la bola blanca ---
                             if (ball.number === null && 'vibrate' in navigator) {
-                                navigator.vibrate(300);
+                                navigator.vibrate(50);
                             }
                         }
 

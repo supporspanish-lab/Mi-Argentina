@@ -88,6 +88,11 @@ window.addEventListener('updatespinmodal', (event) => {
     }
 });
 
+// --- NUEVO: Listener para resetear el spin después de disparar ---
+window.addEventListener('resetspin', () => {
+    resetSpin();
+});
+
 // --- NUEVO: Función para mostrar el modal de efecto ---
 export function showSpinModal() {
     if (spinModalOverlay) {

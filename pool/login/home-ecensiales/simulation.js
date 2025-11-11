@@ -54,7 +54,7 @@ function createSimulatedRoom() {
         betAmount: Math.floor(Math.random() * 5000) + 1000,
         createdBy: {
             displayName: creatorName,
-            photoURL: `../../imajenes/perfil/${player1Num}.jpg`
+            photoURL: `../imajenes/perfil/${player1Num}.jpg`
         }
     };
 }

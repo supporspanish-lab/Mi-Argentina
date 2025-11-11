@@ -1666,7 +1666,9 @@
                     const { gameState: gameData, ...shotData } = event.detail; // Separar gameState del resto de los datos del tiro
                     const gameRef = doc(db, "games", gameId);
                     try {
-                        await updateDoc(gameRef, { 
+                        // --- NUEVO: Resetear el spin en la UI antes de disparar ---
+                        window.dispatchEvent(new CustomEvent('resetspin'));
+                        await updateDoc(gameRef, {
                             lastShot: { // --- TEMPORAL: Directamente a lastShot para sincronización inmediata
                                 playerUid: auth.currentUser.uid,
                                 currentPlayerUid: gameData.currentPlayerUid, // --- SOLUCIÓN: Incluir el UID del jugador actual en el resultado del turno

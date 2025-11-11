@@ -61,7 +61,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     const RACK_SPACING_DIAMETER = 28;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
-    const startX = TABLE_WIDTH * 0.80;
+    const startX = TABLE_WIDTH * 0.75;
     const startY = TABLE_HEIGHT / 2;
     const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
     let ballIndex = 0;
@@ -166,10 +166,10 @@ export const createPracticeGame = async () => {
 
     const gamesRef = collection(db, "games");
     const ballPositions = [];
-    const RACK_SPACING_DIAMETER = 24;
+    const RACK_SPACING_DIAMETER = 28;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
-    const startX = TABLE_WIDTH * 0.80;
+    const startX = TABLE_WIDTH * 0.75;
     const startY = TABLE_HEIGHT / 2;
     const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
     let ballIndex = 0;
