@@ -1,5 +1,5 @@
 import { db, collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, arrayUnion, getDoc as getDocFromAuth } from './firebaseService.js';
-import { friendSearchView, friendResultView, searchInput, searchBtn, searchError, foundUserAvatarImg, foundUserAvatarSvg, foundUsernameSpan, addFriendBtn, cancelAddFriendBtn, friendRequestsContainer, gameInvitesContainer, friendsListContainer, gameCarousel, waitingScreen, player1ChatName, player1ChatAvatar, player2ChatName, player2ChatAvatar, cancelWaitBtn, startGameBtn } from './domElements.js';
+import { friendSearchView, friendResultView, searchInput, searchBtn, searchError, foundUserAvatarImg, foundUserAvatarSvg, foundUsernameSpan, addFriendBtn, cancelAddFriendBtn, friendRequestsContainer, gameInvitesContainer, friendsListContainer, gameCarousel, waitingScreen, player1ChatName, player1ChatAvatar, player2ChatName, player2ChatAvatar, cancelWaitBtn, startGameBtn, friendRequestBadge } from './domElements.js';
 import { getState, setUserWaitingGameId, setLastMessageCount, setGameStarted } from './state.js';
 import { setPlayerAvatar } from './utils.js';
 
@@ -130,6 +130,15 @@ export const setupFriendRequestsListener = () => {
     const q = query(requestsRef, where('to', '==', currentUser.uid), where('status', '==', 'pending'));
 
     onSnapshot(q, (snapshot) => {
+        // Update badge
+        const count = snapshot.size;
+        if (count > 0) {
+            friendRequestBadge.textContent = count > 99 ? '99+' : count;
+            friendRequestBadge.style.display = 'flex';
+        } else {
+            friendRequestBadge.style.display = 'none';
+        }
+
         // --- MODIFICADO: Limpiar solo el contenido, no el título ---
         const existingItems = friendRequestsContainer.querySelectorAll('.friend-request-item');
         existingItems.forEach(item => item.remove());

@@ -5,6 +5,7 @@ let userWaitingGameId = null;
 let lastMessageCount = 0;
 let pollingIntervalId = null;
 let gameStarted = false;
+let salas = [];
 
 export const getState = () => ({
     currentUser,
@@ -13,7 +14,8 @@ export const getState = () => ({
     userWaitingGameId,
     lastMessageCount,
     pollingIntervalId,
-    gameStarted
+    gameStarted,
+    salas
 });
 
 export const setCurrentUser = (user) => { currentUser = user; };
@@ -23,6 +25,8 @@ export const setUserWaitingGameId = (gameId) => { userWaitingGameId = gameId; };
 export const setLastMessageCount = (count) => { lastMessageCount = count; };
 export const setPollingIntervalId = (id) => { pollingIntervalId = id; };
 export const setGameStarted = (status) => { gameStarted = status; };
+export const getSalas = () => salas;
+export const setSalas = (newSalas) => { salas = newSalas; };
 
 export const stopPolling = () => {
     if (pollingIntervalId) {

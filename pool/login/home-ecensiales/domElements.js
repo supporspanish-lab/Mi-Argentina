@@ -16,7 +16,7 @@ export const player2ChatAvatar = document.getElementById('player2-chat-avatar');
 export const maintenanceModal = document.getElementById('maintenance-modal');
 export const closeMaintenanceModalBtn = document.getElementById('close-maintenance-modal-btn');
 
-export const gameCarousel = document.getElementById('game-carousel');
+export const gameCarousel = document.getElementById('main-game-carousel');
 export const waitingScreen = document.getElementById('waiting-screen');
 export const cancelWaitBtn = document.getElementById('cancel-wait-btn');
 export const startGameBtn = document.getElementById('start-game-btn');
@@ -27,8 +27,13 @@ export const sendChatMessageBtn = document.getElementById('send-chat-message-btn
 export const minimizeChatBtn = document.getElementById('minimize-chat-btn');
 
 export const profilePictureContainer = document.querySelector('.profile-picture-container');
-export const profilePictureModal = document.getElementById('profile-picture-modal');
-export const closeAvatarModalBtn = document.getElementById('close-avatar-modal-btn');
+export const mainAvatarModal = document.getElementById('main-avatar-modal');
+export const closeMainAvatarModalBtn = document.getElementById('close-main-avatar-modal-btn');
+export const openAvatarSelectionBtn = document.getElementById('open-avatar-selection-btn');
+export const avatarSelectionModal = document.getElementById('avatar-selection-modal');
+export const closeAvatarSelectionModalBtn = document.getElementById('close-avatar-selection-modal-btn');
+export const mainCurrentAvatarDisplay = document.getElementById('main-current-avatar-display');
+export const mainCurrentAvatarImg = document.getElementById('main-current-avatar-img');
 export const avatarGrid = document.getElementById('avatar-grid');
 export const profileImg = document.getElementById('profile-picture-img');
 export const profileSvg = document.getElementById('profile-picture-svg');
@@ -76,3 +81,23 @@ export const closeInviteFriendsModalBtn = document.getElementById('close-invite-
 
 // --- NUEVO: Botón de amigos dentro del chat de la sala de espera ---
 export const leftChatButton = document.getElementById('left-chat-button');
+
+// --- NUEVO: Elementos del modal de chat de amigos ---
+export const friendChatBtn = document.getElementById('friend-chat-btn');
+export const friendChatModal = document.getElementById('friend-chat-modal');
+export const closeFriendChatModalBtn = document.getElementById('close-friend-chat-modal-btn');
+export const friendChatList = document.getElementById('friend-chat-list');
+export const friendChatArea = document.getElementById('friend-chat-area');
+export const friendChatMessages = document.getElementById('friend-chat-messages');
+export const friendChatInput = document.getElementById('friend-chat-input');
+export const sendFriendChatBtn = document.getElementById('send-friend-chat-btn');
+export const chatBadge = document.getElementById('chat-badge');
+
+// --- NUEVO: Insignia de solicitudes de amistad ---
+export const friendRequestBadge = document.getElementById('friend-request-badge');
+
+// --- NUEVO: Elementos del modal de partidas ganadas ---
+export const openWonGamesModalBtn = document.getElementById('open-won-games-modal-btn');
+export const wonGamesModal = document.getElementById('won-games-modal');
+export const closeWonGamesModalBtn = document.getElementById('close-won-games-modal-btn');
+export const wonGamesList = document.getElementById('won-games-list');

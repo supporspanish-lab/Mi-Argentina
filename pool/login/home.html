@@ -162,6 +162,61 @@
         color: var(--text-color); /* Mantener el nombre del jugador en blanco */
         font-weight: 700;
       }
+
+      /* --- NUEVO: Responsive para la sección de salas activas --- */
+      @media (max-width: 768px) {
+        .section-title {
+          font-size: 20px;
+          margin-bottom: 10px;
+        }
+        .active-games-list {
+          padding: 10px;
+          gap: 8px;
+          max-height: 200px;
+        }
+        .active-card-content {
+          padding: 1px 10px;
+        }
+        .player-avatar-card {
+          width: 24px;
+          height: 24px;
+        }
+        .card-game-details {
+          gap: 10px;
+        }
+        .player-name-active,
+        .vs-separator,
+        .card-status-active {
+          font-size: 12px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .section-title {
+          font-size: 18px;
+          margin-bottom: 8px;
+        }
+        .active-games-list {
+          padding: 8px;
+          gap: 5px;
+          max-height: 150px;
+        }
+        .active-card-content {
+          padding: 1px 5px;
+        }
+        .player-avatar-card {
+          width: 20px;
+          height: 20px;
+        }
+        .card-game-details {
+          gap: 5px;
+        }
+        .player-name-active,
+        .vs-separator,
+        .card-status-active {
+          font-size: 10px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -199,6 +254,15 @@
                         <!-- NUEVO: Insignia para el contador de solicitudes de amistad -->
                         <span id="friend-request-badge" class="notification-badge"></span>
                     </div>
+                    <div class="chat-icon-container">
+                        <button id="friend-chat-btn" class="menu-toggle-btn" title="Chat con Amigos">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM7 9h10v2H7V9zm0 4h7v2H7v-2z"/>
+                            </svg>
+                        </button>
+                        <!-- Insignia para mensajes no leídos -->
+                        <span id="chat-badge" class="notification-badge"></span>
+                    </div>
 
                     <div class="user-profile">
                         <div class="profile-picture-container">
@@ -228,22 +292,35 @@
                 </div>
             </header>
             <main class="main-content">
-                <!-- --- NUEVO: Sección para mostrar las salas de juego activas --- -->
-                <div id="active-games-section" class="active-games-section">
-                    <h2 class="section-title">Salas Activas</h2>
-                    <div id="active-games-list" class="active-games-list">
-                        <!-- Las tarjetas de las salas de juego se cargarán aquí dinámicamente -->
-                        <!-- El JavaScript deberá apuntar a este contenedor -->
+
+                <!-- Barra negra semi-transparente -->
+                <div id="notification-bar" class="notification-bar"></div>
+
+                <!-- Notificación de ganancia -->
+                <div id="game-win-notification" class="game-win-notification" style="display: none;"></div>
+
+                <!-- Salas -->
+                <div id="global-games-section" class="active-games-section">
+                    <h2 class="section-title">Salas</h2>
+                    <div id="global-games-list" class="active-games-list">
+                        <!-- Lista de salas -->
                     </div>
                 </div>
 
+                <!-- Carrusel de juegos -->
                 <div class="game-carousel-container">
-                    <div id="waiting-screen" class="chat-modal">
+                    <div class="game-carousel" id="main-game-carousel"></div>
+                </div>
+
+                <!-- --- MOVIDO: El modal de chat ahora está fuera de las listas y centrado --- -->
+                <div id="waiting-screen" class="chat-modal-overlay">
+                    <div class="chat-modal">
                         <div class="chat-header">
                             <div id="chat-action-buttons" class="chat-action-buttons">
-                                                            <button id="start-game-btn" class="play-button" style="display: none;">Iniciar</button>
-                                                            <button id="cancel-wait-btn" class="cancel-button" title="Cancelar">X</button>
-                                                            <button id="abandon-game-btn" class="abandon-button" style="display: none;">Abandonar</button>                            </div>
+                                <button id="start-game-btn" class="play-button" style="display: none;">Iniciar</button>
+                                <button id="cancel-wait-btn" class="cancel-button" title="Cancelar">X</button>
+                                <button id="abandon-game-btn" class="abandon-button" style="display: none;">Abandonar</button>
+                            </div>
                             <button id="minimize-chat-btn" class="minimize-chat-btn" title="Minimizar Chat">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                             </button>
@@ -270,6 +347,9 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="game-carousel-container">
                     <!-- NUEVO: Modal de Fin de Partida -->
                     <div id="always-visible-modal" class="modal-overlay">
                         <div class="modal-box">
@@ -287,11 +367,11 @@
                                     <span id="loser-username" class="result-username"></span>
                     <span id="loser-amount" class="result-amount"></span> <!-- NUEVO -->
                                 </div>
-                                                        </div>
-                                                        
+                                                         </div>
+
                         </div>
                     </div>
-                    <div class="game-carousel" id="game-carousel"></div>
+                    <div class="game-carousel" id="secondary-game-carousel"></div>
                 </div>
 
             </main>
@@ -366,6 +446,25 @@
             <button id="close-friends-modal-btn" class="cancel-button" style="align-self: center; margin-top: 20px; display: none;">Cerrar</button>
         </div>
     </div>
+    <!-- --- NUEVO: Modal para chatear con amigos --- -->
+    <div id="friend-chat-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Chat con Amigos</h3>
+            <div id="friend-chat-list">
+                <!-- Lista de amigos para chatear -->
+            </div>
+            <div id="friend-chat-area" style="display: none;">
+                <div id="friend-chat-messages" class="chat-messages"></div>
+                <input type="text" id="friend-chat-input" placeholder="Escribe un mensaje...">
+                <button id="send-friend-chat-btn">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+    </svg>
+</button>
+            </div>
+            <button id="close-friend-chat-modal-btn" class="cancel-button">Cerrar</button>
+        </div>
+    </div>
     <!-- --- NUEVO: Modal para Invitar Amigos a la Sala --- -->
     <div id="invite-friends-modal" class="modal-overlay">
         <div class="modal-box">
@@ -395,15 +494,36 @@
             </div>
         </div>
     </div>
-    <!-- --- NUEVO: Modal para seleccionar foto de perfil --- -->
-    <div id="profile-picture-modal" class="modal-overlay">
+    <!-- --- NUEVO: Modal Principal de Avatar --- -->
+    <div id="main-avatar-modal" class="modal-overlay">
+        <div class="modal-box profile-modal-box">
+            <h3>Mi Perfil</h3>
+            <div id="main-current-avatar-display" class="current-avatar-display">
+                    <img id="main-current-avatar-img" src="" alt="Tu Avatar Actual" style="max-width: 100px; height: 100px; object-fit: cover; border-radius: 50%;">
+                <span>Haz clic para cambiar</span>
+            </div>
+            <button id="open-won-games-modal-btn" class="play-button">Partidas Ganadas</button>
+        </div>
+    </div>
+    <!-- --- NUEVO: Modal para seleccionar foto de perfil (ahora solo la grilla) --- -->
+    <div id="avatar-selection-modal" class="modal-overlay">
         <div class="modal-box profile-modal-box">
             <h3>Elige tu Avatar</h3>
             <div id="avatar-grid" class="avatar-grid">
                 <!-- Las imágenes se cargarán aquí con JS -->
             </div>
             <!-- Reutilizamos el estilo del botón de cancelar espera -->
-            <button id="close-avatar-modal-btn" class="cancel-button" style="align-self: center; margin-top: 20px;">Cerrar</button>
+            <button id="close-avatar-selection-modal-btn" class="cancel-button" style="align-self: center; margin-top: 20px;">Cerrar</button>
+        </div>
+    </div>
+    <!-- --- NUEVO: Modal para partidas ganadas --- -->
+    <div id="won-games-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Partidas Ganadas</h3>
+            <div id="won-games-list">
+                <!-- Lista de partidas ganadas -->
+            </div>
+            <button id="close-won-games-modal-btn" class="cancel-button">Cerrar</button>
         </div>
     </div>
     <!-- --- NUEVO: Modal para realizar apuesta --- -->
@@ -604,7 +724,8 @@
         }
       });
     });
-  </script></body>
+  </script>
+</body>
   <script>
     // --- SOLUCIÓN: Evitar el reajuste de altura en móviles ---
     // Esta función establece la altura del contenedor principal a la altura
@@ -614,15 +735,15 @@
     function setAppHeight() {
       const appContainer = document.querySelector('.app-container');
       if (!appContainer) return;
-    
+
       const setHeight = () => {
         const vh = window.innerHeight;
         document.documentElement.style.setProperty('--vh', `${vh}px`);
         appContainer.style.height = `${window.innerHeight}px`;
       };
-    
+
       setHeight();
-    
+
       let resizeTimeout;
       window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
@@ -630,6 +751,24 @@
       });
     }
     window.addEventListener('load', setAppHeight);
+
+    // --- NUEVO: Ocultar las secciones de salas cuando el chat está abierto ---
+    const chatModal = document.getElementById('waiting-screen');
+    const gameCarousel = document.getElementById('main-game-carousel');
+    const globalGamesSection = document.getElementById('global-games-section');
+
+    if (chatModal && gameCarousel && globalGamesSection) {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            const hide = chatModal.classList.contains('visible');
+            gameCarousel.style.display = hide ? 'none' : '';
+            globalGamesSection.style.display = hide ? 'none' : '';
+          }
+        });
+      });
+      observer.observe(chatModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // --- MODIFICADO: Lógica de orientación para Android y iOS ---
     async function lockOrientation() {

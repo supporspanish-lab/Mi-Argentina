@@ -189,14 +189,10 @@ export const loadGameIntoIframe = (gameId) => {
 export const cleanupWaitingGame = async () => {
     const { currentUser, userWaitingGameId } = getState();
 
-    if (!userWaitingGameId || !currentUser) {
-        return;
-    }
-
     const resetUI = () => {
         setUserWaitingGameId(null);
         setGameStarted(false);
-        waitingScreen.style.display = 'none';
+        waitingScreen.classList.remove('visible');
         gameCarousel.style.display = 'flex';
         player2ChatName.textContent = 'Oponente';
         player2ChatAvatar.style.display = 'none';
@@ -205,58 +201,51 @@ export const cleanupWaitingGame = async () => {
         kickOpponentBtn.style.display = 'none';
     };
 
+    // If there's no game ID in the state, just reset the UI and exit.
+    // This handles the case for a kicked player whose listener calls this function,
+    // or if the function is called multiple times.
+    if (!userWaitingGameId || !currentUser) {
+        resetUI();
+        return;
+    }
+
     try {
         const gameDocRef = doc(db, "games", userWaitingGameId);
         const gameSnap = await getDoc(gameDocRef);
 
+        // If the game document still exists, perform cleanup actions.
         if (gameSnap.exists()) {
             const gameData = gameSnap.data();
             const isPlayer1 = gameData.player1.uid === currentUser.uid;
             const isPlayer2 = gameData.player2?.uid === currentUser.uid;
 
-            // Case 1: Two players are in the room. The one who leaves makes the other the winner.
-            if (gameData.status === "players_joined" && (isPlayer1 || isPlayer2)) {
-                const winner = isPlayer1 ? gameData.player2 : gameData.player1;
-                const loser = isPlayer1 ? gameData.player1 : gameData.player2;
-                
-                if (winner && loser) {
-                    await updateDoc(gameDocRef, {
-                        juegoTerminado: true,
-                        winner: winner.uid,
-                        loser: loser.uid,
-                        status: 'finished'
-                    });
-
-                    const betAmount = gameData.betAmount || 0;
-                    const totalWinnings = betAmount * 2;
-
-                    localStorage.setItem('gameEnded', 'true');
-                    localStorage.setItem('winnerUid', winner.uid);
-                    localStorage.setItem('loserUid', loser.uid);
-                    localStorage.setItem('winnerUsername', winner.username);
-                    localStorage.setItem('loserUsername', loser.username);
-                    localStorage.setItem('winnerAvatar', `../imajenes/perfil/${winner.profileImageName}`);
-                    localStorage.setItem('loserAvatar', `../imajenes/perfil/${loser.profileImageName}`);
-                    localStorage.setItem('winnerAmount', totalWinnings.toString());
-                    localStorage.setItem('loserAmount', betAmount.toString());
-
-                    window.location.reload();
-                    return; // Exit after starting reload
-                }
-            }
-
-            // Case 2: Player 1 is alone in a "waiting" room and cancels.
-            if (isPlayer1 && gameData.status === "waiting") {
+            // Case 1: Player 1 (host) is alone in a "waiting" room and cancels it.
+            if (isPlayer1 && gameData.status === "waiting" && gameData.player2 === null) {
                 await deleteDoc(gameDocRef);
+            }
+            // Case 2: A player leaves a "players_joined" room before the game has started.
+            else if (gameData.status === "players_joined") {
+                if (isPlayer1) {
+                    // Host (P1) leaves, so delete the game.
+                    // In a real scenario, you might want to handle bet refunds here.
+                    await deleteDoc(gameDocRef);
+                } else if (isPlayer2) {
+                    // Opponent (P2) leaves, so reset the room to "waiting".
+                    await updateDoc(gameDocRef, {
+                        player2: null,
+                        status: "waiting"
+                    });
+                }
             }
         }
         
-        // If we reach here, it means we didn't reload. So, reset the UI.
+        // Finally, always reset the UI for the current user.
+        // This is crucial for the kicked player, as their client will run this
+        // after the host has already changed the game document.
         resetUI();
 
     } catch (error) {
         console.error("Error cleaning up waiting game:", error);
-        // Also reset UI on error
-        resetUI();
+        resetUI(); // Also reset UI on error
     }
 };

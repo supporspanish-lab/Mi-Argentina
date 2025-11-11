@@ -1,10 +1,10 @@
 // Importar las funciones necesarias de los SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, runTransaction, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, runTransaction, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 // --- SOLUCIÓN: Re-exportar las funciones para que otros módulos (como pool.js) puedan usarlas
-export { doc, setDoc, getDoc, onSnapshot, onAuthStateChanged, updateDoc, deleteDoc, runTransaction };
+export { doc, setDoc, getDoc, onSnapshot, onAuthStateChanged, updateDoc, deleteDoc, runTransaction, collection, query, where, getDocs, addDoc };
 
 // Tu configuración de Firebase
 const firebaseConfig = {

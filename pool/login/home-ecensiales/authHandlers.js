@@ -4,6 +4,7 @@ import { getState, setCurrentUser, setCurrentUserProfile, setPreviousBalance, st
 import { requestNotificationPermission, animateBalance, showBalanceUpdateNotification, setPlayerAvatar, cleanupWaitingGame } from './utils.js';
 import { setupFriendRequestsListener, setupFriendsListListener } from './friendshipHandlers.js';
 import { startPollingWaitingGames, updateGameLists } from './gameRoomHandlers.js';
+import { startGlobalMessageListener, updateBadge } from './modalHandlers.js';
 
 export const setupAuthListeners = () => {
     try {
@@ -11,6 +12,9 @@ export const setupAuthListeners = () => {
             if (user) {
                 setCurrentUser(user);
                 requestNotificationPermission();
+
+                startGlobalMessageListener(user);
+                updateBadge();
 
                 window.dispatchEvent(new CustomEvent('userLoggedIn', { detail: { userId: user.uid } }));
                 
