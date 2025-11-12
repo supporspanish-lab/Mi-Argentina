@@ -1,5 +1,5 @@
 import { setupAuthListeners, setupMenuListeners } from './authHandlers.js';
-import { setupMaintenanceModal, setupAvatarModal, setupBetModal, setupFriendsModal, setupErrorConsoleModal, setupWonGamesModal, setupFriendChatModal } from './modalHandlers.js';
+import { setupMaintenanceModal, setupAvatarModal, setupBetModal, setupFriendsModal, setupErrorConsoleModal, setupWonGamesModal, setupInfoModal, setupFriendChatModal } from './modalHandlers.js';
 import { setupFriendSearch } from './friendshipHandlers.js';
 import { setupGameRoomListeners, createGame, purgeStaleGames, setupStartGameButton } from './gameRoomHandlers.js'; // updateGameLists se llama desde auth.js
 import { setupErrorHandling } from './utils.js';
@@ -16,6 +16,7 @@ setupBetModal(createGame); // Pass createGame function to bet modal
 setupFriendsModal();
 setupErrorConsoleModal();
 setupWonGamesModal();
+setupInfoModal();
 setupFriendChatModal();
 setupFriendSearch();
 setupGameRoomListeners();

@@ -1,4 +1,4 @@
-import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge, profileImg, profileSvg } from './domElements.js';
+import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, infoBtn, infoModal, closeInfoModalBtn, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge, profileImg, profileSvg } from './domElements.js';
 import { updateUserProfile } from '../auth.js';
 import { getState, setCurrentUserProfile } from './state.js';
 import { updateErrorConsole, isMaintenanceModalOpen } from './utils.js';
@@ -216,6 +216,25 @@ export const setupWonGamesModal = () => {
     });
 };
 
+export const setupInfoModal = () => {
+    // Open info modal
+    infoBtn.addEventListener('click', () => {
+        infoModal.classList.add('visible');
+    });
+
+    // Close info modal
+    closeInfoModalBtn.addEventListener('click', () => {
+        infoModal.classList.remove('visible');
+    });
+
+    // Close on click outside
+    infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) {
+            infoModal.classList.remove('visible');
+        }
+    });
+};
+
 const loadWonGames = async () => {
     wonGamesList.innerHTML = '<p>Cargando...</p>';
     try {
@@ -232,9 +251,10 @@ const loadWonGames = async () => {
         } else {
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                const li = document.createElement('li');
-                li.textContent = `Ganó $${data.amountWon} el ${new Date(data.date).toLocaleDateString()}`;
-                wonGamesList.appendChild(li);
+                const item = document.createElement('div');
+                item.className = 'won-game-item';
+                item.textContent = `Ganó $${data.amountWon} el ${new Date(data.date).toLocaleDateString()}`;
+                wonGamesList.appendChild(item);
             });
         }
     } catch (error) {

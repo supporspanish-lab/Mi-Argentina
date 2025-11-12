@@ -911,10 +911,9 @@ function connectToGame(gameId) {
                     sessionStorage.setItem('lastGameId', gameId);
 
                     let winnerUsername = "Desconocido";
-                    if (gameData.player1 && gameData.player1.uid === gameData.winner) {
-                        winnerUsername = gameData.player1.username;
-                    } else if (gameData.player2 && gameData.player2.uid === gameData.winner) {
-                        winnerUsername = gameData.player2.username;
+                    const winnerProfileDoc = await getDoc(doc(db, "saldo", gameData.winner));
+                    if (winnerProfileDoc.exists() && winnerProfileDoc.data().username) {
+                        winnerUsername = winnerProfileDoc.data().username;
                     }
                     sessionStorage.setItem('lastGameWinnerUsername', winnerUsername);
                 }

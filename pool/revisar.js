@@ -1152,52 +1152,27 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                 const winnerSnap = await getDoc(winnerDocRef);
                                 if (winnerSnap.exists()) {
                                     const currentBalance = winnerSnap.data().balance || 0;
+                                    const deduction = totalWinnings * 0.05;
+                                    const winningsAfterDeduction = totalWinnings - deduction;
                                     await updateDoc(winnerDocRef, {
-                                        balance: currentBalance + totalWinnings
+                                        balance: currentBalance + winningsAfterDeduction
                                     });
-                                    console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
+                                    console.log(`Winner ${winnerUid} received ${winningsAfterDeduction}. New balance: ${currentBalance + winningsAfterDeduction}`);
                                 }
                             }
 
-                            // Deduct from loser
-                            if (loserUid) {
-                                const loserDocRef = doc(db, "saldo", loserUid);
-                                const loserSnap = await getDoc(loserDocRef);
-                                if (loserSnap.exists()) {
-                                    const currentBalance = loserSnap.data().balance || 0;
-                                    await updateDoc(loserDocRef, {
-                                        balance: currentBalance - betAmount
-                                    });
-                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
-                                }
-                            }
-
-                            // Deduct from loser
-                            if (loserUid) {
-                                const loserDocRef = doc(db, "saldo", loserUid);
-                                const loserSnap = await getDoc(loserDocRef);
-                                if (loserSnap.exists()) {
-                                    const currentBalance = loserSnap.data().balance || 0;
-                                    await updateDoc(loserDocRef, {
-                                        balance: currentBalance - betAmount
-                                    });
-                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
-                                }
-                            }
-            
-                            // Deduct from loser
-                            if (loserUid) {
-                                const loserDocRef = doc(db, "saldo", loserUid);
-                                const loserSnap = await getDoc(loserDocRef);
-                                if (loserSnap.exists()) {
-                                    const currentBalance = loserSnap.data().balance || 0;
-                                    await updateDoc(loserDocRef, {
-                                        balance: currentBalance - betAmount
-                                    });
-                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
-                                }
-                            }
-        
+                                                        // Deduct from loser
+                                                        if (loserUid) {
+                                                            const loserDocRef = doc(db, "saldo", loserUid);
+                                                            const loserSnap = await getDoc(loserDocRef);
+                                                            if (loserSnap.exists()) {
+                                                                const currentBalance = loserSnap.data().balance || 0;
+                                                                await updateDoc(loserDocRef, {
+                                                                    balance: currentBalance - betAmount
+                                                                });
+                                                                console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
+                                                            }
+                                                        }        
                             // Update game status in Firestore
                             if (gameRef) {
                                 await updateDoc(gameRef, {
@@ -1208,10 +1183,11 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                     juegoTerminado: true
                                 });
                                 // Save game history
+                                const actualAmountWon = totalWinnings * 0.95; // After 5% house rake
                                 await addDoc(collection(db, "gameHistory"), {
                                     winnerUid: winnerUid,
                                     loserUid: loserUid,
-                                    amountWon: totalWinnings,
+                                    amountWon: actualAmountWon,
                                     amountLost: betAmount,
                                     date: Date.now(),
                                     gameId: gameRef.id
@@ -1246,10 +1222,12 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                         const winnerSnap = await getDoc(winnerDocRef);
                                         if (winnerSnap.exists()) {
                                             const currentBalance = winnerSnap.data().balance || 0;
+                                            const deduction = totalWinnings * 0.05;
+                                            const winningsAfterDeduction = totalWinnings - deduction;
                                             await updateDoc(winnerDocRef, {
-                                                balance: currentBalance + totalWinnings
+                                                balance: currentBalance + winningsAfterDeduction
                                             });
-                                            console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
+                                            console.log(`Winner ${winnerUid} received ${winningsAfterDeduction} (after 5% house rake). New balance: ${currentBalance + winningsAfterDeduction}`);
                                         }
                                     }
             
@@ -1291,10 +1269,12 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                     const winnerSnap = await getDoc(winnerDocRef);
                     if (winnerSnap.exists()) {
                         const currentBalance = winnerSnap.data().balance || 0;
+                        const deduction = totalWinnings * 0.05;
+                        const winningsAfterDeduction = totalWinnings - deduction;
                         await updateDoc(winnerDocRef, {
-                            balance: currentBalance + totalWinnings
+                            balance: currentBalance + winningsAfterDeduction
                         });
-                        console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
+                        console.log(`Winner ${winnerUid} received ${winningsAfterDeduction} (after 5% house rake). New balance: ${currentBalance + winningsAfterDeduction}`);
                     }
                 }
 
@@ -1318,11 +1298,12 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                     });
 
                     // --- NUEVO: Guardar resultados en la colección 'gameResults' para el ganador ---
+                    const actualWinnerAmount = totalWinnings * 0.95; // After 5% house rake
                     await addDoc(collection(db, "gameResults"), {
                         userUid: winnerUid,
                         winnerUsername: winnerUsername,
                         winnerAvatar: winnerAvatar,
-                        winnerAmount: totalWinnings,
+                        winnerAmount: actualWinnerAmount,
                         loserUsername: loserUsername,
                         loserAvatar: loserAvatar,
                         loserAmount: betAmount,
@@ -1334,7 +1315,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                         userUid: loserUid,
                         winnerUsername: winnerUsername,
                         winnerAvatar: winnerAvatar,
-                        winnerAmount: totalWinnings,
+                        winnerAmount: actualWinnerAmount,
                         loserUsername: loserUsername,
                         loserAvatar: loserAvatar,
                         loserAmount: betAmount,

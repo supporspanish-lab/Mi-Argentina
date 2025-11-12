@@ -280,7 +280,7 @@ const createGameCard = (gameData) => {
             onClickAction = () => joinGameAndSetupListener(gameData);
         } else if (gameData.status === 'starting' || gameData.status === 'players_joined') {
             statusText = isUserInGame ? 'En tu sala' : 'En Partida';
-            statusColor = isUserInGame ? '#3498db' : '#bdc3c7';
+            statusColor = isUserInGame ? '#3498db' : '#2ecc71';
             cursor = 'default';
         } else if (gameData.status === 'ended') {
             statusText = 'Terminada';
@@ -306,7 +306,7 @@ const createGameCard = (gameData) => {
                     </div>
                 </div>
                 <div class="card-game-details">
-                    ${gameData.betAmount > 0 ? `
+                    ${gameData.betAmount > 0 && gameData.status === 'waiting' ? `
                     <div class="card-bet-amount">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm1.5-3.845V11h-3v-1.034c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825V12.5h3v-1.033c-.967-.125-1.51-.28-1.51-.795 0-.515.543-.69 1.51-.825V8.5h-3V7.5h3v1.033c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825z"/></svg>
                         <span>$${gameData.betAmount.toLocaleString()}</span>
@@ -455,7 +455,7 @@ export const updateGameLists = async () => {
 
     try {
         const gamesRef = collection(db, "games");
-        const q = query(gamesRef, where("isPrivate", "==", false), where("isPractice", "==", false), where("status", "in", ["waiting", "starting", "players_joined", "ended"]));
+        const q = query(gamesRef, where("isPrivate", "==", false), where("isPractice", "==", false), where("status", "in", ["waiting", "starting", "players_joined"]));
         
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const realGames = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

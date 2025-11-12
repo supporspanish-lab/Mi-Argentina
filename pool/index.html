@@ -1491,7 +1491,95 @@
                     const gameId = urlParams.get('gameId');
                     const winningsText = document.getElementById('winnings-text');
                     let isGameActive = true; // --- NUEVO: Bandera para controlar si el juego está activo
-        
+
+                    // --- NUEVO: Función para manejar el abandono de la sala ---
+                    async function handleAbandonGame() {
+                        const currentGameId = new URLSearchParams(window.location.search).get('gameId');
+                        if (!currentGameId) {
+                            alert('No se encontró el ID de la partida.');
+                            return;
+                        }
+                        if (confirm('¿Estás seguro de que quieres abandonar la sala? El otro jugador ganará la partida.')) {
+                            try {
+                                const gameRef = doc(db, "games", currentGameId);
+                                const gameSnap = await getDoc(gameRef);
+
+                                if (gameSnap.exists()) {
+                                    const gameData = gameSnap.data();
+                                    const currentUserUid = auth.currentUser.uid;
+                                    let winnerUid = null;
+                                    let loserUid = currentUserUid;
+
+                                    if (gameData.player1 && gameData.player1.uid === currentUserUid) {
+                                        winnerUid = gameData.player2 ? gameData.player2.uid : null;
+                                    } else if (gameData.player2 && gameData.player2.uid === currentUserUid) {
+                                        winnerUid = gameData.player1 ? gameData.player1.uid : null;
+                                    }
+
+                                    if (winnerUid) {
+                                        // --- INICIO DE LA MODIFICACIÓN ---
+                                        const betAmount = gameData.betAmount || 0;
+                                        const totalWinnings = betAmount * 2;
+
+                                        // --- CORRECCIÓN: Obtener la información del perdedor (el usuario actual) correctamente ---
+                                        const winnerPlayerInfo = gameData.player1.uid === winnerUid ? gameData.player1 : gameData.player2;
+                                        const loserPlayerInfo = gameData.player1.uid === loserUid ? gameData.player1 : (gameData.player2.uid === loserUid ? gameData.player2 : null);
+
+                                        const winnerUsername = winnerPlayerInfo?.username || 'Ganador';
+                                        const loserUsername = loserPlayerInfo.username;
+                                        const winnerAvatar = `../imajenes/perfil/${winnerPlayerInfo.profileImageName}`;
+                                        const loserAvatar = `../imajenes/perfil/${loserPlayerInfo.profileImageName}`;
+
+                                        // --- CORRECCIÓN: Guardar en localStorage ANTES de actualizar la base de datos ---
+                                        // Esto asegura que los datos se guarden antes de que la página se redirija.
+                                        const actualWinnerAmount = totalWinnings * 0.95; // After 5% house rake
+                                        localStorage.setItem('gameEnded', 'true');
+                                        localStorage.setItem('winnerUsername', winnerUsername);
+                                        localStorage.setItem('loserUsername', loserUsername);
+                                        localStorage.setItem('winnerAvatar', winnerAvatar);
+                                        localStorage.setItem('loserAvatar', loserAvatar);
+                                        localStorage.setItem('winnerAmount', actualWinnerAmount.toString());
+                                        localStorage.setItem('loserAmount', betAmount.toString());
+
+                                        // --- NUEVO: Verificar que los datos se guardaron antes de continuar ---
+                                        if (localStorage.getItem('gameEnded') === 'true') {
+                                            console.log('Verificación exitosa: Los datos se guardaron en localStorage.');
+                                            await updateDoc(gameRef, {
+                                                juegoTerminado: true,
+                                                winner: winnerUid,
+                                                loser: currentUserUid,
+                                            });
+                                            // Save game history
+                                            await addDoc(collection(db, "gameHistory"), {
+                                                winnerUid: winnerUid,
+                                                loserUid: currentUserUid,
+                                                amountWon: actualWinnerAmount,
+                                                amountLost: betAmount,
+                                                date: Date.now(),
+                                                gameId: currentGameId
+                                            });
+                                            // Redirigir inmediatamente ya que el usuario es el perdedor
+                                            window.location.href = 'login/home.html';
+                                        } else {
+                                            console.error('Error crítico: No se pudieron guardar los datos en localStorage.');
+                                            alert('Hubo un error al guardar el resultado de la partida. Por favor, inténtalo de nuevo.');
+                                        }
+                                    } else {
+                                        await deleteDoc(gameRef);
+                                        alert('Has abandonado la sala. No se pudo determinar un ganador, la sala ha sido eliminada. Serás redirigido a la página principal.');
+                                        window.parent.location.href = 'login/home.html';
+                                    }
+                                } else {
+                                    alert('La sala ya no existe. Serás redirigido a la página principal.');
+                                    window.parent.location.href = 'login/home.html';
+                                }
+                            } catch (error) {
+                                console.error("Error al abandonar la sala:", error);
+                                alert('Hubo un error al intentar abandonar la sala. Por favor, inténtalo de nuevo.');
+                            }
+                        }
+                    }
+
                     // --- CORRECCIÓN: Envolver la lógica en un 'if' para evitar el 'Illegal return statement' ---
                     if (!gameId) {
                         console.error("No se encontró gameId en la URL. La sincronización no funcionará.");
@@ -1503,7 +1591,8 @@
                                 const gameData = docSnap.data();
                                 const betAmount = gameData.betAmount || 0;
                                 const totalWinnings = betAmount * 2; // Apuesta de ambos jugadores
-                                winningsText.textContent = `$${totalWinnings.toLocaleString()}`;
+                                const actualWinnings = totalWinnings * 0.95; // After 5% house rake
+                                winningsText.textContent = `$${actualWinnings.toLocaleString()}`;
 
                                 // --- NUEVO: Actualizar información de los jugadores en el chat ---
                                 const currentUserUid = auth.currentUser.uid;
@@ -1593,86 +1682,6 @@
                             }
                         });
 
-                        // --- NUEVO: Función para manejar el abandono de la sala ---
-                        async function handleAbandonGame() {
-                            if (confirm('¿Estás seguro de que quieres abandonar la sala? El otro jugador ganará la partida.')) {
-                                try {
-                                    const gameRef = doc(db, "games", gameId);
-                                    const gameSnap = await getDoc(gameRef);
-
-                                    if (gameSnap.exists()) {
-                                        const gameData = gameSnap.data();
-                                        const currentUserUid = auth.currentUser.uid;
-                                        let winnerUid = null;
-                                        let loserUid = currentUserUid;
-
-                                        if (gameData.player1 && gameData.player1.uid === currentUserUid) {
-                                            winnerUid = gameData.player2 ? gameData.player2.uid : null;
-                                        } else if (gameData.player2 && gameData.player2.uid === currentUserUid) {
-                                            winnerUid = gameData.player1 ? gameData.player1.uid : null;
-                                        }
-
-                                        if (winnerUid) {
-                                            // --- INICIO DE LA MODIFICACIÓN ---
-                                            const betAmount = gameData.betAmount || 0;
-                                            const totalWinnings = betAmount * 2;
-
-                                            // --- CORRECCIÓN: Obtener la información del perdedor (el usuario actual) correctamente ---
-                                            const winnerPlayerInfo = gameData.player1.uid === winnerUid ? gameData.player1 : gameData.player2;
-                                            const loserPlayerInfo = gameData.player1.uid === loserUid ? gameData.player1 : (gameData.player2.uid === loserUid ? gameData.player2 : null);
-
-                                            const winnerUsername = winnerPlayerInfo?.username || 'Ganador';
-                                            const loserUsername = loserPlayerInfo.username;
-                                            const winnerAvatar = `../imajenes/perfil/${winnerPlayerInfo.profileImageName}`;
-                                            const loserAvatar = `../imajenes/perfil/${loserPlayerInfo.profileImageName}`;
-                                            
-                                            // --- CORRECCIÓN: Guardar en localStorage ANTES de actualizar la base de datos ---
-                                            // Esto asegura que los datos se guarden antes de que la página se redirija.
-                                            localStorage.setItem('gameEnded', 'true');
-                                            localStorage.setItem('winnerUsername', winnerUsername);
-                                            localStorage.setItem('loserUsername', loserUsername);
-                                            localStorage.setItem('winnerAvatar', winnerAvatar);
-                                            localStorage.setItem('loserAvatar', loserAvatar);
-                                            localStorage.setItem('winnerAmount', totalWinnings.toString());
-                                            localStorage.setItem('loserAmount', betAmount.toString());
-
-                                            // --- NUEVO: Verificar que los datos se guardaron antes de continuar ---
-                                            if (localStorage.getItem('gameEnded') === 'true') {
-                                                console.log('Verificación exitosa: Los datos se guardaron en localStorage.');
-                                                await updateDoc(gameRef, {
-                                                    juegoTerminado: true,
-                                                    winner: winnerUid,
-                                                    loser: currentUserUid,
-                                                });
-                                                // Save game history
-                                                await addDoc(collection(db, "gameHistory"), {
-                                                    winnerUid: winnerUid,
-                                                    loserUid: currentUserUid,
-                                                    amountWon: totalWinnings,
-                                                    amountLost: betAmount,
-                                                    date: Date.now(),
-                                                    gameId: gameId
-                                                });
-                                                // La redirección ocurrirá automáticamente cuando onSnapshot detecte juegoTerminado: true
-                                            } else {
-                                                console.error('Error crítico: No se pudieron guardar los datos en localStorage.');
-                                                alert('Hubo un error al guardar el resultado de la partida. Por favor, inténtalo de nuevo.');
-                                            }
-                                        } else {
-                                            await deleteDoc(gameRef);
-                                            alert('Has abandonado la sala. No se pudo determinar un ganador, la sala ha sido eliminada. Serás redirigido a la página principal.');
-                                            window.parent.location.href = 'login/home.html';
-                                        }
-                                    } else {
-                                        alert('La sala ya no existe. Serás redirigido a la página principal.');
-                                        window.parent.location.href = 'login/home.html';
-                                    }
-                                } catch (error) {
-                                    console.error("Error al abandonar la sala:", error);
-                                    alert('Hubo un error al intentar abandonar la sala. Por favor, inténtalo de nuevo.');
-                                }
-                            }
-                        }
 
                         // --- NUEVO: Lógica para el botón "Abandonar Sala" (dentro del panel de opciones) ---
                         const abandonGameBtn = document.getElementById('abandon-game-btn');
@@ -2054,6 +2063,7 @@
 
             const betAmount = gameData.betAmount || 0;
             const totalWinnings = betAmount * 2;
+            const actualWinnerAmount = totalWinnings * 0.95; // After 5% house rake
 
             // Guardar en localStorage del padre para que home.html lo lea
             console.log('setting window.top.localStorage');
@@ -2062,14 +2072,14 @@
             window.top.localStorage.setItem('loserUsername', loserUsername);
             window.top.localStorage.setItem('winnerAvatar', winnerAvatar);
             window.top.localStorage.setItem('loserAvatar', loserAvatar);
-            window.top.localStorage.setItem('winnerAmount', totalWinnings.toString());
+            window.top.localStorage.setItem('winnerAmount', actualWinnerAmount.toString());
             window.top.localStorage.setItem('loserAmount', betAmount.toString());
             console.log('window.top.localStorage set in index.html for game end, gameEnded:', window.top.localStorage.getItem('gameEnded'));
 
             // Poblar el modal
             document.getElementById('winner-avatar').src = winnerAvatar;
             document.getElementById('winner-username').textContent = winnerUsername;
-            document.getElementById('winner-amount').textContent = `Ganó: $${totalWinnings}`;
+            document.getElementById('winner-amount').textContent = `Ganó: $${actualWinnerAmount}`;
             document.getElementById('loser-avatar').src = loserAvatar;
             document.getElementById('loser-username').textContent = loserUsername;
             document.getElementById('loser-amount').textContent = `Perdió: $${betAmount}`;

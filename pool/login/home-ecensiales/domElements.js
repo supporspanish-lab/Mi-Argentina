@@ -100,3 +100,6 @@ export const openWonGamesModalBtn = document.getElementById('open-won-games-moda
 export const wonGamesModal = document.getElementById('won-games-modal');
 export const closeWonGamesModalBtn = document.getElementById('close-won-games-modal-btn');
 export const wonGamesList = document.getElementById('won-games-list');
+export const infoBtn = document.getElementById('info-btn');
+export const infoModal = document.getElementById('info-modal');
+export const closeInfoModalBtn = document.getElementById('close-info-modal-btn');

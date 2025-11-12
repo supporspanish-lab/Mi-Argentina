@@ -74,7 +74,7 @@
       .active-games-section {
         width: 100%;
         max-width: 1200px; /* Coincide con el ancho del header */
-        margin: 0 auto 20px auto; /* Margen inferior para separar del carrusel */
+        margin: -20px auto 20px auto; /* Margen inferior para separar del carrusel, subido más */
         padding: 0 20px;
         box-sizing: border-box;
       }
@@ -218,6 +218,80 @@
         }
       }
 
+      /* --- NUEVO: Estilos para la lista de partidas ganadas --- */
+      .won-games-list {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+      }
+      .won-game-item {
+        padding: 15px;
+        margin-bottom: 10px;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        font-size: 16px;
+        color: var(--text-color);
+      }
+      /* --- NUEVO: Estilos para la barra de desplazamiento --- */
+      .won-games-list::-webkit-scrollbar {
+        width: 8px;
+      }
+      .won-games-list::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 10px;
+      }
+      .won-games-list::-webkit-scrollbar-thumb {
+        background: var(--primary-color);
+        border-radius: 10px;
+      }
+
+      /* --- NUEVO: Estilos para el botón de información --- */
+      .info-btn {
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 24px;
+        cursor: pointer;
+        margin-left: 10px;
+        padding: 5px;
+        border-radius: 50%;
+        transition: background-color 0.3s;
+      }
+      .info-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      /* --- NUEVO: Estilos para el contenido del modal de información --- */
+      .info-content {
+        text-align: left;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 10px;
+      }
+      .info-content h4 {
+        color: var(--primary-color);
+        margin-top: 15px;
+        margin-bottom: 5px;
+      }
+      .info-content ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .info-content li {
+        margin-bottom: 5px;
+      }
+
+      /* --- NUEVO: Ajustes para achicar el modal de información --- */
+      #info-modal .modal-box {
+        padding: 15px;
+        max-width: 500px;
+      }
+      #info-modal .info-content {
+        max-height: 300px;
+      }
+
       /* Notification bar styles */
       .notification-bar {
         background-color: rgba(0, 0, 0, 0.7);
@@ -255,9 +329,10 @@
                 <div class="title-container">
                     <div class="header-pool-ball-container">
                         <div class="pool-ball ball-white"></div>
-                        <div class="pool-ball ball-black"></div>
-                    </div>
-                    <h1 class="app-title">BlackBall</h1>
+                            <div class="pool-ball ball-black"></div>
+                        </div>
+                        <h1 class="app-title">BlackBall</h1>
+                        <button id="info-btn" class="info-btn" title="Cómo Jugar">ℹ️</button>
 
                 </div>
                 <div class="header-right-controls">
@@ -533,10 +608,37 @@
     <div id="won-games-modal" class="modal-overlay">
         <div class="modal-box">
             <h3>Partidas Ganadas</h3>
-            <div id="won-games-list">
+            <div id="won-games-list" class="won-games-list">
                 <!-- Lista de partidas ganadas -->
             </div>
             <button id="close-won-games-modal-btn" class="cancel-button">Cerrar</button>
+        </div>
+    </div>
+    <!-- --- NUEVO: Modal de información del juego --- -->
+    <div id="info-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>¿Cómo Jugar BlackBall?</h3>
+            <div class="info-content">
+                <p>BlackBall es un juego de billar en línea donde compites contra otros jugadores en tiempo real.</p>
+                <h4>Objetivo:</h4>
+                <p>Meter todas tus bolas asignadas en los troneras antes que tu oponente. La bola negra (8) se mete al final.</p>
+                <h4>Reglas Básicas:</h4>
+                <ul>
+                    <li>Las bolas sólidas (1-7) o rayadas (9-15) se asignan al primer jugador que meta una bola.</li>
+                    <li>Debes meter tus bolas asignadas primero.</li>
+                    <li>Si metes la bola negra antes de tiempo, pierdes.</li>
+                    <li>Si cometes una falta, el turno pasa al oponente.</li>
+                    <li>No hay "bola en mano" ya que es profesional.</li>
+                </ul>
+                <h4>Controles:</h4>
+                <p>Usa el mouse o toque para apuntar y golpear la bola blanca. Ajusta la potencia y el efecto con los controles.</p>
+                <h4>Casa (House):</h4>
+                <p>Se cobra un 5% de las ganancias de las apuestas para mantener el juego, servidor, desarrollo y otros costos operativos.</p>
+                <h4>Nota Técnica:</h4>
+                <p>Puede haber un poco de retraso debido a la sincronización en tiempo real, procesamiento de físicas y otros elementos del juego.</p>
+                <p>¡Diviértete y juega limpio!</p>
+            </div>
+            <button id="close-info-modal-btn" class="cancel-button">Cerrar</button>
         </div>
     </div>
     <!-- --- NUEVO: Modal para realizar apuesta --- -->
