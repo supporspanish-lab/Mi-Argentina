@@ -94,17 +94,7 @@ window.addEventListener('receiveaim', (event) => {
     if (gameData.lastShot && gameData.lastShot.timestamp > lastProcessedShotTimestamp) {
         lastProcessedShotTimestamp = gameData.lastShot.timestamp;
 
-        // --- MODIFICADO: Ya no se ignora el tiro propio. Todos los clientes (incluido el que dispara)
-        // esperan la confirmación del servidor para asegurar una sincronización perfecta.
-        // const myUid = auth.currentUser?.uid;
-        // if (gameData.lastShot.playerUid === myUid) return;
-
-        // --- CORRECCIÓN CRÍTICA: Limpiar el tiro del servidor INMEDIATAMENTE después de leerlo. ---
-        // Esto evita que el tiro se vuelva a ejecutar si se recarga la página o hay un retraso.
-        if (gameRef) {
-            updateDoc(gameRef, { lastShot: null });
-        }
-
+        // --- 
         // Aplicamos el tiro (tanto el nuestro como el del oponente) desde el servidor
         // para asegurar que ambos juegos estén perfectamente sincronizados.
         const { angle, power, spin, cueBallStartPos } = gameData.lastShot;
@@ -286,11 +276,11 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
             if (gameRef) {
                 // MODO ONLINE: Solo el jugador cuyo turno es, revisa el estado.
                 if (currentGameState.currentPlayerUid === auth.currentUser?.uid) {
-                    revisarEstado(false, gameRef, currentGameState);
+                    await revisarEstado(false, gameRef, currentGameState);
                 }
             } else {
                 // MODO OFFLINE: Se revisa el estado localmente.
-                revisarEstado(false, null, getGameState());
+                await revisarEstado(false, null, getGameState());
             }
             handleTurnEnd(); // Limpiar estado local para ambos jugadores.
         }
@@ -382,14 +372,14 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
             // Detener el temporizador para que no se siga ejecutando.
             stopTurnTimer();
             // Se llama a revisarEstado con la bandera de tiempo agotado para procesar la falta.
-            revisarEstado(true, gameRef, currentGameState);
+            await revisarEstado(true, gameRef, currentGameState);
         }
     }
     renderer.render(scene, camera);
     
     // --- NUEVO: Disparar evento para enviar el ángulo si es mi turno y estoy apuntando ---
 
-    // --- CORRECCIÓN: Lógica de dibujado con Predicción del Lado del Cliente ---
+    // --- CORRECCIÓN: Lógica de dibujado con predicción del lado del cliente para el jugador local ---
     if (!areBallsMoving(balls)) {
         if (isMyTurn) {
             // Si es mi turno, uso mis datos locales para una respuesta instantánea.
@@ -402,7 +392,7 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
             updateAimingGuides(localAngle, getGameState(), localPower, true);
             if (cueMesh) cueMesh.visible = true;
         } else {
-            // Si es el turno del oponente, uso los datos del servidor.
+            // Si es el turno del oponente, uso los datos del servidor con interpolación.
             if (serverAimAngle !== null) {
                 if (smoothedAimAngle === null) {
                     smoothedAimAngle = serverAimAngle;
@@ -410,7 +400,8 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
                 // Interpolar el ángulo para una animación suave
                 smoothedAimAngle += (serverAimAngle - smoothedAimAngle) * 0.1;
 
-                                    updateAimingGuides(smoothedAimAngle, getGameState(), serverPowerPercent, true);                if (cueMesh) cueMesh.visible = true;
+                updateAimingGuides(smoothedAimAngle, getGameState(), serverPowerPercent, true);
+                if (cueMesh) cueMesh.visible = true;
             } else {
                 smoothedAimAngle = null;
                 hideAimingGuides();
@@ -456,7 +447,7 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
         }
     });
 
-    // --- NUEVO: Actualizar la UI de la barra de potencia desde el servidor ---
+    // --- NUEVO: Actualizar la UI de la barra de potencia ---
     // Esta lógica se ejecuta para ambos jugadores.
     const powerBarFill = document.getElementById('powerBarFill');
     const powerBarHandle = document.getElementById('powerBarHandle');
@@ -477,7 +468,7 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
 function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     if (areBallsMoving(balls)) return; // No hacer nada si las bolas ya se están moviendo
 
-    const maxPower = 100 * 25;
+    const maxPower = 7;
     const power = powerPercent * maxPower;
     const velocityFactor = 2.5;
 
@@ -489,8 +480,8 @@ function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     }
 
     // Aplicar el impulso a la bola blanca
-    cueBall.vx = Math.cos(angle) * (power / 1000) * velocityFactor;
-    cueBall.vy = Math.sin(angle) * (power / 1000) * velocityFactor;
+    cueBall.vx = Math.cos(angle) * power * velocityFactor;
+    cueBall.vy = Math.sin(angle) * power * velocityFactor;
     cueBall.initialVx = cueBall.vx;
     cueBall.initialVy = cueBall.vy;
     cueBall.spin = { ...spin };

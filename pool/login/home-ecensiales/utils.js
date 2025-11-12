@@ -214,9 +214,21 @@ export const cleanupWaitingGame = async () => {
         const gameDocRef = doc(db, "games", userWaitingGameId);
         const gameSnap = await getDoc(gameDocRef);
 
-        // If the game document still exists, delete it to ensure no orphaned games.
         if (gameSnap.exists()) {
-            await deleteDoc(gameDocRef);
+            const gameData = gameSnap.data();
+            if (gameData.player1 && gameData.player1.uid === currentUser.uid) {
+                // Current user is the owner (player1), delete the game
+                await deleteDoc(gameDocRef);
+            } else if (gameData.player2 && gameData.player2.uid === currentUser.uid) {
+                // Current user is player2, leave the game without deleting it
+                await updateDoc(gameDocRef, {
+                    player2: null,
+                    status: "waiting"
+                });
+            } else {
+                // Fallback: if not player1 or player2, delete to avoid orphaned games
+                await deleteDoc(gameDocRef);
+            }
         }
 
         // Finally, always reset the UI for the current user.

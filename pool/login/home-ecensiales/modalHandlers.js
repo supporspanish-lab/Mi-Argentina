@@ -1,6 +1,6 @@
-import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge } from './domElements.js';
+import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge, profileImg, profileSvg } from './domElements.js';
 import { updateUserProfile } from '../auth.js';
-import { getState } from './state.js';
+import { getState, setCurrentUserProfile } from './state.js';
 import { updateErrorConsole, isMaintenanceModalOpen } from './utils.js';
 import { db, auth, query, where, getDocs, collection, addDoc, onSnapshot, doc, getDoc } from '../auth.js';
 
@@ -60,7 +60,7 @@ export const setupAvatarModal = () => {
         img.alt = `Avatar ${i}`;
         img.dataset.path = imgPath;
         img.addEventListener('click', () => {
-            const { currentUser } = getState();
+            const { currentUser, currentUserProfile } = getState();
             if (!currentUser) {
                 console.error("Usuario no logueado. No se puede cambiar la foto.");
                 return;
@@ -69,7 +69,22 @@ export const setupAvatarModal = () => {
             const imageName = selectedPath.split('/').pop();
 
             updateUserProfile(currentUser.uid, { profileImageName: imageName });
-            
+
+            // Update header avatar immediately
+            profileImg.src = selectedPath;
+            profileImg.style.display = 'block';
+            profileSvg.style.display = 'none';
+            profileImg.onerror = () => {
+                profileImg.style.display = 'none';
+                profileSvg.style.display = 'block';
+            };
+
+            // Update state
+            if (currentUserProfile) {
+                currentUserProfile.profileImageName = imageName;
+                setCurrentUserProfile(currentUserProfile);
+            }
+
             mainCurrentAvatarImg.src = selectedPath; // Update the displayed current avatar in main modal
             mainCurrentAvatarImg.style.display = 'block';
             avatarSelectionModal.classList.remove('visible'); // Close avatar selection modal

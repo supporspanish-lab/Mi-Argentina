@@ -1,5 +1,5 @@
 import { db, collection, query, where, getDocs, addDoc, doc, updateDoc, onSnapshot, arrayUnion, deleteDoc, getDoc } from './firebaseService.js';
-import { appContainer, gameContainer, gameIframe, gameCarousel, waitingScreen, cancelWaitBtn, startGameBtn, kickOpponentBtn, chatMessagesContainer, chatMessageInput, sendChatMessageBtn, minimizeChatBtn, player1ChatName, player2ChatName, player1ChatAvatar, player2ChatAvatar, betModal, betAmountInput, betErrorMessage, leftChatButton, inviteFriendsModal, inviteFriendsListContainer, closeInviteFriendsModalBtn } from './domElements.js';
+import { appContainer, gameContainer, gameIframe, gameCarousel, waitingScreen, cancelWaitBtn, startGameBtn, kickOpponentBtn, chatMessagesContainer, chatMessageInput, sendChatMessageBtn, player1ChatName, player2ChatName, player1ChatAvatar, player2ChatAvatar, betModal, betAmountInput, betErrorMessage, leftChatButton, inviteFriendsModal, inviteFriendsListContainer, closeInviteFriendsModalBtn } from './domElements.js';
 import { getState, setUserWaitingGameId, setLastMessageCount, setPollingIntervalId, stopPolling, setGameStarted, getSalas, setSalas } from './state.js';
 import { setPlayerAvatar, renderMessages, cleanupWaitingGame, fetchUserProfile } from './utils.js';
 import { updateUserProfile } from '../auth.js';
@@ -14,17 +14,6 @@ const startGameFullscreen = (gameId) => {
     appContainer.style.display = 'none'; // Hide the home.html UI
     gameIframe.src = `../index.html?gameId=${gameId}`; // Set iframe source
     gameContainer.style.display = 'block'; // Show the game container
-
-    // Request fullscreen
-    if (gameContainer.requestFullscreen) {
-        gameContainer.requestFullscreen();
-    } else if (gameContainer.mozRequestFullScreen) { /* Firefox */
-        gameContainer.mozRequestFullScreen();
-    } else if (gameContainer.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
-        gameContainer.webkitRequestFullscreen();
-    } else if (gameContainer.msRequestFullscreen) { /* IE/Edge */
-        gameContainer.msRequestFullscreen();
-    }
 };
 
 const STALE_GAME_MINUTES = 10;
@@ -57,6 +46,12 @@ export const createGame = async (betAmount, isPrivate = false) => {
     if (!currentUser || !currentUserProfile) return;
 
     const gamesRef = collection(db, "games");
+
+    // Eliminar salas anteriores del usuario que están esperando
+    const oldGamesQuery = query(gamesRef, where("player1.uid", "==", currentUser.uid), where("status", "==", "waiting"));
+    const oldGamesSnap = await getDocs(oldGamesQuery);
+    const deletePromises = oldGamesSnap.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
     const ballPositions = [];
     const RACK_SPACING_DIAMETER = 28;
     const TABLE_WIDTH = 1000;
@@ -379,18 +374,13 @@ const joinGameAndSetupListener = async (gameData) => {
         const updatedGameData = gameSnap.data();
         if (updatedGameData) {
             if (updatedGameData.status === "starting") {
-                const { gameStarted } = getState();
-                if (!gameStarted) {
-                    setGameStarted(true);
+                // Para el jugador 2, mostrar el botón de iniciar manualmente como respaldo.
+                startGameBtn.style.display = 'block';
+                startGameBtn.textContent = 'Jugar';
+                startGameBtn.onclick = () => {
+                    setGameStarted(true); // Marcar que el juego ha comenzado
                     startGameFullscreen(gameData.id);
-                }
-                // Fallback: force start after 5 seconds if not started
-                setTimeout(() => {
-                    if (!getState().gameStarted) {
-                        setGameStarted(true);
-                        startGameFullscreen(gameData.id);
-                    }
-                }, 5000);
+                };
             }
             renderMessages(updatedGameData.messages, chatMessagesContainer);
             setLastMessageCount(updatedGameData.messages ? updatedGameData.messages.length : 0);
@@ -408,12 +398,21 @@ export const displaySalas = (allRooms) => {
 
     globalGamesList.innerHTML = '';
 
-    // Sort: user's rooms first, then other real, then simulated
+    // --- CORRECCIÓN: Cambiar la lógica de ordenación ---
+    // 1. Tu sala en espera primero.
+    // 2. Otras salas en espera.
+    // 3. El resto de salas por fecha.
     allRooms.sort((a, b) => {
-        const aIsUser = (a.player1?.uid === currentUser.uid || (a.player2?.uid && a.player2?.uid === currentUser.uid));
-        const bIsUser = (b.player1?.uid === currentUser.uid || (b.player2?.uid && b.player2?.uid === currentUser.uid));
-        if (aIsUser && !bIsUser) return -1;
-        if (!aIsUser && bIsUser) return 1;
+        const aIsMyWaitingRoom = a.status === "waiting" && a.player1?.uid === currentUser.uid;
+        const bIsMyWaitingRoom = b.status === "waiting" && b.player1?.uid === currentUser.uid;
+        if (aIsMyWaitingRoom) return -1; // La sala 'a' es mi sala en espera, va primero.
+        if (bIsMyWaitingRoom) return 1;  // La sala 'b' es mi sala en espera, va primero.
+
+        const aIsWaiting = a.status === "waiting";
+        const bIsWaiting = b.status === "waiting";
+        if (aIsWaiting && !bIsWaiting) return -1; // Cualquier otra sala en espera va antes que las que están en partida.
+        if (!aIsWaiting && bIsWaiting) return 1;
+
         return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
@@ -499,10 +498,6 @@ export const setupGameRoomListeners = () => {
     sendChatMessageBtn.addEventListener('click', sendMessage);
     chatMessageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    minimizeChatBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        waitingScreen.classList.toggle('minimized');
-    });
 
     waitingScreen.addEventListener('click', (e) => {
         if (waitingScreen.classList.contains('minimized')) {

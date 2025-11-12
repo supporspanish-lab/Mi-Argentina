@@ -745,56 +745,18 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     const currentUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
     const bola8Entronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === 8);
     if (bola8Entronerada) {
-                        const betAmount = onlineGameData.betAmount || 0;
-                        const totalWinnings = betAmount * 2;
-                        const netWinnings = totalWinnings * 0.95;
                         if (faltaCometida) {
                             // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
                             setGameOver(true);
-                            console.log('Setting gameEnded to true in localStorage');
                             localStorage.setItem('gameEnded', 'true'); // Signal game end
-                            console.log('localStorage.gameEnded after set (foul):', localStorage.getItem('gameEnded'));
                             localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-
                             const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
                             const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid; // Define winnerUid here
-
-                            // Send game result to Firebase
-                            const winnerPlayerNumber = winnerUid === onlineGameData.player1?.uid ? 1 : 2;
-                            const loserPlayerNumber = jugadorActual;
-                            const winnerUsername = onlineGameData[`player${winnerPlayerNumber}`]?.username || 'Desconocido';
-                            const loserUsername = onlineGameData[`player${loserPlayerNumber}`]?.username || 'Desconocido';
-                            const winnerAvatar = onlineGameData[`player${winnerPlayerNumber}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${winnerPlayerNumber}`]?.profileImageName}` : '../imajenes/perfil/1.jpg';
-                            const loserAvatar = onlineGameData[`player${loserPlayerNumber}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${loserPlayerNumber}`]?.profileImageName}` : '../imajenes/perfil/2.jpg';
-                            const winnerAmount = netWinnings.toString();
-                            const loserAmount = betAmount.toString();
-                            await addDoc(collection(db, "gameResults"), {
-                                winnerUsername,
-                                loserUsername,
-                                winnerAvatar,
-                                loserAvatar,
-                                winnerAmount,
-                                loserAmount,
-                                timestamp: Date.now(),
-                                userUid: onlineGameData[`player${jugadorActual}`]?.uid
-                            });
-
-                            // Send global notification
-                            await addDoc(collection(db, "globalNotifications"), {
-                                message: `¡${winnerUsername} ganó $${winnerAmount}!`,
-                                timestamp: Date.now()
-                            });
-
-                            // Send global notification
-                            await addDoc(collection(db, "globalNotifications"), {
-                                message: `¡${winnerUsername} ganó $${winnerAmount}!`,
-                                timestamp: Date.now()
-                            });
-
+                            const betAmount = onlineGameData.betAmount || 0;
+                            const totalWinnings = betAmount * 2;
+        
                             showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 y cometiste una falta.`, loserUid);
-
-                            console.log('Game over detected: player lost by potting 8 with foul');
-
+        
                             // Award winnings to the opponent
                             if (winnerUid) {
                                 const winnerDocRef = doc(db, "saldo", winnerUid);
@@ -802,9 +764,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                 if (winnerSnap.exists()) {
                                     const currentBalance = winnerSnap.data().balance || 0;
                                     await updateDoc(winnerDocRef, {
-                                        balance: currentBalance + netWinnings
+                                        balance: currentBalance + totalWinnings
                                     });
-                                    console.log(`Winner ${winnerUid} received ${netWinnings}. New balance: ${currentBalance + netWinnings}`);
+                                    console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
                                 }
                             }
 
@@ -853,8 +815,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                     status: "ended",
                                     winner: winnerUid,
                                     loser: loserUid,
-                                    winnerUsername: winnerUsername,
-                                    loserUsername: loserUsername,
                                     endedAt: Date.now(),
                                     juegoTerminado: true
                                 });
@@ -862,9 +822,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                 await addDoc(collection(db, "gameHistory"), {
                                     winnerUid: winnerUid,
                                     loserUid: loserUid,
-                                    amountWon: netWinnings,
+                                    amountWon: totalWinnings,
                                     amountLost: betAmount,
-                                    houseCut: totalWinnings * 0.05,
                                     date: Date.now(),
                                     gameId: gameRef.id
                                 });
@@ -885,38 +844,10 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                     setGameOver(true);
                                     localStorage.setItem('gameEnded', 'true'); // Signal game end
                                     localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-
-                                    const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                                    const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
-                                    const betAmount = onlineGameData.betAmount || 0;
-                                    const totalWinnings = betAmount * 2;
-                                    
-                                    const winnerPlayerNum = (jugadorActual === 1) ? 2 : 1;
-                                    const loserPlayerNum = jugadorActual;
-                                    
-                                    const winnerUsername = onlineGameData[`player${winnerPlayerNum}`]?.username || 'Desconocido';
-                                    const loserUsername = onlineGameData[`player${loserPlayerNum}`]?.username || 'Desconocido';
-                                    const winnerAvatar = onlineGameData[`player${winnerPlayerNum}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${winnerPlayerNum}`]?.profileImageName}` : '../imajenes/perfil/1.jpg';
-                                    const loserAvatar = onlineGameData[`player${loserPlayerNum}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${loserPlayerNum}`]?.profileImageName}` : '../imajenes/perfil/2.jpg';
-                                    const winnerAmount = netWinnings.toString();
-                                    const loserAmount = betAmount.toString();
-
-                                    await addDoc(collection(db, "gameResults"), {
-                                        winnerUsername: winnerUsername,
-                                        loserUsername: loserUsername,
-                                        winnerAvatar: winnerAvatar,
-                                        loserAvatar: loserAvatar,
-                                        winnerAmount: winnerAmount,
-                                        loserAmount: loserAmount,
-                                        timestamp: Date.now(),
-                                        userUid: onlineGameData[`player${jugadorActual}`]?.uid
-                                    });
-                    
-                                    // Send global notification
-                                    await addDoc(collection(db, "globalNotifications"), {
-                                        message: `¡${winnerUsername} ganó <span style="color: #27ae60; font-weight: bold;">$${winnerAmount}</span>!`,
-                                        timestamp: Date.now()
-                                    });
+                            const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                            const betAmount = onlineGameData.betAmount || 0;
+                            const totalWinnings = betAmount * 2;
             
                                     showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, loserUid);
             
@@ -927,9 +858,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                         if (winnerSnap.exists()) {
                                             const currentBalance = winnerSnap.data().balance || 0;
                                             await updateDoc(winnerDocRef, {
-                                                balance: currentBalance + netWinnings
+                                                balance: currentBalance + totalWinnings
                                             });
-                                            console.log(`Winner ${winnerUid} received ${netWinnings}. New balance: ${currentBalance + netWinnings}`);
+                                            console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
                                         }
                                     }
             
@@ -939,8 +870,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                             status: "ended",
                                             winner: winnerUid,
                                             loser: loserUid,
-                                            winnerUsername: winnerUsername,
-                                            loserUsername: loserUsername,
                                             endedAt: Date.now(),
                                             juegoTerminado: true
                                         });
@@ -948,26 +877,21 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                         await addDoc(collection(db, "gameHistory"), {
                                             winnerUid: winnerUid,
                                             loserUid: loserUid,
-                                            amountWon: netWinnings,
+                                            amountWon: totalWinnings,
                                             amountLost: betAmount,
-                                            houseCut: totalWinnings * 0.05,
                                             date: Date.now(),
                                             gameId: gameRef.id
                                         });
                                     }
                                 } else {
-               // ¡El jugador ha ganado!
-               setGameOver(true);
-               localStorage.setItem('gameEnded', 'true'); // Signal game end
-               localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-               const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
-               const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                // ¡El jugador ha ganado!
+                setGameOver(true);
+                localStorage.setItem('gameEnded', 'true'); // Signal game end
+                localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
+                const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
                 const betAmount = onlineGameData.betAmount || 0;
                 const totalWinnings = betAmount * 2;
-                const netWinnings = totalWinnings * 0.95;
-                const winnerUsername = currentUsername;
-                const loserPlayerNumber = (jugadorActual === 1) ? 2 : 1;
-                const loserUsername = onlineGameData[`player${loserPlayerNumber}`]?.username || 'Desconocido';
 
                 if (winnerUid) {
                     const winnerDocRef = doc(db, "saldo", winnerUid);
@@ -975,9 +899,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                     if (winnerSnap.exists()) {
                         const currentBalance = winnerSnap.data().balance || 0;
                         await updateDoc(winnerDocRef, {
-                            balance: currentBalance + netWinnings
+                            balance: currentBalance + totalWinnings
                         });
-                        console.log(`Winner ${winnerUid} received ${netWinnings}. New balance: ${currentBalance + netWinnings}`);
+                        console.log(`Winner ${winnerUid} received ${totalWinnings}. New balance: ${currentBalance + totalWinnings}`);
                     }
                 }
 
@@ -987,8 +911,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                         status: "ended",
                         winner: winnerUid,
                         loser: loserUid,
-                        winnerUsername: winnerUsername,
-                        loserUsername: loserUsername,
                         endedAt: Date.now(),
                         juegoTerminado: true
                     });
@@ -996,9 +918,8 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                     await addDoc(collection(db, "gameHistory"), {
                         winnerUid: winnerUid,
                         loserUid: loserUid,
-                        amountWon: netWinnings,
+                        amountWon: totalWinnings,
                         amountLost: betAmount,
-                        houseCut: totalWinnings * 0.05,
                         date: Date.now(),
                         gameId: gameRef.id
                     });

@@ -37,6 +37,10 @@ export const setupAuthListeners = () => {
                         profileImg.src = `../imajenes/perfil/${userData.profileImageName}`;
                         profileImg.style.display = 'block';
                         profileSvg.style.display = 'none';
+                        profileImg.onerror = () => {
+                            profileImg.style.display = 'none';
+                            profileSvg.style.display = 'block';
+                        };
                     } else {
                         profileImg.style.display = 'none';
                         profileSvg.style.display = 'block';

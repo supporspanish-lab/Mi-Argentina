@@ -24,7 +24,6 @@ export const kickOpponentBtn = document.getElementById('kick-opponent-btn');
 export const chatMessagesContainer = document.querySelector('.chat-messages');
 export const chatMessageInput = document.getElementById('chat-message-input');
 export const sendChatMessageBtn = document.getElementById('send-chat-message-btn');
-export const minimizeChatBtn = document.getElementById('minimize-chat-btn');
 
 export const profilePictureContainer = document.querySelector('.profile-picture-container');
 export const mainAvatarModal = document.getElementById('main-avatar-modal');

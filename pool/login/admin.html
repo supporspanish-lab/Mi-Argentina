@@ -300,6 +300,7 @@
         <div class="section-container">
             <h2>Salas de Juego Activas</h2>
             <button id="delete-old-games-btn" class="action-button" style="margin-bottom: 15px;">Eliminar Salas Antiguas (más de 1 día)</button>
+            <button id="delete-all-games-btn" class="action-button" style="margin-bottom: 15px; margin-left: 10px;">Eliminar Todas las Salas</button>
             <table id="games-table">
                 <thead>
                     <tr>
@@ -518,6 +519,38 @@
             } catch (error) {
                 console.error("Error deleting old game rooms:", error);
                 alert('Hubo un error al eliminar las salas de juego antiguas: ' + error.message);
+            }
+        });
+
+        // Event listener for deleting all games
+        const deleteAllGamesBtn = document.getElementById('delete-all-games-btn');
+        deleteAllGamesBtn.addEventListener('click', async () => {
+            if (!confirm('¿Estás seguro de que quieres eliminar TODAS las salas de juego? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            const gamesRef = collection(db, "games");
+            let deletedCount = 0;
+
+            try {
+                const querySnapshot = await getDocs(gamesRef);
+                const deletePromises = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    deletePromises.push(deleteDoc(doc(db, "games", docSnap.id)));
+                    deletedCount++;
+                });
+
+                await Promise.all(deletePromises);
+
+                if (deletedCount > 0) {
+                    alert(`${deletedCount} sala(s) de juego ha(n) sido eliminada(s).`);
+                } else {
+                    alert('No hay salas de juego para eliminar.');
+                }
+            } catch (error) {
+                console.error("Error deleting all game rooms:", error);
+                alert('Hubo un error al eliminar todas las salas de juego: ' + error.message);
             }
         });
 

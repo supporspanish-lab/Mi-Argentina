@@ -1572,8 +1572,13 @@
                                     localStorage.setItem('winnerAmount', totalWinnings); // Asumiendo que totalWinnings es la cantidad ganada
                                     localStorage.setItem('loserAmount', betAmount); // Asumiendo que betAmount es la cantidad perdida
 
-                                    // Mostrar el modal de fin de partida en lugar de redirigir
-                                    showGameOverModal(gameData);
+                                    // Si el usuario actual es el perdedor (el que abandonó), redirigir directamente a home
+                                    if (currentUserUid === loserUid) {
+                                        window.location.href = 'login/home.html';
+                                    } else {
+                                        // Mostrar el modal de fin de partida para el ganador
+                                        showGameOverModal(gameData);
+                                    }
                                     isGameActive = false; // El juego ha terminado
                                     unsubscribe(); // Unsubscribe from further updates
                                     return; // Detener el procesamiento posterior
@@ -1811,23 +1816,21 @@
             // --- NUEVO: Listener para enviar los datos del tiro al servidor ---
             window.addEventListener('sendShot', async (event) => {
                 if (!isGameActive || !gameId) return; // --- NUEVO: No enviar actualizaciones si el juego no está activo
-                if (gameId && event.detail) {
-                    const { gameState: gameData, ...shotData } = event.detail; // Separar gameState del resto de los datos del tiro
+                if (gameId && event.detail && auth.currentUser) {
+                    const { gameState, ...shotData } = event.detail;
                     const gameRef = doc(db, "games", gameId);
                     try {
                         // --- NUEVO: Resetear el spin en la UI antes de disparar ---
                         window.dispatchEvent(new CustomEvent('resetspin'));
                         await updateDoc(gameRef, {
-                            lastShot: { // --- TEMPORAL: Directamente a lastShot para sincronización inmediata
+                            lastShot: {
                                 playerUid: auth.currentUser.uid,
-                                currentPlayerUid: gameData.currentPlayerUid, // --- SOLUCIÓN: Incluir el UID del jugador actual en el resultado del turno
-                                // --- SOLUCIÓN: Incluir la información de ambos jugadores para la lógica del servidor ---
-                                player1: gameData.player1,
-                                player2: gameData.player2,
-                                ...shotData, // Enviar solo los datos del tiro, no todo el gameState
+                                ...shotData,
                                 timestamp: Date.now()
                             },
-                            ballInHandFor: null, cueBallPosition: null,
+                            // Limpiar estados de apuntado en el servidor
+                            ballInHandFor: null, 
+                            cueBallPosition: null,
                             aimingSpin: { x: 0, y: 0 }, isSpinModalOpen: false
                         });
                     } catch (error) {
