@@ -17,13 +17,6 @@ const firebaseConfig = {
     measurementId: "G-MSX7ELVR48"
 };
 
-// --- SOLUCIÓN: Redirigir si el usuario ya está logueado ---
-// Si estamos en la página de login y el localStorage indica que hay una sesión activa,
-// redirigimos inmediatamente a la página principal (home).
-if (window.location.pathname.endsWith('login.html') && localStorage.getItem('userIsLoggedIn') === 'true') {
-    window.location.href = 'home.html';
-}
-
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -64,9 +57,6 @@ export async function loginWithEmail(email, password) {
             profileImageName: null
         });
     }
-
-    // Guardar el estado de la sesión en localStorage
-    localStorage.setItem('userIsLoggedIn', 'true');
     return user;
 }
 
@@ -144,7 +134,5 @@ export async function updateUserProfile(userId, data) {
 }
 
 export function logout() {
-    // Eliminar el estado de la sesión de localStorage
-    localStorage.removeItem('userIsLoggedIn');
     return signOut(auth);
 }

@@ -32,7 +32,6 @@ const ASSETS_TO_CACHE = [
     'audio/cushionHit.wav',
     'audio/EntrarPelotaTronera.mp3',
     'audio/cueHit.wav',
-    'audio/mensaje.mp3', // --- SOLUCIÓN: Añadir el sonido de mensaje que faltaba
     'modelos/billiard_balls.glb',
     // Login page assets
     'login/login.html',
