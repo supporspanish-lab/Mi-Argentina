@@ -57,6 +57,9 @@ export async function loginWithEmail(email, password) {
             profileImageName: null
         });
     }
+
+    // Guardar el estado de la sesión en localStorage
+    localStorage.setItem('userIsLoggedIn', 'true');
     return user;
 }
 
@@ -134,5 +137,7 @@ export async function updateUserProfile(userId, data) {
 }
 
 export function logout() {
+    // Eliminar el estado de la sesión de localStorage
+    localStorage.removeItem('userIsLoggedIn');
     return signOut(auth);
 }

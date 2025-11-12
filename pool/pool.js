@@ -224,6 +224,13 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
                     for (const ball of pocketedInFrame) {
                         // --- FIX: Check if the ball has already been pocketed this turn to prevent duplication ---
                         const alreadyPocketed = pocketedThisTurn.some(p => p.number === ball.number);
+                        // --- SOLUCIÓN: Marcar la bola como inactiva en el array principal ---
+                        // Esto asegura que el estado que se envía a Firestore sea correcto.
+                        const localBall = balls.find(b => b.number === ball.number);
+                        if (localBall) {
+                            localBall.isActive = false;
+                        }
+
                         if (!alreadyPocketed) {
                             addPocketedBall(ball);
                             if (gameRef && isMyTurn) {

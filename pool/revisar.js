@@ -11,6 +11,20 @@ import { db, doc, getDoc, updateDoc, addDoc, collection } from './login/auth.js'
  */
 export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onlineGameData = null) {
     console.log("--- INICIO REVISAR ESTADO ---");
+
+    // --- SOLUCIÓN: ESPERAR DATOS FRESCOS DE FIREBASE ---
+    // Si estamos en una partida online (gameRef existe), antes de hacer nada,
+    // obtenemos la versión más reciente del estado del juego desde el servidor.
+    // Esto previene tomar decisiones basadas en datos locales obsoletos.
+    if (gameRef) {
+        console.log("Revisión online: Obteniendo estado fresco de Firebase...");
+        const docSnap = await getDoc(gameRef);
+        if (docSnap.exists()) {
+            onlineGameData = docSnap.data();
+            setOnlineGameData(onlineGameData); // Actualizamos el estado global localmente
+        }
+    }
+
     const estadoInicialDebug = getGameState();
     console.log("Contenido de 'bolasEntroneradasEsteTurno' al iniciar la revisión:", JSON.parse(JSON.stringify(estadoInicialDebug.pocketedThisTurn)));
 

@@ -59,6 +59,12 @@ export function shoot(powerPercent) {
         // Disparamos un evento global que será capturado para enviar los datos al servidor.
         window.dispatchEvent(new CustomEvent('sendShot', { detail: { ...shotData, gameState: getGameState() } }));
 
+        // --- SOLUCIÓN: Ocultar la barra de potencia inmediatamente ---
+        // Ocultamos la UI de disparo de forma local para dar una respuesta instantánea al jugador,
+        // sin esperar la confirmación del servidor.
+        const powerBarWrapper = document.getElementById('powerBarWrapper');
+        if (powerBarWrapper) powerBarWrapper.style.display = 'none';
+
         // Reproducir sonido localmente para una respuesta inmediata al jugador que dispara.
         playSound('cueHit', 1.0);
         isShooting = false; // Resetear estado de disparo

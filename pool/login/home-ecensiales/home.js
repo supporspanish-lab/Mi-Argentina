@@ -1,6 +1,16 @@
 // Este archivo ahora solo contiene la lógica para la música de fondo,
 // encapsulada en una función para ser llamada desde main.js.
 
+// --- NUEVO: Comprobación de sesión al cargar la página de inicio ---
+// Si no hay una sesión guardada en localStorage, redirigir a la página de login.
+// Esto previene que un usuario no autenticado acceda a home.html directamente.
+if (localStorage.getItem('userIsLoggedIn') !== 'true') {
+    // Excepción: no redirigir si estamos en la página de login para evitar un bucle infinito.
+    if (!window.location.pathname.endsWith('login.html')) {
+        window.location.href = 'login.html';
+    }
+}
+
 let backgroundAudio; // Make backgroundAudio accessible in this module
 
 export const setupBackgroundMusic = () => {
