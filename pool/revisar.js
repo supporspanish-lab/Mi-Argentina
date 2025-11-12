@@ -885,37 +885,38 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                     setGameOver(true);
                                     localStorage.setItem('gameEnded', 'true'); // Signal game end
                                     localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-                    
-                                    // Send game result to Firebase
-                                    const winnerPlayerNum = jugadorActual;
-                                    const loserPlayerNum = winnerUid === onlineGameData.player1?.uid ? 2 : 1;
-                                    const winnerUser = onlineGameData[`player${winnerPlayerNum}`]?.username || 'Desconocido';
-                                    const loserUser = onlineGameData[`player${loserPlayerNum}`]?.username || 'Desconocido';
-                                    const winnerAv = onlineGameData[`player${winnerPlayerNum}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${winnerPlayerNum}`]?.profileImageName}` : '../imajenes/perfil/1.jpg';
-                                    const loserAv = onlineGameData[`player${loserPlayerNum}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${loserPlayerNum}`]?.profileImageName}` : '../imajenes/perfil/2.jpg';
-                                    const winnerAmt = netWinnings.toString();
-                                    const loserAmt = betAmount.toString();
+
+                                    const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                                    const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                                    const betAmount = onlineGameData.betAmount || 0;
+                                    const totalWinnings = betAmount * 2;
+                                    
+                                    const winnerPlayerNum = (jugadorActual === 1) ? 2 : 1;
+                                    const loserPlayerNum = jugadorActual;
+                                    
+                                    const winnerUsername = onlineGameData[`player${winnerPlayerNum}`]?.username || 'Desconocido';
+                                    const loserUsername = onlineGameData[`player${loserPlayerNum}`]?.username || 'Desconocido';
+                                    const winnerAvatar = onlineGameData[`player${winnerPlayerNum}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${winnerPlayerNum}`]?.profileImageName}` : '../imajenes/perfil/1.jpg';
+                                    const loserAvatar = onlineGameData[`player${loserPlayerNum}`]?.profileImageName ? `../imajenes/perfil/${onlineGameData[`player${loserPlayerNum}`]?.profileImageName}` : '../imajenes/perfil/2.jpg';
+                                    const winnerAmount = netWinnings.toString();
+                                    const loserAmount = betAmount.toString();
+
                                     await addDoc(collection(db, "gameResults"), {
-                                        winnerUsername: winnerUser,
-                                        loserUsername: loserUser,
-                                        winnerAvatar: winnerAv,
-                                        loserAvatar: loserAv,
-                                        winnerAmount: winnerAmt,
-                                        loserAmount: loserAmt,
+                                        winnerUsername: winnerUsername,
+                                        loserUsername: loserUsername,
+                                        winnerAvatar: winnerAvatar,
+                                        loserAvatar: loserAvatar,
+                                        winnerAmount: winnerAmount,
+                                        loserAmount: loserAmount,
                                         timestamp: Date.now(),
                                         userUid: onlineGameData[`player${jugadorActual}`]?.uid
                                     });
                     
                                     // Send global notification
                                     await addDoc(collection(db, "globalNotifications"), {
-                                        message: `¡${winnerUser} ganó <span style="color: #27ae60; font-weight: bold;">$${winnerAmt}</span>!`,
+                                        message: `¡${winnerUsername} ganó <span style="color: #27ae60; font-weight: bold;">$${winnerAmount}</span>!`,
                                         timestamp: Date.now()
                                     });
-
-                            const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
-                            const betAmount = onlineGameData.betAmount || 0;
-                            const totalWinnings = betAmount * 2;
             
                                     showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, loserUid);
             
@@ -961,6 +962,12 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
                const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
                const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                const betAmount = onlineGameData.betAmount || 0;
+                const totalWinnings = betAmount * 2;
+                const netWinnings = totalWinnings * 0.95;
+                const winnerUsername = currentUsername;
+                const loserPlayerNumber = (jugadorActual === 1) ? 2 : 1;
+                const loserUsername = onlineGameData[`player${loserPlayerNumber}`]?.username || 'Desconocido';
 
                 if (winnerUid) {
                     const winnerDocRef = doc(db, "saldo", winnerUid);
