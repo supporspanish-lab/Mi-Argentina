@@ -778,6 +778,20 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         
                             showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 y cometiste una falta.`, loserUid);
         
+                            // --- FIX: Define winner/loser usernames and avatars ---
+                            let winnerUsername, loserUsername, winnerAvatar, loserAvatar;
+                            if (onlineGameData.player1?.uid === winnerUid) {
+                                winnerUsername = onlineGameData.player1.username;
+                                winnerAvatar = onlineGameData.player1.avatar;
+                                loserUsername = onlineGameData.player2?.username;
+                                loserAvatar = onlineGameData.player2?.avatar;
+                            } else {
+                                winnerUsername = onlineGameData.player2?.username;
+                                winnerAvatar = onlineGameData.player2?.avatar;
+                                loserUsername = onlineGameData.player1?.username;
+                                loserAvatar = onlineGameData.player1?.avatar;
+                            }
+
                             // Award winnings to the opponent
                             if (winnerUid) {
                                 const winnerDocRef = doc(db, "saldo", winnerUid);
@@ -871,6 +885,16 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                             const totalWinnings = betAmount * 2;
             
                                     showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, loserUid);
+
+                                    // --- FIX: Define winner/loser usernames and avatars ---
+                                    let winnerUsername, loserUsername;
+                                    if (onlineGameData.player1?.uid === winnerUid) {
+                                        winnerUsername = onlineGameData.player1.username;
+                                        loserUsername = onlineGameData.player2?.username;
+                                    } else {
+                                        winnerUsername = onlineGameData.player2?.username;
+                                        loserUsername = onlineGameData.player1?.username;
+                                    }
             
                                     // Award winnings to the opponent
                                     if (winnerUid) {
@@ -903,7 +927,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                         await updateDoc(gameRef, {
                                             status: "ended",
                                             winner: winnerUid,
+                                            winnerUsername: winnerUsername, // --- FIX: Add username
                                             loser: loserUid,
+                                            loserUsername: loserUsername,   // --- FIX: Add username
                                             endedAt: Date.now(),
                                             juegoTerminado: true
                                         });
@@ -926,6 +952,20 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                 const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
                 const betAmount = onlineGameData.betAmount || 0;
                 const totalWinnings = betAmount * 2;
+
+                // --- FIX: Define winner/loser usernames and avatars ---
+                let winnerUsername, loserUsername, winnerAvatar, loserAvatar;
+                if (onlineGameData.player1?.uid === winnerUid) {
+                    winnerUsername = onlineGameData.player1.username;
+                    winnerAvatar = onlineGameData.player1.avatar;
+                    loserUsername = onlineGameData.player2?.username;
+                    loserAvatar = onlineGameData.player2?.avatar;
+                } else {
+                    winnerUsername = onlineGameData.player2?.username;
+                    winnerAvatar = onlineGameData.player2?.avatar;
+                    loserUsername = onlineGameData.player1?.username;
+                    loserAvatar = onlineGameData.player1?.avatar;
+                }
 
                 if (winnerUid) {
                     const winnerDocRef = doc(db, "saldo", winnerUid);

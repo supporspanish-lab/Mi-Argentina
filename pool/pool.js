@@ -18,11 +18,11 @@ import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
 import { shoot } from './shooting.js';
 
-let lastTime;
-
-// --- NUEVO: Variables para pasos de tiempo fijos ---
-let accumulatedTime = 0;
-const FIXED_DT = 1 / 30; // Paso fijo de 60 FPS para simulación determinista
+// --- Variables para el bucle de juego con timestep fijo ---
+const FIXED_DT = 1 / 60.0; // Paso de tiempo fijo para la simulación de física (60 FPS).
+const MAX_STEPS_PER_FRAME = 5; // Límite de pasos de simulación por frame para evitar la "espiral de la muerte".
+let lastFrameTime = performance.now(); // Tiempo del último frame renderizado.
+let accumulator = 0.0; // Acumula el tiempo entre frames para alimentar la simulación de física.
 
 // --- NUEVO: Variables para el efecto de vibración de la cámara ---
 let gameRef = null; // --- NUEVO: Referencia global a la partida online
@@ -197,250 +197,178 @@ window.addEventListener('sendsingleplayer', (event) => {
     // Este listener es solo para el modo offline, si se implementa en el futuro.
 });
 
-async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como asíncrona
-    // --- LOG: Indica el inicio de un nuevo fotograma en el bucle del juego.
-    // console.log('[GameLoop] Iniciando nuevo fotograma...');
-
-    // --- CORRECCIÓN: Definir si es el turno del jugador local al inicio del bucle. ---
-    const isMyTurn = currentGameState.currentPlayerUid === auth.currentUser?.uid;
-
-    TWEEN.update(time); // --- NUEVO: Actualizar el motor de animaciones TWEEN
-    // Vuelve a llamar a gameLoop para el siguiente fotograma
+async function gameLoop(currentTime) {
+    // 1. Sincronización del bucle y cálculo del tiempo
     requestAnimationFrame(gameLoop);
+    TWEEN.update(currentTime);
+    const deltaTime = (currentTime - lastFrameTime) / 1000.0; // Delta time en segundos
+    lastFrameTime = currentTime;
 
-    // --- NUEVO: Log para verificar el estado de pausa ---
-    // console.log(`Juego Pausado: ${getGameState().gamePaused}`);
-
-    // --- NUEVO: Si el juego está pausado, no se actualiza la lógica, solo se renderiza. ---
+    // 2. Lógica de pausa
     if (getGameState().gamePaused) {
-        // --- LOG: Indica que el bucle está en modo pausa.
-        // console.log('[GameLoop] Juego en pausa, solo renderizando.');
-        renderer.render(scene, camera); // Renderizar la escena
-        return; // Detener la ejecución del resto del bucle
+        renderer.render(scene, camera); // Renderizar incluso en pausa
+        return;
     }
 
-    // --- NUEVO: Lógica para la vibración de la cámara ---
-    if (shakeDuration > 0 && lastTime !== undefined) {
-        const dt = (time - lastTime) / 1000;
-        // Aplicar el desplazamiento aleatorio
-        camera.position.x = originalCameraPosition.x + (Math.random() - 0.5) * shakeIntensity;
-        camera.position.y = originalCameraPosition.y + (Math.random() - 0.5) * shakeIntensity;
+    // 3. Bucle de simulación de física con timestep fijo
+    accumulator += deltaTime;
+    let steps = 0;
+    while (accumulator >= FIXED_DT && steps < MAX_STEPS_PER_FRAME) {
+        // Simulación de física
+        const pocketedInFrame = updateBallPositions(FIXED_DT, balls, pockets, handles, BALL_RADIUS);
 
-        // Reducir la duración y la intensidad
-        shakeDuration -= dt;
-        shakeIntensity *= 0.95; // Decaimiento suave de la intensidad
+        // Lógica de bolas entroneradas (consecuencia directa de la física)
+        if (pocketedInFrame.length > 0) {
+            const isMyTurn = currentGameState.currentPlayerUid === auth.currentUser?.uid;
+            const { pocketedThisTurn } = getGameState();
+            for (const ball of pocketedInFrame) {
+                const alreadyPocketed = pocketedThisTurn.some(p => p.number === ball.number);
+                const localBall = balls.find(b => b.number === ball.number);
+                if (localBall) {
+                    localBall.isActive = false;
+                }
 
-        if (shakeDuration <= 0) {
-            camera.position.copy(originalCameraPosition); // Restaurar la posición original
-        }
-    }
-    let dt = 0;
-    if (lastTime !== undefined) {
-        dt = (time - lastTime) / 1000; // Delta time en segundos
-        accumulatedTime += dt;
-
-        // --- NUEVO: Ejecutar pasos de física fijos mientras haya tiempo acumulado ---
-        while (accumulatedTime >= FIXED_DT) {
-            // --- CORRECCIÓN CRÍTICA: Lógica de simulación autoritativa con dt fijo ---
-
-            const pocketedInFrame = updateBallPositions(FIXED_DT, balls, pockets, handles, BALL_RADIUS);
-
-            if (pocketedInFrame.length > 0) {
-                const { pocketedThisTurn } = getGameState(); // Get the current list from gameState
-                for (const ball of pocketedInFrame) {
-                    // --- FIX: Check if the ball has already been pocketed this turn to prevent duplication ---
-                    const alreadyPocketed = pocketedThisTurn.some(p => p.number === ball.number);
-                    // --- SOLUCIÓN: Marcar la bola como inactiva en el array principal ---
-                    // Esto asegura que el estado que se envía a Firestore sea correcto.
-                    const localBall = balls.find(b => b.number === ball.number);
+                if (!alreadyPocketed) {
+                    addPocketedBall(ball);
                     if (localBall) {
                         localBall.isActive = false;
+                        localBall.mesh.visible = false;
+                        if (localBall.shadowMesh) localBall.shadowMesh.visible = false;
                     }
+                    if (gameRef && isMyTurn) {
+                        updateDoc(gameRef, { pocketedBalls: arrayUnion(ball.number) })
+                            .catch(err => console.error("Error enviando bola entronerada:", err));
 
-                    if (!alreadyPocketed) {
-                        addPocketedBall(ball);
-                        // Remover la bola localmente para ambos jugadores
-                        const localBall = balls.find(b => b.number === ball.number);
-                        if (localBall) {
-                            localBall.isActive = false;
-                            localBall.mesh.visible = false;
-                            if (localBall.shadowMesh) localBall.shadowMesh.visible = false;
-                        }
-                        if (gameRef && isMyTurn) {
-                            // Enviar la bola entronerada a Firebase para que el otro jugador la remueva
-                            updateDoc(gameRef, {
-                                pocketedBalls: arrayUnion(ball.number)
-                            }).catch(err => console.error("Error enviando bola entronerada:", err));
-
-                            const gameState = getGameState();
-                            // Mantener la lógica de asignaciones de tipos de bolas
-                            if (gameState && gameState.playerAssignments) {
-                                if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
-                                    const { assignPlayerTypes } = await import('./gameState.js');
-                                    const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-                                    const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
-                                    const { playerAssignments: newPlayerAssignments, ballsAssigned: newBallsAssigned } = assignPlayerTypes(
-                                        currentPlayerNumber,
-                                        type,
-                                        gameState.playerAssignments,
-                                        gameState.ballsAssigned
-                                    );
-                                    gameState.ballsAssigned = newBallsAssigned;
-                                    gameState.playerAssignments = newPlayerAssignments;
-                                    if (gameRef) {
-                                        await updateDoc(gameRef, {
-                                            ballsAssigned: newBallsAssigned,
-                                            playerAssignments: newPlayerAssignments
-                                        });
-                                    }
-                                }
+                        const gameState = getGameState();
+                        if (gameState && gameState.playerAssignments) {
+                            if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
+                                const { assignPlayerTypes } = await import('./gameState.js');
+                                const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
                                 const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
-                                const playerType = gameState.playerAssignments[currentPlayerNumber] || 'no asignado';
-                                window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
+                                const { playerAssignments: newPlayerAssignments, ballsAssigned: newBallsAssigned } = assignPlayerTypes(
+                                    currentPlayerNumber, type, gameState.playerAssignments, gameState.ballsAssigned
+                                );
+                                gameState.ballsAssigned = newBallsAssigned;
+                                gameState.playerAssignments = newPlayerAssignments;
+                                if (gameRef) {
+                                    await updateDoc(gameRef, {
+                                        ballsAssigned: newBallsAssigned,
+                                        playerAssignments: newPlayerAssignments
+                                    });
+                                }
                             }
+                            const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
+                            window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
                         }
                     }
                 }
             }
-
-            accumulatedTime -= FIXED_DT;
         }
+        accumulator -= FIXED_DT;
+        steps++;
+    }
 
-        // --- MODIFICACIÓN: El turno solo termina si no hay bolas moviéndose NI animándose ---
-        // --- SOLUCIÓN: Usar una variable de estado para asegurar que la revisión se haga una sola vez ---
-        const ballsHaveStopped = !areBallsMoving(balls) && !areBallsAnimating(balls);
-        // --- CORRECCIÓN: La revisión del estado debe ocurrir si las bolas se acaban de detener.
-        // Se usa una variable externa (importada de ui.js) para saber si en el frame anterior se estaban moviendo.
-        // Esta es la forma más fiable de detectar el fin de un tiro.
-        if (window.ballsWereMoving && ballsHaveStopped) {
-            // --- CORRECCIÓN: Lógica de Cliente Autoritativo y modo offline ---
-            if (gameRef) {
-                // MODO ONLINE: Solo el jugador cuyo turno es, revisa el estado.
-                if (currentGameState.currentPlayerUid === auth.currentUser?.uid) {
-                    await revisarEstado(false, gameRef, currentGameState);
-                }
-            } else {
-                // MODO OFFLINE: Se revisa el estado localmente.
-                await revisarEstado(false, null, getGameState());
+    // 4. Lógica de fin de turno (se ejecuta una vez por frame si las bolas se detienen)
+    const ballsHaveStopped = !areBallsMoving(balls) && !areBallsAnimating(balls);
+    if (window.ballsWereMoving && ballsHaveStopped) {
+        if (gameRef) {
+            if (currentGameState.currentPlayerUid === auth.currentUser?.uid) {
+                await revisarEstado(false, gameRef, currentGameState);
             }
-            handleTurnEnd(); // Limpiar estado local para ambos jugadores.
+        } else {
+            await revisarEstado(false, null, getGameState());
+        }
+        handleTurnEnd();
+    }
+
+    // 5. Actualizaciones visuales (se ejecutan una vez por frame)
+    // Efecto de vibración de la cámara
+    if (shakeDuration > 0) {
+        camera.position.x = originalCameraPosition.x + (Math.random() - 0.5) * shakeIntensity;
+        camera.position.y = originalCameraPosition.y + (Math.random() - 0.5) * shakeIntensity;
+        shakeDuration -= deltaTime;
+        shakeIntensity *= 0.95;
+        if (shakeDuration <= 0) {
+            camera.position.copy(originalCameraPosition);
         }
     }
-    lastTime = time;
 
-    // --- CORREGIDO: Lógica para la rotación visual de las bolas ---
-    if (dt > 0) {
-        const timeStep = dt * 100; // Usamos el mismo multiplicador que en fisicas.js
-
-        // --- CORRECCIÓN: Iterar hacia atrás para poder eliminar elementos de forma segura ---
+    // Rotación visual de las bolas y gestión de bolas entroneradas
+    if (deltaTime > 0) {
+        const timeStep = deltaTime * 100;
         for (let i = balls.length - 1; i >= 0; i--) {
             const ball = balls[i];
-
-            // --- CORRECCIÓN: Reestructurar la lógica de estados para que sea más clara ---
-
-    // Estado 1: La bola está siendo simulada por el motor de física 3D (Cannon.js)
-            // --- NUEVO: Comprobar si una bola de color fue recolectada para eliminarla ---
             if (ball.pocketedState === 'collected') {
-                if (ball.number === null) { // Si es la bola blanca
-                    // La marcamos como inactiva y la añadimos a la lista de entroneradas para que se gestione la falta.
+                if (ball.number === null) {
                     ball.isActive = false;
                     ball.vx = 0; ball.vy = 0;
                     addPocketedBall(ball);
-                } else { // Si es una bola de color
-                    // La marcamos como inactiva y la añadimos a la lista de entroneradas para que se gestione la falta.
+                } else {
                     ball.isActive = false;
                     ball.vx = 0; ball.vy = 0;
-                    addPocketedBall(ball); // Add to local pocketed list for foul checking
-                    scene.remove(ball.mesh); // Still remove from 3D scene
+                    addPocketedBall(ball);
+                    scene.remove(ball.mesh);
                     if (ball.shadowMesh) scene.remove(ball.shadowMesh);
-                    // No remove from balls array, just set isActive to false
                 }
-            } 
+            }
         }
 
         balls.forEach(ball => {
             if (ball.isActive && (ball.vx !== 0 || ball.vy !== 0)) {
-                // --- CORRECCIÓN: La rotación debe ser proporcional a la distancia recorrida ---
-                // Esto hace que la animación de giro sea realista y dependa de la velocidad.
                 const distance = Math.sqrt((ball.vx * timeStep)**2 + (ball.vy * timeStep)**2);
                 const rotationAngle = distance / BALL_RADIUS;
-
-                // --- CORRECCIÓN: El eje de rotación debe ser perpendicular a la dirección del movimiento.
-                // Esto asegura que la bola "ruede" en la dirección en la que se mueve.
-                // La velocidad de la animación es fija, pero la dirección del giro es dinámica.
                 const rotationAxis = new THREE.Vector3(-ball.vy, ball.vx, 0).normalize();
-
-                const deltaQuaternion = new THREE.Quaternion();
-                deltaQuaternion.setFromAxisAngle(rotationAxis, rotationAngle);
-
-                // --- SOLUCIÓN DEFINITIVA: Aplicar primero la rotación de rodado y luego la de efecto ---
-                // 1. Aplicar la rotación de rodado natural a la malla de la bola.
+                const deltaQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, rotationAngle);
                 ball.mesh.children[0].quaternion.premultiply(deltaQuaternion);
 
-                // 2. Si es la bola blanca y tiene efecto, aplicar esa rotación adicionalmente en su espacio local.
                 if (ball === cueBall && (ball.spin.x !== 0 || ball.spin.y !== 0)) {
-                    // Efecto lateral (spin.x) alrededor del eje Y local de la bola
-                    const sideSpinAxis = new THREE.Vector3(0, 1, 0); 
-                    const sideSpinAngle = -ball.spin.x * 0.05 * timeStep; // Reducimos un poco la velocidad del efecto visual
+                    const sideSpinAxis = new THREE.Vector3(0, 1, 0);
+                    const sideSpinAngle = -ball.spin.x * 0.05 * timeStep;
                     ball.mesh.children[0].rotateOnWorldAxis(sideSpinAxis, sideSpinAngle);
 
-                    // Efecto vertical (spin.y) alrededor del eje X local de la bola
-                    const verticalSpinAxis = new THREE.Vector3(1, 0, 0); 
-                    const verticalSpinAngle = ball.spin.y * 0.05 * timeStep; // Reducimos un poco la velocidad del efecto visual
-
-                    // --- SOLUCIÓN: Mostrar el efecto de estela si es la bola blanca y se mueve rápido ---
+                    const verticalSpinAxis = new THREE.Vector3(1, 0, 0);
+                    const verticalSpinAngle = ball.spin.y * 0.05 * timeStep;
                     if (ball === cueBall) {
                         showShotEffect();
                     }
-
                     ball.mesh.children[0].rotateOnWorldAxis(verticalSpinAxis, verticalSpinAngle);
                 }
             }
         });
     }
 
+    // Actualización de controles y UI
     handleInput();
-    updateCueBallEffects(dt);
-    updateUI(); // --- NUEVO: Actualizar la UI (incluyendo el taco)
+    updateCueBallEffects(deltaTime);
+    updateUI();
 
-    // --- SOLUCIÓN: Actualizar el temporizador de turno ---
+    // Lógica del temporizador de turno
     if (isTurnTimerActive()) {
         const elapsedTime = performance.now() - turnStartTime;
         const timeRemainingPercent = Math.max(0, 1 - (elapsedTime / TURN_TIME_LIMIT));
         updateTurnTimerUI(getGameState().currentPlayer, timeRemainingPercent);
         if (checkTurnTimer()) {
-            // --- CORRECCIÓN: Forzar fin de turno y revisar el estado inmediatamente.
-            // Detener el temporizador para que no se siga ejecutando.
             stopTurnTimer();
-            // Se llama a revisarEstado con la bandera de tiempo agotado para procesar la falta.
             await revisarEstado(true, gameRef, currentGameState);
         }
     }
-    renderer.render(scene, camera);
-    
-    // --- NUEVO: Disparar evento para enviar el ángulo si es mi turno y estoy apuntando ---
 
-    // --- CORRECCIÓN: Lógica de dibujado con predicción del lado del cliente para el jugador local ---
+    // 6. Renderizado final
+    renderer.render(scene, camera);
+
+    // 7. Actualización de guías de apuntado y otros elementos de UI en tiempo real
+    const isMyTurn = currentGameState.currentPlayerUid === auth.currentUser?.uid;
     if (!areBallsMoving(balls)) {
         if (isMyTurn) {
-            // Si es mi turno, uso mis datos locales para una respuesta instantánea.
             const localAngle = getCurrentShotAngle();
             const localPower = getPowerPercent();
-
-            // --- CORRECCIÓN: Enviar el ángulo Y LA POTENCIA al servidor para sincronización en tiempo real ---
             window.dispatchEvent(new CustomEvent('sendaim', { detail: { angle: localAngle, power: localPower } }));
-
             updateAimingGuides(localAngle, getGameState(), localPower, true);
             if (cueMesh) cueMesh.visible = true;
         } else {
-            // Si es el turno del oponente, uso los datos del servidor con interpolación.
             if (serverAimAngle !== null) {
-                if (smoothedAimAngle === null) {
-                    smoothedAimAngle = serverAimAngle;
-                }
-                // Interpolar el ángulo para una animación suave
+                if (smoothedAimAngle === null) smoothedAimAngle = serverAimAngle;
                 smoothedAimAngle += (serverAimAngle - smoothedAimAngle) * 0.1;
-
                 updateAimingGuides(smoothedAimAngle, getGameState(), serverPowerPercent, true);
                 if (cueMesh) cueMesh.visible = true;
             } else {
@@ -448,36 +376,25 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
                 hideAimingGuides();
             }
         }
-    } else {
-        // Si no, las guías se ocultarán después de la animación del taco.
     }
 
-    // --- CORRECCIÓN: Actualizar la posición del punto de efecto (spin) en cada frame ---
-    // Esta lógica se ejecuta para ambos jugadores, basándose en los datos del servidor.
-    // --- NUEVO: Solo aplicar el spin del servidor si el jugador local NO está arrastrando el control. ---
-    import('./spinControls.js').then(({ isDraggingSpin }) => { // Import dynamically to avoid circular dependency
+    // Actualización del control de efecto (spin)
+    import('./spinControls.js').then(({ isDraggingSpin }) => {
         if (currentGameState.aimingSpin && !isDraggingSpin()) {
             const spin = currentGameState.aimingSpin;
-
-            // 1. Actualizar el punto rojo en la bola 3D
             if (cueBallRedDot && cueBall) {
                 cueBallRedDot.position.x = spin.x * (cueBall.radius * 0.8);
                 cueBallRedDot.position.y = spin.y * (cueBall.radius * 0.8);
             }
-
-            // 2. Actualizar el punto en la miniatura de la UI
             const miniSpinSelectorDot = document.getElementById('miniSpinSelectorDot');
             if (miniSpinSelectorDot) {
                 miniSpinSelectorDot.style.left = `${50 + (spin.x * 40)}%`;
                 miniSpinSelectorDot.style.top = `${50 - (spin.y * 40)}%`;
             }
-
-            // 3. Actualizar el punto en el modal grande
             const spinSelectorDot = document.getElementById('spinSelectorDot');
             const largeSpinSelector = document.getElementById('largeSpinSelector');
             if (spinSelectorDot && largeSpinSelector) {
                 const rect = largeSpinSelector.getBoundingClientRect();
-                // Solo actualizar si el modal es visible (tiene dimensiones)
                 if (rect.width > 0) {
                     const selectorRadius = rect.width / 2;
                     const dx = spin.x * selectorRadius;
@@ -488,28 +405,25 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
         }
     });
 
-    // --- NUEVO: Actualizar la UI de la barra de potencia ---
-    // Esta lógica se ejecuta para ambos jugadores.
+    // Actualización de la barra de potencia
     const powerBarFill = document.getElementById('powerBarFill');
     const powerBarHandle = document.getElementById('powerBarHandle');
     if (powerBarFill && powerBarHandle) {
         let displayPower = serverPowerPercent;
         if (isMyTurn) {
-            // Si es mi turno, usamos la potencia local para una respuesta instantánea.
-            // La potencia local ya se actualiza en powerControls.js y se envía al servidor.
             displayPower = getPowerPercent();
         }
         powerBarFill.style.width = `${displayPower * 100}%`;
         powerBarHandle.style.left = `${displayPower * 100}%`;
     }
-
 }
+
 
 // --- NUEVO: Función para aplicar un tiro recibido del servidor ---
 function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     if (areBallsMoving(balls)) return; // No hacer nada si las bolas ya se están moviendo
 
-    const maxPower = 7;
+    const maxPower = 5;
     const power = powerPercent * maxPower;
     const velocityFactor = 2.5;
 
