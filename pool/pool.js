@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { updateBallPositions, areBallsMoving, applyBallStatesFromServer } from './fisicas.js';
 import TWEEN from 'https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js';
 import { db, auth, onSnapshot, doc, onAuthStateChanged, updateDoc, getDoc } from './login/auth.js'; // --- CORRECCIÓN: Importar onSnapshot y doc
+import { arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { initializeHandles, handles, pockets, BALL_RADIUS, TABLE_WIDTH, TABLE_HEIGHT } from './config.js'; // Asegúrate que handles se exporta
 import { scene, camera, renderer, loadTableTexture } from './scene.js'; // --- CORRECCIÓN: Importar showFoulMessage
 import { balls, cueBall, setupBalls, loadBallModels, cueBallRedDot, prepareBallLoaders, getSceneBalls, updateBallModelAndTexture } from './ballManager.js'; // --- SOLUCIÓN: Quitar updateSafeArea
@@ -18,6 +19,10 @@ import { initializePowerBar, getPowerPercent } from './powerBar.js';
 import { shoot } from './shooting.js';
 
 let lastTime;
+
+// --- NUEVO: Variables para pasos de tiempo fijos ---
+let accumulatedTime = 0;
+const FIXED_DT = 1 / 30; // Paso fijo de 60 FPS para simulación determinista
 
 // --- NUEVO: Variables para el efecto de vibración de la cámara ---
 let gameRef = null; // --- NUEVO: Referencia global a la partida online
@@ -90,17 +95,35 @@ window.addEventListener('receiveaim', (event) => {
         window.dispatchEvent(new CustomEvent('updatespinmodal', { detail: { visible: gameData.isSpinModalOpen } }));
     }
 
+    // --- NUEVO: Manejar bolas entroneradas enviadas por el otro jugador ---
+    if (gameData.pocketedBalls && gameData.pocketedBalls.length > 0) {
+        gameData.pocketedBalls.forEach(ballNumber => {
+            const localBall = balls.find(b => b.number === ballNumber);
+            if (localBall && localBall.isActive) {
+                localBall.isActive = false;
+                localBall.mesh.visible = false;
+                if (localBall.shadowMesh) localBall.shadowMesh.visible = false;
+                addPocketedBall(localBall);
+            }
+        });
+    }
+
     // --- NUEVO: Lógica para recibir y aplicar un tiro del servidor ---
     if (gameData.lastShot && gameData.lastShot.timestamp > lastProcessedShotTimestamp) {
         lastProcessedShotTimestamp = gameData.lastShot.timestamp;
 
-        // --- 
+        // ---
         // Aplicamos el tiro (tanto el nuestro como el del oponente) desde el servidor
         // para asegurar que ambos juegos estén perfectamente sincronizados.
         const { angle, power, spin, cueBallStartPos } = gameData.lastShot;
-        
+
         // Llamamos a una nueva función que encapsula la lógica de aplicar el tiro
         applyServerShot(angle, power, spin, cueBallStartPos);
+
+        // Limpiar las bolas entroneradas del turno anterior
+        if (gameRef) {
+            updateDoc(gameRef, { pocketedBalls: [] }).catch(err => console.error("Error limpiando pocketedBalls:", err));
+        }
     }
 
 
@@ -214,63 +237,74 @@ async function gameLoop(time) { // --- SOLUCIÓN 1: Marcar la función como así
     let dt = 0;
     if (lastTime !== undefined) {
         dt = (time - lastTime) / 1000; // Delta time en segundos
+        accumulatedTime += dt;
 
-        // --- CORRECCIÓN CRÍTICA: Lógica de simulación autoritativa ---
+        // --- NUEVO: Ejecutar pasos de física fijos mientras haya tiempo acumulado ---
+        while (accumulatedTime >= FIXED_DT) {
+            // --- CORRECCIÓN CRÍTICA: Lógica de simulación autoritativa con dt fijo ---
 
-                const pocketedInFrame = updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS);
+            const pocketedInFrame = updateBallPositions(FIXED_DT, balls, pockets, handles, BALL_RADIUS);
 
-                if (pocketedInFrame.length > 0) {
-                    const { pocketedThisTurn } = getGameState(); // Get the current list from gameState
-                    for (const ball of pocketedInFrame) {
-                        // --- FIX: Check if the ball has already been pocketed this turn to prevent duplication ---
-                        const alreadyPocketed = pocketedThisTurn.some(p => p.number === ball.number);
-                        // --- SOLUCIÓN: Marcar la bola como inactiva en el array principal ---
-                        // Esto asegura que el estado que se envía a Firestore sea correcto.
+            if (pocketedInFrame.length > 0) {
+                const { pocketedThisTurn } = getGameState(); // Get the current list from gameState
+                for (const ball of pocketedInFrame) {
+                    // --- FIX: Check if the ball has already been pocketed this turn to prevent duplication ---
+                    const alreadyPocketed = pocketedThisTurn.some(p => p.number === ball.number);
+                    // --- SOLUCIÓN: Marcar la bola como inactiva en el array principal ---
+                    // Esto asegura que el estado que se envía a Firestore sea correcto.
+                    const localBall = balls.find(b => b.number === ball.number);
+                    if (localBall) {
+                        localBall.isActive = false;
+                    }
+
+                    if (!alreadyPocketed) {
+                        addPocketedBall(ball);
+                        // Remover la bola localmente para ambos jugadores
                         const localBall = balls.find(b => b.number === ball.number);
                         if (localBall) {
                             localBall.isActive = false;
+                            localBall.mesh.visible = false;
+                            if (localBall.shadowMesh) localBall.shadowMesh.visible = false;
                         }
+                        if (gameRef && isMyTurn) {
+                            // Enviar la bola entronerada a Firebase para que el otro jugador la remueva
+                            updateDoc(gameRef, {
+                                pocketedBalls: arrayUnion(ball.number)
+                            }).catch(err => console.error("Error enviando bola entronerada:", err));
 
-                        if (!alreadyPocketed) {
-                            addPocketedBall(ball);
-                            if (gameRef && isMyTurn) {
-                                const gameState = getGameState();
-                                const ballStates = gameState.balls || [];
-                                const ballToUpdate = ballStates.find(b => b.number === ball.number);
-                                if (ballToUpdate) {
-                                    ballToUpdate.isActive = false;
-                                    
-                                    // --- SOLUCIÓN: Añadir una guarda para asegurar que el estado del juego y las asignaciones de jugador existan ---
-                                    // Esto previene un error de carrera si los datos de Firestore aún no han llegado cuando se entronera una bola.
-                                    if (gameState && gameState.playerAssignments) {
-                                        if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
-                                            const { assignPlayerTypes } = await import('./gameState.js');
-                                            const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-                                            const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
-                                            const { playerAssignments: newPlayerAssignments, ballsAssigned: newBallsAssigned } = assignPlayerTypes(
-                                                currentPlayerNumber,
-                                                type,
-                                                gameState.playerAssignments,
-                                                gameState.ballsAssigned
-                                            );
-                                            gameState.ballsAssigned = newBallsAssigned;
-                                            gameState.playerAssignments = newPlayerAssignments;
-                                            if (gameRef) {
-                                                await updateDoc(gameRef, {
-                                                    ballsAssigned: newBallsAssigned,
-                                                    playerAssignments: newPlayerAssignments
-                                                });
-                                            }
-                                        }
-                                        const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
-                                        const playerType = gameState.playerAssignments[currentPlayerNumber] || 'no asignado';
-                                        window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
+                            const gameState = getGameState();
+                            // Mantener la lógica de asignaciones de tipos de bolas
+                            if (gameState && gameState.playerAssignments) {
+                                if (!gameState.ballsAssigned && ball.number !== null && ball.number !== 8) {
+                                    const { assignPlayerTypes } = await import('./gameState.js');
+                                    const type = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                                    const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
+                                    const { playerAssignments: newPlayerAssignments, ballsAssigned: newBallsAssigned } = assignPlayerTypes(
+                                        currentPlayerNumber,
+                                        type,
+                                        gameState.playerAssignments,
+                                        gameState.ballsAssigned
+                                    );
+                                    gameState.ballsAssigned = newBallsAssigned;
+                                    gameState.playerAssignments = newPlayerAssignments;
+                                    if (gameRef) {
+                                        await updateDoc(gameRef, {
+                                            ballsAssigned: newBallsAssigned,
+                                            playerAssignments: newPlayerAssignments
+                                        });
                                     }
                                 }
+                                const currentPlayerNumber = currentGameState.currentPlayerUid === currentGameState.player1?.uid ? 1 : 2;
+                                const playerType = gameState.playerAssignments[currentPlayerNumber] || 'no asignado';
+                                window.dispatchEvent(new CustomEvent('updateassignments', { detail: gameState }));
                             }
                         }
                     }
                 }
+            }
+
+            accumulatedTime -= FIXED_DT;
+        }
 
         // --- MODIFICACIÓN: El turno solo termina si no hay bolas moviéndose NI animándose ---
         // --- SOLUCIÓN: Usar una variable de estado para asegurar que la revisión se haga una sola vez ---
@@ -615,7 +649,9 @@ function connectToGame(gameId) {
                     await updateDoc(gameRef, {
                         status: "ended",
                         winner: winnerUid,
+                        winnerUsername: winnerUsername,
                         loser: loserUid,
+                        loserUsername: loserUsername,
                         endedAt: Date.now(),
                         juegoTerminado: true,
                         endReason: "Oponente inactivo"

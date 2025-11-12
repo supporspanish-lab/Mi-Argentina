@@ -2054,6 +2054,7 @@
 
             const betAmount = gameData.betAmount || 0;
             const totalWinnings = betAmount * 2;
+            const netWinnings = Math.floor(totalWinnings * 0.95); // Deducción del 5% para la casa
 
             // Guardar en localStorage del padre para que home.html lo lea
             console.log('setting window.top.localStorage');
@@ -2062,7 +2063,7 @@
             window.top.localStorage.setItem('loserUsername', loserUsername);
             window.top.localStorage.setItem('winnerAvatar', winnerAvatar);
             window.top.localStorage.setItem('loserAvatar', loserAvatar);
-            window.top.localStorage.setItem('winnerAmount', totalWinnings.toString());
+            window.top.localStorage.setItem('winnerAmount', netWinnings.toString());
             window.top.localStorage.setItem('loserAmount', betAmount.toString());
             console.log('window.top.localStorage set in index.html for game end, gameEnded:', window.top.localStorage.getItem('gameEnded'));
 

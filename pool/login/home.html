@@ -218,6 +218,81 @@
         }
       }
 
+      /* --- NUEVO: Scroll para el historial de partidas ganadas --- */
+      #won-games-list {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      /* --- NUEVO: Estilos para el botón de ayuda --- */
+      .help-btn {
+        background: none;
+        border: none;
+        color: var(--primary-color);
+        cursor: pointer;
+        margin-left: 10px;
+        padding: 5px;
+        border-radius: 50%;
+        transition: background-color 0.2s;
+      }
+      .help-btn:hover {
+        background-color: rgba(0, 242, 145, 0.1);
+      }
+      .help-btn svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      /* --- NUEVO: Estilos para el modal de ayuda --- */
+      #help-modal .modal-box {
+        max-width: 450px;
+        text-align: left;
+      }
+      #rules-content {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      #rules-content h4 {
+        color: var(--primary-color);
+        margin-top: 15px;
+        margin-bottom: 5px;
+      }
+      #rules-content ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      #rules-content li {
+        margin-bottom: 5px;
+      }
+
+      /* --- NUEVO: Responsive para el modal de ayuda --- */
+      @media (max-width: 768px) {
+        #help-modal .modal-box {
+          max-width: 80vw;
+          padding: 15px;
+        }
+        #rules-content {
+          max-height: 250px;
+          font-size: 14px;
+        }
+        #rules-content h4 {
+          font-size: 16px;
+        }
+      }
+      @media (max-width: 480px) {
+        #help-modal .modal-box {
+          max-width: 90vw;
+          padding: 10px;
+        }
+        #rules-content {
+          max-height: 200px;
+          font-size: 12px;
+        }
+        #rules-content h4 {
+          font-size: 14px;
+        }
+      }
+
       /* Notification bar styles */
       .notification-bar {
         background-color: rgba(0, 0, 0, 0.7);
@@ -258,7 +333,11 @@
                         <div class="pool-ball ball-black"></div>
                     </div>
                     <h1 class="app-title">BlackBall</h1>
-
+                    <button id="help-btn" class="help-btn" title="¿Cómo jugar?">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-6h2v6zm0-8h-2V7h2v4z"/>
+                        </svg>
+                    </button>
                 </div>
                 <div class="header-right-controls">
                     <button id="mute-music-btn" class="menu-toggle-btn" title="Silenciar Música">
@@ -545,7 +624,7 @@
             <h3>Realizar Apuesta</h3>
             <p>Ingresa el monto que deseas apostar. Mínimo: $1,000.</p>
             <div class="input-group" style="margin: 15px 0;">
-                 <input type="number" id="bet-amount-input" class="form-input" placeholder="Monto de la apuesta" min="1000" step="100">
+                  <input type="number" id="bet-amount-input" class="form-input" placeholder="Monto de la apuesta" min="1000" step="100">
             </div>
             <div class="input-group" style="margin: 15px 0; display: flex; align-items: center; justify-content: center;">
                 <input type="checkbox" id="private-room-checkbox" style="margin-right: 10px;">
@@ -555,6 +634,42 @@
             <div class="modal-buttons">
                 <button id="cancel-bet-btn" class="cancel-button" style="background-color: #555; border-color: #777;">Cancelar</button>
                 <button id="confirm-bet-btn" class="play-button" style="font-size: 18px; padding: 15px 30px;">Apostar y Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- NUEVO: Modal de ayuda con reglas del juego --- -->
+    <div id="help-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>¿Cómo Jugar BlackBall?</h3>
+            <div id="rules-content">
+                <p><strong>Objetivo:</strong> Ser el primero en meter la bola negra (8) en la tronera después de haber metido todas tus bolas asignadas.</p>
+                <h4>Reglas Básicas:</h4>
+                <ul>
+                    <li>El juego comienza con 15 bolas de colores y 1 bola blanca (taco).</li>
+                    <li>En el primer tiro, se asignan grupos: sólidas (1-7) o rayadas (9-15).</li>
+                    <li>Debes meter tus bolas asignadas antes de la negra.</li>
+                    <li>Si metes la bola blanca o cometes una falta, pierdes el turno.</li>
+                    <li>Faltas incluyen: no golpear ninguna bola, golpear fuera de turno, etc.</li>
+                </ul>
+                <h4>Efectos:</h4>
+                <ul>
+                    <li><strong>Lateral:</strong> Gira el control para efecto lateral (izquierda/derecha).</li>
+                    <li><strong>Vertical:</strong> Arrastra arriba/abajo para corrido (adelante) o retroceso (atrás).</li>
+                </ul>
+                <h4>Victoria:</h4>
+                <ul>
+                    <li>Gana quien meta la bola 8 legalmente después de sus bolas.</li>
+                    <li>Si metes la 8 antes o por falta, pierdes.</li>
+                </ul>
+                <h4>Notas de Juego:</h4>
+                <ul>
+                    <li>Para asegurar la sincronización perfecta y prevenir trampas, utilizamos herramientas avanzadas que pueden causar un pequeño retraso en los golpes de las bolas. Esto garantiza que ambos jugadores vean la misma simulación en tiempo real.</li>
+                    <li>A diferencia de las partidas profesionales de billar, no hay "bola en mano" después de faltas. En este modo de apuestas, el turno pasa directamente al oponente para mantener un ritmo rápido y justo.</li>
+                </ul>
+                <h4>House Rake:</h4>
+                <p>Aplicamos un house rake del 5% en las ganancias para cubrir los costos operativos, incluyendo servidores, desarrollo continuo, mantenimiento de la plataforma y mejoras de la experiencia de usuario. Esto nos permite ofrecer un servicio gratuito y de alta calidad.</p>
+                <p>¡Diviértete y juega limpio!</p>
             </div>
         </div>
     </div>
@@ -700,6 +815,11 @@
         loserUsernameSpan.textContent = data.loserUsername || 'Desconocido';
         loserAmountSpan.textContent = data.loserAmount ? `Perdió: $${data.loserAmount}` : '';
 
+        // Mostrar mensaje de victoria en la barra de notificaciones si el usuario ganó
+        if (data.winnerUsername === currentUserProfile.username) {
+            notificationBar.innerHTML = `¡Felicidades! Ganaste $${data.winnerAmount}`;
+        }
+
         alwaysVisibleModal.style.display = 'flex';
         alwaysVisibleModal.style.opacity = '1';
         alwaysVisibleModal.style.visibility = 'visible';
@@ -719,7 +839,10 @@
       if (!snapshot.empty) {
         const docs = snapshot.docs.sort((a, b) => b.data().timestamp - a.data().timestamp).slice(0, 5);
         const messages = docs.map(doc => doc.data().message);
-        notificationBar.innerHTML = messages.join(' | ');
+        const globalMessages = messages.join(' | ');
+        // Append to existing content (e.g., win message)
+        const existingContent = notificationBar.innerHTML.trim();
+        notificationBar.innerHTML = existingContent ? `${existingContent} | ${globalMessages}` : globalMessages;
 
         // Delete notifications older than 1.5 minutes
         const cutoff = Date.now() - 90000;
@@ -729,7 +852,10 @@
           }
         });
       } else {
-        notificationBar.textContent = '';
+        // If no global messages, keep existing content (e.g., win message)
+        if (!notificationBar.innerHTML.trim()) {
+          notificationBar.textContent = '';
+        }
       }
     };
 
@@ -805,6 +931,21 @@
         });
       });
       observer.observe(chatModal, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // --- NUEVO: Lógica para el modal de ayuda ---
+    const helpBtn = document.getElementById('help-btn');
+    const helpModal = document.getElementById('help-modal');
+
+    if (helpBtn && helpModal) {
+        helpBtn.addEventListener('click', () => {
+            helpModal.classList.add('visible');
+        });
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) {
+                helpModal.classList.remove('visible');
+            }
+        });
     }
 
     // --- MODIFICADO: Lógica de orientación para Android y iOS ---
