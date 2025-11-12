@@ -793,6 +793,7 @@
       if (!snapshot.empty) {
         console.log('Game results found in Firebase. Populating modal.');
         const docs = snapshot.docs.sort((a, b) => b.data().timestamp - a.data().timestamp);
+        console.log('Number of game results:', docs.length);
         const data = docs[0].data();
 
         winnerAvatarImg.src = data.winnerAvatar;
@@ -808,8 +809,7 @@
         alwaysVisibleModal.style.zIndex = '10000';
         alwaysVisibleModal.dataset.docId = docs[0].id;
       } else {
-        alwaysVisibleModal.style.display = 'none';
-        console.log('No game results found in Firebase. Modal is hidden.');
+          alwaysVisibleModal.style.display = 'none';
       }
     };
 

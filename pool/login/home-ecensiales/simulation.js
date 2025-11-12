@@ -59,31 +59,49 @@ function createSimulatedRoom() {
     };
 }
 
-function showWinNotification(room) {
+function showMultipleWinNotifications(winners) {
     const notificationDiv = document.getElementById('game-win-notification');
     const notificationBar = document.getElementById('notification-bar');
-    const winner = Math.random() < 0.5 ? room.player1 : room.player2;
-    const winAmount = Math.floor(Math.random() * 50000) + 20000; // 20k to 70k
-    notificationDiv.innerHTML = `${winner.username} ganó <span class="win-amount">$${winAmount.toLocaleString()}</span>!`;
     notificationDiv.style.display = 'block';
     notificationBar.style.display = 'block';
+
+    let currentMessages = [];
+    winners.forEach((winner, index) => {
+        setTimeout(() => {
+            const message = `${winner.username} ganó <span class="win-amount">$${winner.amount.toLocaleString()}</span>!`;
+            currentMessages.push(message);
+            notificationDiv.innerHTML = currentMessages.join(' | ');
+        }, index * 1000); // 1 second delay between each
+    });
+
+    // Hide after all are shown plus some time
+    const totalTime = winners.length * 1000 + 8000;
     setTimeout(() => {
         notificationDiv.style.display = 'none';
         notificationBar.style.display = 'none';
-    }, 8000);
+    }, totalTime);
 }
 
 function updateSimulatedRooms() {
+    const winners = [];
+
     // Eliminar una o dos salas simuladas aleatoriamente
     if (simulatedRooms.length > 5) {
         const roomsToRemove = Math.floor(Math.random() * 2) + 1;
         for (let i = 0; i < roomsToRemove; i++) {
             const randomIndex = Math.floor(Math.random() * simulatedRooms.length);
             const roomToRemove = simulatedRooms[randomIndex];
-            // Show notification before removing
-            showWinNotification(roomToRemove);
+            // Collect winner info
+            const winner = Math.random() < 0.5 ? roomToRemove.player1 : roomToRemove.player2;
+            const winAmount = Math.floor(Math.random() * 50000) + 20000; // 20k to 70k
+            winners.push({ username: winner.username, amount: winAmount });
             simulatedRooms.splice(randomIndex, 1);
         }
+    }
+
+    // Show notifications for all winners at once
+    if (winners.length > 0) {
+        showMultipleWinNotifications(winners);
     }
 
     // Añadir una o dos salas nuevas
@@ -96,9 +114,9 @@ function updateSimulatedRooms() {
 
     // Ordenar las salas simuladas por fecha de creación
     simulatedRooms.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
+
     const realRooms = getSalas().filter(sala => !sala.isSimulated);
-    
+
     const allRooms = [...realRooms, ...simulatedRooms];
     setSalas(allRooms);
     displaySalas(allRooms);
@@ -114,6 +132,14 @@ export function initSimulation() {
     setSalas(allRooms);
     displaySalas(allRooms);
 
-    // Actualizar cada minuto
-    setInterval(updateSimulatedRooms, 60000);
+    // Función para programar la próxima actualización con intervalo aleatorio
+    function scheduleNextUpdate() {
+        updateSimulatedRooms();
+        const delay = Math.floor(Math.random() * (60000 - 5000 + 1)) + 5000; // Entre 5 segundos y 1 minuto
+        setTimeout(scheduleNextUpdate, delay);
+    }
+
+    // Iniciar la primera actualización con un retraso aleatorio
+    const initialDelay = Math.floor(Math.random() * (60000 - 5000 + 1)) + 5000;
+    setTimeout(scheduleNextUpdate, initialDelay);
 }

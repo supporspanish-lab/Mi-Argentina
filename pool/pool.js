@@ -222,6 +222,20 @@ async function gameLoop(currentTime) {
 
     }
 
+    // --- NUEVO: Si el juego terminó, no se actualiza la lógica, solo se renderiza. ---
+
+    if (getGameState().gameOver) {
+
+        // --- LOG: Indica que el juego terminó.
+
+        // console.log('[GameLoop] Juego terminado, solo renderizando.');
+
+        renderer.render(scene, camera); // Renderizar la escena
+
+        return; // Detener la ejecución del resto del bucle
+
+    }
+
 
 
     // Calculate deltaTime for rendering and non-physics updates

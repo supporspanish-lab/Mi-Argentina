@@ -1135,6 +1135,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     const bola8Entronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === 8);
     if (bola8Entronerada) {
                         if (faltaCometida) {
+                            console.log("Entering loss branch due to foul with 8-ball");
                             // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
                             setGameOver(true);
                             localStorage.setItem('gameEnded', 'true'); // Signal game end
@@ -1205,6 +1206,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                 });
             }
                                 if (jugadorTieneBolasRestantes || !bolasAsignadasAlInicioTurno) {
+                                    console.log("Entering loss branch due to early 8-ball");
                                     // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
                                     setGameOver(true);
                                     localStorage.setItem('gameEnded', 'true'); // Signal game end
@@ -1213,9 +1215,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                             const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
                             const betAmount = onlineGameData.betAmount || 0;
                             const totalWinnings = betAmount * 2;
-            
+
                                     showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, loserUid);
-            
+
                                     // Award winnings to the opponent
                                     if (winnerUid) {
                                         const winnerDocRef = doc(db, "saldo", winnerUid);
@@ -1230,7 +1232,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                             console.log(`Winner ${winnerUid} received ${winningsAfterDeduction} (after 5% house rake). New balance: ${currentBalance + winningsAfterDeduction}`);
                                         }
                                     }
-            
+
                                     // Update game status in Firestore
                                     if (gameRef) {
                                         await updateDoc(gameRef, {
@@ -1251,79 +1253,98 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                         });
                                     }
                                 } else {
-                // ¡El jugador ha ganado!
-                setGameOver(true);
-                localStorage.setItem('gameEnded', 'true'); // Signal game end
-                localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-                const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
-                const betAmount = onlineGameData.betAmount || 0;
-                const totalWinnings = betAmount * 2;
-                const winnerUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
-                const loserUsername = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.username || `Jugador ${onlineGameData.player2?.playerNumber}` : onlineGameData.player1?.username || `Jugador ${onlineGameData.player1?.playerNumber}`;
-                const winnerAvatar = onlineGameData[`player${jugadorActual}`]?.avatar || '';
-                const loserAvatar = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.avatar || '' : onlineGameData.player1?.avatar || '';
-
-                if (winnerUid) {
-                    const winnerDocRef = doc(db, "saldo", winnerUid);
-                    const winnerSnap = await getDoc(winnerDocRef);
-                    if (winnerSnap.exists()) {
-                        const currentBalance = winnerSnap.data().balance || 0;
-                        const deduction = totalWinnings * 0.05;
-                        const winningsAfterDeduction = totalWinnings - deduction;
-                        await updateDoc(winnerDocRef, {
-                            balance: currentBalance + winningsAfterDeduction
-                        });
-                        console.log(`Winner ${winnerUid} received ${winningsAfterDeduction} (after 5% house rake). New balance: ${currentBalance + winningsAfterDeduction}`);
-                    }
-                }
-
-                // Update game status in Firestore
-                if (gameRef) {
-                    await updateDoc(gameRef, {
-                        status: "ended",
-                        winner: winnerUid,
-                        loser: loserUid,
-                        endedAt: Date.now(),
-                        juegoTerminado: true
-                    });
-                    // Save game history
-                    await addDoc(collection(db, "gameHistory"), {
-                        winnerUid: winnerUid,
-                        loserUid: loserUid,
-                        amountWon: totalWinnings,
-                        amountLost: betAmount,
-                        date: Date.now(),
-                        gameId: gameRef.id
-                    });
-
-                    // --- NUEVO: Guardar resultados en la colección 'gameResults' para el ganador ---
-                    const actualWinnerAmount = totalWinnings * 0.95; // After 5% house rake
-                    await addDoc(collection(db, "gameResults"), {
-                        userUid: winnerUid,
-                        winnerUsername: winnerUsername,
-                        winnerAvatar: winnerAvatar,
-                        winnerAmount: actualWinnerAmount,
-                        loserUsername: loserUsername,
-                        loserAvatar: loserAvatar,
-                        loserAmount: betAmount,
-                        timestamp: Date.now()
-                    });
-
-                    // --- NUEVO: Guardar resultados en la colección 'gameResults' para el perdedor ---
-                    await addDoc(collection(db, "gameResults"), {
-                        userUid: loserUid,
-                        winnerUsername: winnerUsername,
-                        winnerAvatar: winnerAvatar,
-                        winnerAmount: actualWinnerAmount,
-                        loserUsername: loserUsername,
-                        loserAvatar: loserAvatar,
-                        loserAmount: betAmount,
-                        timestamp: Date.now()
-                    });
-                }
-                showFoulMessage(`¡Felicidades, ${currentUsername} has ganado la partida!`, winnerUid);
-            }
+                    console.log("Entering win branch");
+                    // ¡El jugador ha ganado!
+                    console.log("Player has won the game!");
+                                    setGameOver(true);
+                                    localStorage.setItem('gameEnded', 'true'); // Signal game end
+                                    localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
+                                    const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
+                                    const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
+                                    const betAmount = onlineGameData.betAmount || 0;
+                                    const totalWinnings = betAmount * 2;
+                                    const winnerUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+                                    const loserUsername = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.username || `Jugador ${onlineGameData.player2?.playerNumber}` : onlineGameData.player1?.username || `Jugador ${onlineGameData.player1?.playerNumber}`;
+                                    const winnerAvatar = onlineGameData[`player${jugadorActual}`]?.avatar || '';
+                                    const loserAvatar = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.avatar || '' : onlineGameData.player1?.avatar || '';
+                
+                                    console.log("Winner UID:", winnerUid, "Loser UID:", loserUid, "Bet Amount:", betAmount);
+                
+                                    if (winnerUid) {
+                                        const winnerDocRef = doc(db, "saldo", winnerUid);
+                                        const winnerSnap = await getDoc(winnerDocRef);
+                                        if (winnerSnap.exists()) {
+                                            const currentBalance = winnerSnap.data().balance || 0;
+                                            const deduction = totalWinnings * 0.05;
+                                            const winningsAfterDeduction = totalWinnings - deduction;
+                                            await updateDoc(winnerDocRef, {
+                                                balance: currentBalance + winningsAfterDeduction
+                                            });
+                                            console.log(`Winner ${winnerUid} received ${winningsAfterDeduction} (after 5% house rake). New balance: ${currentBalance + winningsAfterDeduction}`);
+                                        }
+                                    }
+                
+                                    // Update game status in Firestore
+                                    if (gameRef) {
+                                        console.log("Updating game status in Firestore");
+                                        await updateDoc(gameRef, {
+                                            status: "ended",
+                                            winner: winnerUid,
+                                            loser: loserUid,
+                                            endedAt: Date.now(),
+                                            juegoTerminado: true
+                                        });
+                                        // Save game history
+                                        await addDoc(collection(db, "gameHistory"), {
+                                            winnerUid: winnerUid,
+                                            loserUid: loserUid,
+                                            amountWon: totalWinnings,
+                                            amountLost: betAmount,
+                                            date: Date.now(),
+                                            gameId: gameRef.id
+                                        });
+                
+                                        // --- NUEVO: Guardar resultados en la colección 'gameResults' para el ganador ---
+                                        const actualWinnerAmount = totalWinnings * 0.95; // After 5% house rake
+                                        console.log("Attempting to save game results for winner");
+                                        try {
+                                            await addDoc(collection(db, "gameResults"), {
+                                                userUid: winnerUid,
+                                                winnerUsername: winnerUsername,
+                                                winnerAvatar: winnerAvatar,
+                                                winnerAmount: actualWinnerAmount,
+                                                loserUsername: loserUsername,
+                                                loserAvatar: loserAvatar,
+                                                loserAmount: betAmount,
+                                                timestamp: Date.now()
+                                            });
+                                            console.log("Game results saved for winner:", winnerUid);
+                                        } catch (error) {
+                                            console.error("Error saving game results for winner:", error);
+                                        }
+                
+                                        // --- NUEVO: Guardar resultados en la colección 'gameResults' para el perdedor ---
+                                        console.log("Attempting to save game results for loser");
+                                        try {
+                                            await addDoc(collection(db, "gameResults"), {
+                                                userUid: loserUid,
+                                                winnerUsername: winnerUsername,
+                                                winnerAvatar: winnerAvatar,
+                                                winnerAmount: actualWinnerAmount,
+                                                loserUsername: loserUsername,
+                                                loserAvatar: loserAvatar,
+                                                loserAmount: betAmount,
+                                                timestamp: Date.now()
+                                            });
+                                            console.log("Game results saved for loser:", loserUid);
+                                        } catch (error) {
+                                            console.error("Error saving game results for loser:", error);
+                                        }
+                                    } else {
+                                        console.log("No gameRef, not saving results");
+                                    }
+                                    showFoulMessage(`¡Felicidades, ${currentUsername} has ganado la partida!`, winnerUid);
+                                }
         }
     }
 
