@@ -105,7 +105,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     // });
 
     const newGameRef = await addDoc(collection(db, "games"), {
-        player1: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
+        player1: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null },
         player2: null,
         status: "waiting",
         createdAt: new Date(),
@@ -145,6 +145,13 @@ export const createGame = async (betAmount, isPrivate = false) => {
                     setGameStarted(true);
                     startGameFullscreen(newGameRef.id);
                 }
+                // Fallback: force start after 5 seconds if not started
+                setTimeout(() => {
+                    if (!getState().gameStarted) {
+                        setGameStarted(true);
+                        startGameFullscreen(newGameRef.id);
+                    }
+                }, 5000);
             } else if (gameData.status === "waiting") {
                 player2ChatName.textContent = 'Oponente';
                 player2ChatAvatar.style.display = 'none';
@@ -193,8 +200,8 @@ export const createPracticeGame = async () => {
     });
 
     const newGameRef = await addDoc(collection(db, "games"), {
-        player1: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
-        player2: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
+        player1: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null },
+        player2: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null },
         status: "starting",
         createdAt: new Date(),
         currentPlayerUid: currentUser.uid,
@@ -275,30 +282,7 @@ const createGameCard = (gameData) => {
             statusText = 'Unirse';
             statusColor = '#2ecc71';
             cursor = 'pointer';
-            onClickAction = async () => {
-                const gameDocRef = doc(db, "games", gameData.id);
-                const gameSnap = await getDoc(gameDocRef);
-
-                if (!gameSnap.exists() || gameSnap.data().status !== 'waiting') {
-                    alert('Esta partida ya no está disponible.');
-                    return;
-                }
-
-                // Removed balance check as per user request
-                // if (currentUserProfile.balance < gameSnap.data().betAmount) {
-                //     alert('No tienes saldo suficiente para unirte.');
-                //     return;
-                // }
-
-                await updateDoc(gameDocRef, {
-                    player2: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName },
-                    status: "players_joined",
-                    currentPlayerUid: Math.random() < 0.5 ? gameData.player1.uid : currentUser.uid,
-                });
-                
-                setUserWaitingGameId(gameData.id);
-                // The onSnapshot listener in createGame will handle the UI transition
-            };
+            onClickAction = () => joinGameAndSetupListener(gameData);
         } else if (gameData.status === 'starting' || gameData.status === 'players_joined') {
             statusText = isUserInGame ? 'En tu sala' : 'En Partida';
             statusColor = isUserInGame ? '#3498db' : '#bdc3c7';
@@ -349,6 +333,71 @@ const createGameCard = (gameData) => {
         card.addEventListener('click', card.onclick);
     }
     return card;
+};
+
+// --- NUEVO: Función para unirse a una partida y configurar el listener ---
+const joinGameAndSetupListener = async (gameData) => {
+    const { currentUser, currentUserProfile } = getState();
+    if (!currentUser || !currentUserProfile) return;
+
+    const gameDocRef = doc(db, "games", gameData.id);
+    const gameSnap = await getDoc(gameDocRef);
+
+    if (!gameSnap.exists() || gameSnap.data().status !== 'waiting') {
+        alert('Esta partida ya no está disponible.');
+        return;
+    }
+
+    // Actualizar el documento del juego para añadir al jugador 2
+    await updateDoc(gameDocRef, {
+        player2: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null },
+        status: "players_joined",
+        currentPlayerUid: Math.random() < 0.5 ? gameData.player1.uid : currentUser.uid,
+    });
+
+    setUserWaitingGameId(gameData.id);
+
+    // --- Lógica de UI para el jugador que se une ---
+    gameCarousel.style.display = 'none';
+    const globalGamesSection = document.getElementById('global-games-section');
+    if(globalGamesSection) globalGamesSection.style.display = 'none';
+    
+    waitingScreen.classList.add('visible'); // ¡Esta es la corrección clave!
+
+    // Configurar la UI del chat con la información de ambos jugadores
+    player1ChatName.textContent = gameData.player1.username;
+    setPlayerAvatar(player1ChatAvatar, gameData.player1.profileImageName);
+    player2ChatName.textContent = currentUserProfile.username;
+    setPlayerAvatar(player2ChatAvatar, currentUserProfile.profileImageName);
+    
+    cancelWaitBtn.textContent = 'Salir';
+    startGameBtn.style.display = 'none'; // El creador inicia la partida
+    kickOpponentBtn.style.display = 'none'; // No se puede expulsar a sí mismo
+
+    // Configurar el listener para futuras actualizaciones (inicio de partida, chat, etc.)
+    onSnapshot(gameDocRef, (gameSnap) => {
+        const updatedGameData = gameSnap.data();
+        if (updatedGameData) {
+            if (updatedGameData.status === "starting") {
+                const { gameStarted } = getState();
+                if (!gameStarted) {
+                    setGameStarted(true);
+                    startGameFullscreen(gameData.id);
+                }
+                // Fallback: force start after 5 seconds if not started
+                setTimeout(() => {
+                    if (!getState().gameStarted) {
+                        setGameStarted(true);
+                        startGameFullscreen(gameData.id);
+                    }
+                }, 5000);
+            }
+            renderMessages(updatedGameData.messages, chatMessagesContainer);
+            setLastMessageCount(updatedGameData.messages ? updatedGameData.messages.length : 0);
+        } else {
+            cleanupWaitingGame(); // La partida fue cancelada o eliminada
+        }
+    });
 };
 
 export const displaySalas = (allRooms) => {

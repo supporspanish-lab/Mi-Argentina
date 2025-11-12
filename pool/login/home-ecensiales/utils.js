@@ -193,6 +193,7 @@ export const cleanupWaitingGame = async () => {
         setUserWaitingGameId(null);
         setGameStarted(false);
         waitingScreen.classList.remove('visible');
+        waitingScreen.classList.remove('minimized');
         gameCarousel.style.display = 'flex';
         player2ChatName.textContent = 'Oponente';
         player2ChatAvatar.style.display = 'none';
@@ -213,32 +214,11 @@ export const cleanupWaitingGame = async () => {
         const gameDocRef = doc(db, "games", userWaitingGameId);
         const gameSnap = await getDoc(gameDocRef);
 
-        // If the game document still exists, perform cleanup actions.
+        // If the game document still exists, delete it to ensure no orphaned games.
         if (gameSnap.exists()) {
-            const gameData = gameSnap.data();
-            const isPlayer1 = gameData.player1.uid === currentUser.uid;
-            const isPlayer2 = gameData.player2?.uid === currentUser.uid;
-
-            // Case 1: Player 1 (host) is alone in a "waiting" room and cancels it.
-            if (isPlayer1 && gameData.status === "waiting" && gameData.player2 === null) {
-                await deleteDoc(gameDocRef);
-            }
-            // Case 2: A player leaves a "players_joined" room before the game has started.
-            else if (gameData.status === "players_joined") {
-                if (isPlayer1) {
-                    // Host (P1) leaves, so delete the game.
-                    // In a real scenario, you might want to handle bet refunds here.
-                    await deleteDoc(gameDocRef);
-                } else if (isPlayer2) {
-                    // Opponent (P2) leaves, so reset the room to "waiting".
-                    await updateDoc(gameDocRef, {
-                        player2: null,
-                        status: "waiting"
-                    });
-                }
-            }
+            await deleteDoc(gameDocRef);
         }
-        
+
         // Finally, always reset the UI for the current user.
         // This is crucial for the kicked player, as their client will run this
         // after the host has already changed the game document.
