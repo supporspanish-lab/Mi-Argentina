@@ -12,7 +12,7 @@ import { initializeSpinControls, wasDraggingSpin } from './spinControls.js'; // 
 
 
 // --- Referencias a elementos del DOM ---
-const powerBarContainer = document.getElementById('newPowerBarContainer');
+const powerBarWrapper = document.getElementById('powerBarWrapper'); // --- CORRECCIÓN: Usar el contenedor principal
 
 // --- Estado de la UI ---
 // --- NUEVO: Variable para rastrear si las bolas se estaban moviendo en el frame anterior ---
@@ -54,13 +54,13 @@ export function initializeUI() {
     initializeSpinControls(); // --- NUEVO: Inicializar los eventos para el control de efecto
 
     // --- SOLUCIÓN: Reintroducir los listeners para la barra de potencia deslizable ---
-    if (powerBarContainer) {
+    if (powerBarWrapper) {
         // --- NUEVO: Establecer una posición inicial por defecto si no hay un layout guardado
         if (!localStorage.getItem('poolUILayout')) {
-            powerBarContainer.style.top = '50%';
-            powerBarContainer.style.left = '10px';
-            powerBarContainer.style.transform = 'translateY(-50%)';
-            powerBarContainer.style.right = 'auto';
+            powerBarWrapper.style.top = '50%';
+            powerBarWrapper.style.left = '10px';
+            powerBarWrapper.style.transform = 'translateY(-50%)';
+            powerBarWrapper.style.right = 'auto';
         }
     }
 
@@ -117,9 +117,9 @@ export function initializeUI() {
 
             // --- SOLUCIÓN: Actualizar el valor de los sliders al entrar en modo edición ---
             const pocketContainer = document.querySelector('.pocketed-balls-container');
-            if (pocketContainer) pocketsSizeSlider.value = pocketContainer.offsetWidth;
-            if (powerBarContainer) powerBarSizeSlider.value = powerBarContainer.offsetWidth;
-            if (powerBarContainer) powerBarHeightSlider.value = powerBarContainer.offsetHeight;
+            if (pocketContainer) pocketsSizeSlider.value = pocketContainer.offsetWidth; 
+            if (powerBarWrapper) powerBarSizeSlider.value = powerBarWrapper.offsetWidth;
+            if (powerBarWrapper) powerBarHeightSlider.value = powerBarWrapper.offsetHeight;
 
             updateToggleBtnPosition(); // --- SOLUCIÓN: Actualizar la posición del botón
         };
@@ -170,12 +170,12 @@ export function initializeUI() {
 
         powerBarSizeSlider.addEventListener('input', (e) => {
             const newSize = e.target.value;
-            powerBarContainer.style.width = `${newSize}px`;
+            powerBarWrapper.style.width = `${newSize}px`;
         });
 
         powerBarHeightSlider.addEventListener('input', (e) => {
             const newSize = e.target.value;
-            powerBarContainer.style.height = `${newSize}px`;
+            powerBarWrapper.style.height = `${newSize}px`;
         });
     }
 
@@ -208,11 +208,11 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
     // Se puede disparar si las bolas no se mueven y la bola blanca no está entronerada.
     const canShoot = !ballsAreCurrentlyMoving && !cueBall.isPocketed;
     
-    // --- MODIFICACIÓN: Las guías solo se muestran si se puede disparar Y NO se está en modo "bola en mano".
+    // --- MODIFICACIÓN: Las guías solo se muestran si se puede disparar Y NO se está en modo "bola en mano". 
     // --- CORRECCIÓN: Las guías deben mostrarse si se puede disparar, excepto cuando se está arrastrando activamente la bola.
     const shouldShowGuides = (canShoot || isPullingBack()) && !isMovingCueBall();
 
-    powerBarContainer.style.display = canShoot ? 'block' : 'none';
+    if (powerBarWrapper) powerBarWrapper.style.display = canShoot ? 'block' : 'none'; // --- CORRECCIÓN: Controlar la visibilidad del contenedor principal
 
 
     if (shouldShowGuides) {
@@ -638,11 +638,11 @@ function setupUIEditListeners() {
             // Si el elemento está centrado (como la barra de potencia), ajustamos el 'left'
             // pero mantenemos la transformación para que siga centrado respecto a su nueva posición.
             // --- CORRECCIÓN: La miniatura del selector de efecto necesita un tratamiento especial.
-            if (el.id === 'newPowerBarContainer') {
+            if (el.id === 'powerBarWrapper') {
                 const newTop = activeDrag.initialTop + dy;
                 el.style.top = `${newTop}px`;
                 el.style.left = `${activeDrag.initialLeft + dx}px`;
-                el.style.right = 'auto';
+                el.style.right = 'auto'; 
             } else if (el.style.left !== 'auto') {
                 el.style.left = `${activeDrag.initialLeft + dx}px`;
                 el.style.right = 'auto';

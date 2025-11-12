@@ -797,32 +797,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                 }
                             }
 
-                            // Deduct from loser
-                            if (loserUid) {
-                                const loserDocRef = doc(db, "saldo", loserUid);
-                                const loserSnap = await getDoc(loserDocRef);
-                                if (loserSnap.exists()) {
-                                    const currentBalance = loserSnap.data().balance || 0;
-                                    await updateDoc(loserDocRef, {
-                                        balance: currentBalance - betAmount
-                                    });
-                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
-                                }
-                            }
-            
-                            // Deduct from loser
-                            if (loserUid) {
-                                const loserDocRef = doc(db, "saldo", loserUid);
-                                const loserSnap = await getDoc(loserDocRef);
-                                if (loserSnap.exists()) {
-                                    const currentBalance = loserSnap.data().balance || 0;
-                                    await updateDoc(loserDocRef, {
-                                        balance: currentBalance - betAmount
-                                    });
-                                    console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
-                                }
-                            }
-        
                             // Update game status in Firestore
                             if (gameRef) {
                                 await updateDoc(gameRef, {
@@ -878,6 +852,19 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                                         }
                                     }
             
+                                    // --- SOLUCIÓN: Añadir la deducción de saldo que faltaba para el perdedor ---
+                                    if (loserUid) {
+                                        const loserDocRef = doc(db, "saldo", loserUid);
+                                        const loserSnap = await getDoc(loserDocRef);
+                                        if (loserSnap.exists()) {
+                                            const currentBalance = loserSnap.data().balance || 0;
+                                            await updateDoc(loserDocRef, {
+                                                balance: currentBalance - betAmount
+                                            });
+                                            console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
+                                        }
+                                    }
+
                                     // Update game status in Firestore
                                     if (gameRef) {
                                         await updateDoc(gameRef, {

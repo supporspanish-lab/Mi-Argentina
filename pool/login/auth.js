@@ -17,6 +17,13 @@ const firebaseConfig = {
     measurementId: "G-MSX7ELVR48"
 };
 
+// --- SOLUCIÓN: Redirigir si el usuario ya está logueado ---
+// Si estamos en la página de login y el localStorage indica que hay una sesión activa,
+// redirigimos inmediatamente a la página principal (home).
+if (window.location.pathname.endsWith('login.html') && localStorage.getItem('userIsLoggedIn') === 'true') {
+    window.location.href = 'home.html';
+}
+
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
