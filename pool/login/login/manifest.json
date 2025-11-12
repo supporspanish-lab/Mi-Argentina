@@ -1,0 +1,23 @@
+{
+  "name": "BlackBall Pool",
+  "short_name": "BlackBall Pool",
+  "start_url": "login.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "../imajenes/pwa.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "../imajenes/pwa.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+
+  ]
+}
