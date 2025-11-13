@@ -41,6 +41,8 @@ const startGameFullscreen = (gameId) => {
 
 const STALE_GAME_MINUTES = 10;
 
+const STALE_STARTED_GAME_MINUTES = 30; // Juegos iniciados sin terminar después de 30 min se eliminan
+
 export const purgeStaleGames = async () => {
     try {
         const gamesRef = collection(db, "games");
@@ -61,6 +63,29 @@ export const purgeStaleGames = async () => {
         await Promise.all(promises);
     } catch (error) {
         console.error("Error al purgar partidas antiguas:", error);
+    }
+};
+
+export const purgeStaleStartedGames = async () => {
+    try {
+        const gamesRef = collection(db, "games");
+        const startedGamesQuery = query(gamesRef, where("status", "in", ["starting", "players_joined"]));
+        const snapshot = await getDocs(startedGamesQuery);
+        const now = new Date();
+        const promises = [];
+        snapshot.forEach(docSnap => {
+            const gameData = docSnap.data();
+            const createdAt = gameData.createdAt?.toDate();
+            if (createdAt) {
+                const minutesDiff = (now - createdAt) / (1000 * 60);
+                if (minutesDiff > STALE_STARTED_GAME_MINUTES) {
+                    promises.push(deleteDoc(doc(db, "games", docSnap.id)));
+                }
+            }
+        });
+        await Promise.all(promises);
+    } catch (error) {
+        console.error("Error al purgar partidas iniciadas antiguas:", error);
     }
 };
 
@@ -490,6 +515,10 @@ export const updateGameLists = async () => {
         practiceCard.addEventListener('click', () => createPracticeGame());
         gameCarousel.appendChild(practiceCard);
     }
+
+    // Purge stale games
+    await purgeStaleGames();
+    await purgeStaleStartedGames();
 
     try {
         const gamesRef = collection(db, "games");
