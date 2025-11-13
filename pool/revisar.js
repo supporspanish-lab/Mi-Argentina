@@ -835,7 +835,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                        // --- CORRECCIÓN: La falta solo aplica si NO se entroneró también una bola propia.
+                                                                                                                                                                                                                        // --- Falta por entronerar una bola del oponente, independientemente de si se entroneró una propia.
 
         
 
@@ -867,7 +867,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                        if (bolasAsignadasAlInicioTurno && !faltaCometida && !jugadorEntroneroSuBola && bolasEntroneradasEsteTurno.length > 0) {
+                                                                                                                                                                                                                        if (bolasAsignadasAlInicioTurno && !faltaCometida && bolasEntroneradasEsteTurno.length > 0) {
 
         
 

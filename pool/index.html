@@ -1888,7 +1888,11 @@
             const reason = event.reason;
             let errorInfo = 'Error en una promesa no manejada.\n';
             if (reason instanceof Error) {
-                errorInfo += `Error: ${reason.message}\n\nPila de llamadas:\n${reason.stack}`;
+                if (reason.message.includes('network-request-failed')) {
+                    errorInfo = 'Error de conexión a internet. Verifica tu conexión y vuelve a intentarlo.';
+                } else {
+                    errorInfo += `Error: ${reason.message}\n\nPila de llamadas:\n${reason.stack}`;
+                }
             }
             else {
                 errorInfo += `Razón: ${JSON.stringify(reason, null, 2)}`;
