@@ -4,6 +4,7 @@ import { getState, setUserWaitingGameId, setLastMessageCount, setPollingInterval
 import { setPlayerAvatar, renderMessages, cleanupWaitingGame, fetchUserProfile } from './utils.js';
 import { updateUserProfile } from '../auth.js';
 import { getBackgroundAudio } from './home.js';
+import { showTournamentInfo } from './modalHandlers.js';
 
 export const endGame = () => {
     const audio = getBackgroundAudio();
@@ -163,7 +164,6 @@ export const createGame = async (betAmount, isPrivate = false) => {
 
     setUserWaitingGameId(newGameRef.id);
 
-    gameCarousel.style.display = 'none';
     waitingScreen.classList.add('visible');
     player1ChatName.textContent = currentUserProfile.username;
     setPlayerAvatar(player1ChatAvatar, currentUserProfile.profileImageName);
@@ -258,9 +258,7 @@ export const createPracticeGame = async () => {
         balancesDeducted: false,
         player1BalanceTransaction: null
     });
-
-    setUserWaitingGameId(newGameRef.id);
-    gameCarousel.style.display = 'none';
+setUserWaitingGameId(newGameRef.id);
     setGameStarted(true);
     startGameFullscreen(newGameRef.id);
 };
@@ -294,6 +292,32 @@ const createGameCard = (gameData) => {
     let cardHTML = '';
 
     if (gameData.isSimulated) {
+        let statusText, statusColor, cursor = 'default', onClickAction = null;
+        if (gameData.status === 'waiting') {
+            statusText = 'Unirse';
+            statusColor = '#2ecc71';
+        } else if (gameData.status === 'starting' || gameData.status === 'players_joined') {
+            statusText = 'En Partida';
+            statusColor = '#2ecc71';
+            cursor = 'pointer';
+            onClickAction = () => alert('Otra persona ya se está sincronizando a la sala.');
+        } else if (gameData.status === 'ended') {
+            statusText = 'Terminada';
+            statusColor = '#95a5a6';
+        } else {
+            statusText = 'En Partida';
+            statusColor = '#2ecc71';
+        }
+        const p2Display = gameData.status === 'waiting' ?
+            `<div class="player-avatar-card" style="background-color: #2c3e50; border-style: dashed;"></div><span class="player-name-active" style="opacity: 0.6;">Esperando...</span>` :
+            `<img src="${p2AvatarSimulated}" alt="${p2UsernameSimulated}" class="player-avatar-card"><span class="player-name-active">${p2UsernameSimulated}</span>`;
+        const betDisplay = (gameData.betAmount > 0 && gameData.status === 'waiting') ? `
+            <div class="card-bet-amount">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm1.5-3.845V11h-3v-1.034c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825V12.5h3v-1.033c-.967-.125-1.51-.28-1.51-.795 0-.515.543-.69 1.51-.825V8.5h-3V7.5h3v1.033c.96.124 1.51.278 1.51.794 0 .516-.544.69-1.51.825z"/></svg>
+                <span>$${gameData.betAmount.toLocaleString()}</span>
+            </div>
+        ` : '';
+        const statusDisplay = gameData.status === 'waiting' ? `<div class="card-game-details">${betDisplay}<span class="card-status-active" style="color: ${statusColor}; font-weight: bold; cursor: ${cursor};">${statusText}</span></div>` : `<div class="card-game-details"><span class="card-status-active" style="color: ${statusColor}; font-weight: bold;">${statusText}</span></div>`;
         cardHTML = `
             <div class="active-card-content">
                 <div class="card-active-players">
@@ -303,13 +327,10 @@ const createGameCard = (gameData) => {
                     </div>
                     <span class="vs-separator">vs</span>
                     <div class="player-avatar-container">
-                        <img src="${p2AvatarSimulated}" alt="${p2UsernameSimulated}" class="player-avatar-card">
-                        <span class="player-name-active">${p2UsernameSimulated}</span>
+                        ${p2Display}
                     </div>
                 </div>
-                <div class="card-game-details">
-                    <span class="card-status-active" style="color: #2ecc71; font-weight: bold;">En Partida</span>
-                </div>
+                ${statusDisplay}
             </div>
         `;
     } else {
@@ -323,7 +344,7 @@ const createGameCard = (gameData) => {
 
         if (canJoin) {
             statusText = 'Unirse';
-            statusColor = '#2ecc71';
+            statusColor = '#3498db';
             cursor = 'pointer';
             onClickAction = () => joinGameAndSetupListener(gameData);
         } else if (gameData.status === 'starting' || gameData.status === 'players_joined') {
@@ -401,7 +422,6 @@ const joinGameAndSetupListener = async (gameData) => {
     setUserWaitingGameId(gameData.id);
 
     // --- Lógica de UI para el jugador que se une ---
-    gameCarousel.style.display = 'none';
     const globalGamesSection = document.getElementById('global-games-section');
     if(globalGamesSection) globalGamesSection.style.display = 'none';
     
@@ -493,27 +513,37 @@ export const updateGameLists = async () => {
         return;
     }
 
-    // Add static cards
-    if (!gameCarousel.querySelector('.create-new')) {
-        const createCard = document.createElement('div');
-        createCard.className = 'game-card create-new';
-        createCard.innerHTML = `<div class="create-icon">+</div><span class="create-text">Crear Partida</span>`;
-        createCard.addEventListener('click', () => {
-            const betModal = document.getElementById('bet-modal');
-            const betAmountInput = document.getElementById('bet-amount-input');
-            const betErrorMessage = document.getElementById('bet-error-message');
-            betAmountInput.value = '1000';
-            betErrorMessage.textContent = '';
-            betModal.classList.add('visible');
-        });
-        gameCarousel.appendChild(createCard);
-    }
-    if (!gameCarousel.querySelector('.practice-game')) {
-        const practiceCard = document.createElement('div');
-        practiceCard.className = 'game-card practice-game';
-        practiceCard.innerHTML = `<div class="create-icon">🎮</div><span class="create-text">Practica</span>`;
-        practiceCard.addEventListener('click', () => createPracticeGame());
-        gameCarousel.appendChild(practiceCard);
+    // Add vertical options
+    const verticalList = document.getElementById('vertical-options-list');
+    if (verticalList) {
+        if (!verticalList.querySelector('.create-new')) {
+            const createCard = document.createElement('div');
+            createCard.className = 'game-card create-new';
+            createCard.innerHTML = `<img src="../video/crear.png" alt="Crear Partida" class="create-icon"><span class="create-text">Crear Partida</span>`;
+            createCard.addEventListener('click', () => {
+                const betModal = document.getElementById('bet-modal');
+                const betAmountInput = document.getElementById('bet-amount-input');
+                const betErrorMessage = document.getElementById('bet-error-message');
+                betAmountInput.value = '1000';
+                betErrorMessage.textContent = '';
+                betModal.classList.add('visible');
+            });
+            verticalList.appendChild(createCard);
+        }
+        if (!verticalList.querySelector('.practice-game')) {
+            const practiceCard = document.createElement('div');
+            practiceCard.className = 'game-card practice-game';
+            practiceCard.innerHTML = `<img src="../video/practica.png" alt="Practica" class="create-icon"><span class="create-text">Practica</span>`;
+            practiceCard.addEventListener('click', () => createPracticeGame());
+            verticalList.appendChild(practiceCard);
+        }
+        if (!verticalList.querySelector('.practice-torneo-game') && window.tournamentEnabled) {
+            const practiceTorneoCard = document.createElement('div');
+            practiceTorneoCard.className = 'game-card practice-torneo-game';
+            practiceTorneoCard.innerHTML = `<img src="../video/torneo.png" alt="Torneo" class="create-icon"><span class="create-text">Torneo</span><div class="tournament-prize">Premio: $${window.tournamentPrize}</div>`;
+            practiceTorneoCard.addEventListener('click', () => showTournamentInfo());
+            verticalList.appendChild(practiceTorneoCard);
+        }
     }
 
     // Purge stale games

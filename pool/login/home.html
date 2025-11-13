@@ -307,6 +307,25 @@
         0% { transform: translateX(-100%); opacity: 0; }
         100% { transform: translateX(0); opacity: 1; }
       }
+
+      /* --- NUEVO: Estilos para la lista vertical de opciones --- */
+      .vertical-options-container {
+        width: 100%;
+        max-width: 1200px; /* Coincide con el ancho del header */
+        margin: 20px auto 0 auto; /* Margen superior para separar del carrusel */
+        padding: 0 20px;
+        box-sizing: border-box;
+      }
+      .vertical-options-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 15px;
+        border-radius: 12px;
+        max-width: 600px; /* Ancho aumentado para 2 columnas */
+        margin: 0 auto; /* Centrar */
+      }
     </style>
   </head>
   <body>
@@ -398,9 +417,9 @@
                     </div>
                 </div>
 
-                <!-- Carrusel de juegos -->
-                <div class="game-carousel-container">
-                    <div class="game-carousel" id="main-game-carousel"></div>
+                <!-- Lista vertical de opciones -->
+                <div class="vertical-options-container">
+                    <div class="vertical-options-list" id="vertical-options-list"></div>
                 </div>
 
                 <!-- --- MOVIDO: El modal de chat ahora está fuera de las listas y centrado --- -->
@@ -438,6 +457,7 @@
                 </div>
 
                 <div class="game-carousel-container">
+                    <div class="game-carousel" id="main-game-carousel"></div>
                     <!-- NUEVO: Modal de Fin de Partida -->
                     <div id="always-visible-modal" class="modal-overlay">
                         <div class="modal-box">
@@ -459,7 +479,6 @@
 
                         </div>
                     </div>
-                    <div class="game-carousel" id="secondary-game-carousel"></div>
                 </div>
 
             </main>
@@ -661,16 +680,26 @@
         </div>
     </div>
         <!-- --- NUEVO: Modal para copiar errores de consola --- -->
-    <div id="error-console-modal" class="error-modal-overlay">
-        <div class="error-modal-box">
-            <h3>Errores de Consola</h3>
-            <textarea id="error-console-textarea" readonly></textarea>
-            <div class="error-modal-actions">
-                <button id="copy-errors-btn" class="copy-button">Copiar Errores</button>
-                <button id="close-error-modal-btn" class="close-button">Cerrar</button>
+        <div id="error-console-modal" class="error-modal-overlay">
+            <div class="error-modal-box">
+                <h3>Errores de Consola</h3>
+                <textarea id="error-console-textarea" readonly></textarea>
+                <div class="error-modal-actions">
+                    <button id="copy-errors-btn" class="copy-button">Copiar Errores</button>
+                    <button id="close-error-modal-btn" class="close-button">Cerrar</button>
+                </div>
             </div>
         </div>
-    </div>
+   
+        <!-- --- NUEVO: Modal de información del torneo --- -->
+        <div id="tournament-info-modal" class="modal-overlay">
+            <div class="modal-box">
+                <h3>Información del Torneo</h3>
+                <p>Costo de Entrada: $<span id="entry-cost-display"></span></p>
+                <p>Premio: $<span id="prize-display"></span></p>
+                <button id="participate-tournament-btn" class="play-button">Participar</button>
+            </div>
+        </div>
     <!-- CORRECCIÓN: Cargar main.js, que es el punto de entrada principal de la aplicación -->
     <script type="module" src="./home-ecensiales/main.js" defer></script>
     <!-- NUEVO: Script para el video de fondo aleatorio en canvas -->
@@ -746,8 +775,9 @@
   </script>
   <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
-  import { getFirestore, collection, query, where, orderBy, limit, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+  import { getFirestore, collection, query, where, orderBy, limit, getDocs, deleteDoc, doc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
   import { getState } from './home-ecensiales/state.js';
+  import { updateGameLists } from './home-ecensiales/gameRoomHandlers.js';
 
   const firebaseConfig = {
       apiKey: "AIzaSyARtudlNYekKYm3zDl1r4RsinP1b3GUlu4",
@@ -762,8 +792,25 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  document.addEventListener('DOMContentLoaded', () => {
+  async function loadTournamentSettings() {
+      const settingsRef = doc(db, "tournamentSettings", "settings");
+      const settingsSnap = await getDoc(settingsRef);
+      if (settingsSnap.exists()) {
+          const data = settingsSnap.data();
+          window.tournamentEnabled = data.enabled !== false; // Default true if not set
+          window.tournamentPrize = data.prize || 1000;
+          window.tournamentEntryCost = data.entryCost || 100;
+      } else {
+          window.tournamentEnabled = true; // Default enabled
+          window.tournamentPrize = 1000;
+          window.tournamentEntryCost = 100;
+      }
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOMContentLoaded fired in home.html');
+    await loadTournamentSettings();
+    updateGameLists();
 
     const alwaysVisibleModal = document.getElementById('always-visible-modal');
     const winnerAvatarImg = document.getElementById('winner-avatar');
@@ -895,16 +942,16 @@
 
     // --- NUEVO: Ocultar las secciones de salas cuando el chat está abierto ---
     const chatModal = document.getElementById('waiting-screen');
-    const gameCarousel = document.getElementById('main-game-carousel');
     const globalGamesSection = document.getElementById('global-games-section');
+    const verticalOptionsContainer = document.getElementById('vertical-options-container');
 
-    if (chatModal && gameCarousel && globalGamesSection) {
+    if (chatModal && globalGamesSection && verticalOptionsContainer) {
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
             const hide = chatModal.classList.contains('visible');
-            gameCarousel.style.display = hide ? 'none' : '';
             globalGamesSection.style.display = hide ? 'none' : '';
+            verticalOptionsContainer.style.display = hide ? 'none' : '';
           }
         });
       });

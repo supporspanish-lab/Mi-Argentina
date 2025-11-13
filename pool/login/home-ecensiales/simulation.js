@@ -4,6 +4,7 @@ import { getSalas, setSalas } from './state.js';
 import { displaySalas } from './gameRoomHandlers.js';
 
 let simulatedRooms = [];
+let simulationStartTime = 0;
 
 const NAMES = [
   "ShadowKill", "LunaFire", "Gamer202", "SombraXD", "DarkLion", "NeoHunter", "ToxicWave", "AlexPro", "SniperWolf",
@@ -19,6 +20,12 @@ const NAMES = [
   "BlazeMan", "LauFPS", "JuanitoYT", "WolfyBoy", "ElGamerArg", "Prosofia", "VegaX", "Sofi_2009", "Sn1perGod", "LauBoom"
 ];
 
+const STATUSES = ['waiting', 'starting', 'players_joined', 'ended'];
+
+function getRandomStatus() {
+    return STATUSES[Math.floor(Math.random() * STATUSES.length)];
+}
+
 
 function getRandomName() {
     return NAMES[Math.floor(Math.random() * NAMES.length)];
@@ -31,14 +38,16 @@ function createSimulatedRoom() {
     const player1Name = getRandomName();
     const player2Name = getRandomName();
     const creatorName = getRandomName();
-    return {
+    const canCreateWaiting = Date.now() - simulationStartTime > 2000;
+    const status = canCreateWaiting && Math.random() < 0.3 ? 'waiting' : 'starting'; // 30% chance to start as waiting after 2 seconds
+    const room = {
         id: salaId,
         nombre: `Sala de demostración ${Math.floor(Math.random() * 100)}`,
         creador: creatorName,
         jugadores: 2,
         maxJugadores: 2,
         estado: 'jugando',
-        status: 'starting',
+        status: status,
         createdAt: new Date().toISOString(),
         isSimulated: true,
         player1: {
@@ -51,50 +60,95 @@ function createSimulatedRoom() {
             username: player2Name,
             profileImageName: `${player2Num}.jpg`
         },
-        betAmount: Math.floor(Math.random() * 5000) + 1000,
+        betAmount: Math.floor(Math.random() * 99000) + 1000, // 1000 to 100000
         createdBy: {
             displayName: creatorName,
             photoURL: `../imajenes/perfil/${player1Num}.jpg`
         }
     };
+    if (status === 'waiting') {
+        room.changeTime = Date.now() + (Math.floor(Math.random() * 1000) + 500); // 0.5-1.5 seconds
+    }
+    if (status === 'ended') {
+        room.winnerUsername = Math.random() < 0.5 ? player1Name : player2Name;
+        room.removeTime = Date.now() + 3000; // Remove after 3 seconds
+    }
+    return room;
 }
 
 function showMultipleWinNotifications(winners) {
-    const notificationDiv = document.getElementById('game-win-notification');
-    const notificationBar = document.getElementById('notification-bar');
-    notificationDiv.style.display = 'block';
-    notificationBar.style.display = 'block';
+    if (winners.length > 0) {
+        const notificationBar = document.getElementById('notification-bar');
+        notificationBar.style.display = 'block';
+        // Hide the bar when the last notification disappears
+        const lastNotificationTime = (winners.length - 1) * 2000 + 8000;
+        setTimeout(() => {
+            notificationBar.style.display = 'none';
+        }, lastNotificationTime);
+    }
 
-    let currentMessages = [];
     winners.forEach((winner, index) => {
         setTimeout(() => {
-            const message = `${winner.username} ganó <span class="win-amount">$${winner.amount.toLocaleString()}</span>!`;
-            currentMessages.push(message);
-            notificationDiv.innerHTML = currentMessages.join(' | ');
-        }, index * 1000); // 1 second delay between each
-    });
+            const notificationDiv = document.createElement('div');
+            notificationDiv.id = `game-win-notification-${Date.now()}-${index}`;
+            notificationDiv.className = 'game-win-notification';
+            notificationDiv.innerHTML = `${winner.username} ganó <span class="win-amount">$${winner.amount.toLocaleString()}</span>!`;
+            notificationDiv.style.left = `${-100 + index * 10}%`;
+            notificationDiv.style.display = 'block';
+            document.body.appendChild(notificationDiv);
 
-    // Hide after all are shown plus some time
-    const totalTime = winners.length * 1000 + 8000;
-    setTimeout(() => {
-        notificationDiv.style.display = 'none';
-        notificationBar.style.display = 'none';
-    }, totalTime);
+            // Hide after 8 seconds
+            setTimeout(() => {
+                notificationDiv.style.display = 'none';
+                document.body.removeChild(notificationDiv);
+            }, 8000);
+        }, index * 2000); // 2 second delay between each to avoid overlap
+    });
 }
 
 function updateSimulatedRooms() {
     const winners = [];
 
-    // Eliminar una o dos salas simuladas aleatoriamente
+    // Cambiar estados de salas existentes aleatoriamente
+    simulatedRooms.forEach(room => {
+        if (room.status === 'waiting' && room.changeTime && Date.now() > room.changeTime) {
+            room.status = 'players_joined';
+            delete room.changeTime; // Remove the timer
+        } else if (room.status === 'players_joined') {
+            if (Math.random() < 0.2) { // 20% chance to start if joined
+                room.status = 'starting';
+            }
+        } else if (room.status === 'starting') {
+            if (Math.random() < 0.1) { // 10% chance to end
+                room.status = 'ended';
+                room.winnerUsername = Math.random() < 0.5 ? room.player1.username : room.player2.username;
+                room.removeTime = Date.now() + 3000; // Remove after 3 seconds
+            }
+        }
+    });
+
+    // Eliminar salas simuladas terminadas después de 3 segundos
+    const endedRooms = simulatedRooms.filter(room => room.status === 'ended' && room.removeTime && Date.now() > room.removeTime);
+    endedRooms.forEach(room => {
+        const winner = room.player1.username === room.winnerUsername ? room.player1 : room.player2;
+        const winAmount = Math.floor(Math.random() * 50000) + 20000; // 20k to 70k
+        winners.push({ username: winner.username, amount: winAmount });
+        const index = simulatedRooms.indexOf(room);
+        if (index > -1) simulatedRooms.splice(index, 1);
+    });
+
+    // Eliminar una o dos salas simuladas aleatoriamente si hay más de 5
     if (simulatedRooms.length > 5) {
         const roomsToRemove = Math.floor(Math.random() * 2) + 1;
         for (let i = 0; i < roomsToRemove; i++) {
             const randomIndex = Math.floor(Math.random() * simulatedRooms.length);
             const roomToRemove = simulatedRooms[randomIndex];
-            // Collect winner info
-            const winner = Math.random() < 0.5 ? roomToRemove.player1 : roomToRemove.player2;
-            const winAmount = Math.floor(Math.random() * 50000) + 20000; // 20k to 70k
-            winners.push({ username: winner.username, amount: winAmount });
+            // Collect winner info if ended and not already collected
+            if (roomToRemove.status === 'ended' && !winners.some(w => w.username === roomToRemove.winnerUsername)) {
+                const winner = roomToRemove.player1.username === roomToRemove.winnerUsername ? roomToRemove.player1 : roomToRemove.player2;
+                const winAmount = Math.floor(Math.random() * 50000) + 20000; // 20k to 70k
+                winners.push({ username: winner.username, amount: winAmount });
+            }
             simulatedRooms.splice(randomIndex, 1);
         }
     }
@@ -123,7 +177,8 @@ function updateSimulatedRooms() {
 }
 
 export function initSimulation() {
-    // Carga inicial de salas simuladas
+    simulationStartTime = Date.now();
+    // Carga inicial de salas simuladas (solo 'starting')
     for (let i = 0; i < 45; i++) {
         simulatedRooms.push(createSimulatedRoom());
     }

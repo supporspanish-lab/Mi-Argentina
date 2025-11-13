@@ -359,9 +359,68 @@
           font-size: 14px; /* Texto más pequeño */
       }
 
-      .game-card:has(.create-text):not(.practice-game) .create-icon,
-      .game-card.practice-game .create-icon {
+      /* --- NUEVO: Estilos para la tarjeta de práctica torneo --- */
+      .game-card.practice-torneo-game {
+          background-image: url('../video/torneo.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          position: relative; /* Necesario para el pseudo-elemento */
+          overflow: hidden; /* Asegura que el pseudo-elemento no se desborde */
+          flex: 0 0 80px; /* Flex-basis reducido para achicar horizontalmente */
+          width: 80px; /* Más estrecho horizontalmente */
+          height: 100px; /* Altura mantenida */
+          padding: 8px; /* Padding ajustado */
+      }
+
+      .game-card.practice-torneo-game::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0); /* Capa oscura para mejorar la legibilidad del texto */
+          z-index: 1;
+      }
+
+      .game-card.practice-torneo-game .create-icon,
+      .game-card.practice-torneo-game .create-text {
+          position: relative; /* Asegura que el texto esté por encima de la capa oscura */
+          z-index: 2;
+          color: var(--primary-color); /* Asegura que el texto sea visible */
+      }
+
+      .game-card.practice-torneo-game .create-icon {
+          font-size: 40px; /* Icono reducido a la mitad */
+      }
+
+      .game-card.practice-torneo-game .create-text {
+          font-size: 14px; /* Texto más pequeño */
+      }
+
+      .game-card:has(.create-text):not(.practice-game):not(.practice-torneo-game) .create-icon,
+      .game-card.practice-game .create-icon,
+      .game-card.practice-torneo-game .create-icon {
           display: none; /* Ocultar el icono */
+      }
+
+      /* --- NUEVO: Estilos para el premio del torneo --- */
+      .tournament-prize {
+          margin-top: auto;
+          font-size: 12px;
+          color: #FFD700; /* Dorado */
+          font-weight: bold;
+          background-color: rgba(0, 0, 0, 0.5);
+          padding: 2px 4px;
+          border-radius: 4px;
+          display: inline-block;
+      }
+
+      /* --- NUEVO: Estilos para la tarjeta de torneo sin imagen de fondo --- */
+      .game-card.tournament-game {
+          background-image: none;
+          background-color: var(--container-bg-color);
       }
 
       /* --- SOLUCIÓN: Asegurar que la tarjeta de práctica no tenga opacidad ni filtro de escala de grises --- */
@@ -371,7 +430,7 @@
       }
       
       /* --- NUEVO: Estilos para la tarjeta de "Crear Partida" con imagen de fondo --- */
-      .game-card:has(.create-text):not(.practice-game) {
+      .game-card:has(.create-text):not(.practice-game):not(.practice-torneo-game) {
           background-image: url('../video/online.png');
           background-size: cover;
           background-position: center;
@@ -618,7 +677,7 @@
         left: 0;
         width: 100%;
         height: 30px;
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(0, 0, 0, 0.7);
         z-index: 999;
         display: none;
       }
@@ -1081,7 +1140,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
+        background-color: rgba(0, 0, 0, 0.9);
         display: none; /* Hidden by default using display */
         justify-content: center;
         align-items: center;
@@ -1485,7 +1544,7 @@
           text-align: center;
           z-index: 1000;
           white-space: nowrap;
-          animation: slideAcross 8s ease-in-out;
+          animation: slideAcross 8s linear;
           line-height: 30px; /* Match bar height */
       }
 
@@ -1495,9 +1554,7 @@
 
       @keyframes slideAcross {
           0% { left: -100%; }
-          10% { left: 10%; }
-          90% { left: 90%; }
-          100% { left: 110%; }
+          100% { left: 100%; }
       }
 
       /* --- MODIFICADO: Hacer el modal de amigos más ancho --- */
