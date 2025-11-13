@@ -5,6 +5,29 @@ import { setPlayerAvatar, renderMessages, cleanupWaitingGame, fetchUserProfile }
 import { updateUserProfile } from '../auth.js';
 import { getBackgroundAudio } from './home.js';
 
+export const endGame = () => {
+    const audio = getBackgroundAudio();
+    if (audio && audio.paused) {
+        audio.play().catch(e => console.warn("Could not resume audio:", e));
+    }
+
+    // Show home UI, hide game UI
+    appContainer.style.display = 'block';
+    gameContainer.style.display = 'none';
+    gameIframe.src = 'about:blank';
+
+    // --- FIX: Hide the waiting screen ---
+    waitingScreen.classList.remove('visible');
+
+    // Reset state
+    setGameStarted(false);
+    setUserWaitingGameId(null);
+
+    // The 'focus' event listener in home.html will handle showing the modal.
+    // I'll also trigger it manually for speed.
+    window.dispatchEvent(new Event('focus'));
+};
+
 const startGameFullscreen = (gameId) => {
     const audio = getBackgroundAudio();
     if (audio) {
@@ -374,11 +397,26 @@ const joinGameAndSetupListener = async (gameData) => {
         const updatedGameData = gameSnap.data();
         if (updatedGameData) {
             if (updatedGameData.status === "starting") {
-                // Para el jugador 2, mostrar el botón de iniciar manualmente como respaldo.
+                // Automatically start the game for player 2
+                const { gameStarted } = getState();
+                if (!gameStarted) {
+                    setGameStarted(true);
+                    startGameFullscreen(gameData.id);
+                }
+                
+                // Fallback: force start after 5 seconds if not started
+                setTimeout(() => {
+                    if (!getState().gameStarted) {
+                        setGameStarted(true);
+                        startGameFullscreen(gameData.id);
+                    }
+                }, 5000);
+
+                // Keep the button as a fallback, as requested by the user.
                 startGameBtn.style.display = 'block';
                 startGameBtn.textContent = 'Jugar';
                 startGameBtn.onclick = () => {
-                    setGameStarted(true); // Marcar que el juego ha comenzado
+                    // This allows re-entering the game if the user somehow navigates away
                     startGameFullscreen(gameData.id);
                 };
             }

@@ -1,10 +1,13 @@
 import { setupAuthListeners, setupMenuListeners } from './authHandlers.js';
 import { setupMaintenanceModal, setupAvatarModal, setupBetModal, setupFriendsModal, setupErrorConsoleModal, setupWonGamesModal, setupInfoModal, setupFriendChatModal } from './modalHandlers.js';
 import { setupFriendSearch } from './friendshipHandlers.js';
-import { setupGameRoomListeners, createGame, purgeStaleGames, setupStartGameButton } from './gameRoomHandlers.js'; // updateGameLists se llama desde auth.js
+import { setupGameRoomListeners, createGame, purgeStaleGames, setupStartGameButton, endGame } from './gameRoomHandlers.js'; // updateGameLists se llama desde auth.js
 import { setupErrorHandling } from './utils.js';
 import { setupBackgroundMusic } from './home.js'; // CORRECCIÓN: Importar la lógica de la música
 import { initSimulation } from './simulation.js';
+
+// Make endGame available to the iframe
+window.endGame = endGame;
 
 // Configurar el manejo de errores primero
 setupErrorHandling();

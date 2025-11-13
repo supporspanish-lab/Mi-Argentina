@@ -448,11 +448,15 @@ async function gameLoop(currentTime) {
 
             await revisarEstado(false, null, getGameState());
 
-        }
+                }
 
-        handleTurnEnd(); // Limpiar estado local para ambos jugadores.
+                clearPocketedBalls();
 
-    }
+                clearFirstHitBall();
+
+                handleTurnEnd(); // Limpiar estado local para ambos jugadores.
+
+            }
 
 
 
@@ -919,20 +923,15 @@ function connectToGame(gameId) {
 
             const gameData = docSnap.data() || {};
             if (gameData.juegoTerminado) {
-                // --- NUEVO: Guardar información del ganador antes de redirigir ---
-                if (gameData.winner) {
-                    sessionStorage.setItem('lastGameWinnerUid', gameData.winner);
-                    sessionStorage.setItem('lastGameId', gameId);
+                if (unsubscribe) unsubscribe();
 
-                    let winnerUsername = "Desconocido";
-                    const winnerProfileDoc = await getDoc(doc(db, "saldo", gameData.winner));
-                    if (winnerProfileDoc.exists() && winnerProfileDoc.data().username) {
-                        winnerUsername = winnerProfileDoc.data().username;
-                    }
-                    sessionStorage.setItem('lastGameWinnerUsername', winnerUsername);
+                if (window.parent && typeof window.parent.endGame === 'function') {
+                    window.parent.endGame();
+                } else {
+                    // Fallback in case it's not in an iframe or something is wrong
+                    window.location.href = 'login/home.html';
                 }
-                window.location.href = 'login/home.html';
-                return;
+                return; // Important to stop further processing
             }
             setOnlineGameData(gameData);
 

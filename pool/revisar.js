@@ -5,6 +5,8 @@ import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
 import { TABLE_WIDTH, TABLE_HEIGHT, BALL_RADIUS } from './config.js';
 import { db, doc, getDoc, updateDoc, addDoc, collection } from './login/auth.js';
+import { handleEndGame } from './endGameLogic.js';
+
 
 /**
  * Función de prueba para revisar el estado antes de mostrar la UI.
@@ -17,15 +19,16 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     // --- SOLUCIÓN: Obtener el estado inicial y mantenerlo separado.
     const estadoInicialJuego = getGameState();
         let {
-            currentPlayer: jugadorActual, 
-            pocketedThisTurn: bolasEntroneradasEsteTurno, 
-            firstBallHitThisTurn: primeraBolaGolpeadaEsteTurno, 
-            ballsAssigned: bolasAsignadasAlInicioTurno, 
+            currentPlayer: jugadorActual,
+            pocketedThisTurn: bolasEntroneradasEsteTurno,
+            firstBallHitThisTurn: primeraBolaGolpeadaEsteTurno,
+            ballsAssigned: bolasAsignadasAlInicioTurno,
             playerAssignments: playerAssignmentsAlInicioTurno,
             pocketedLastTurn: bolasEntroneradasTurnoAnterior, // --- NUEVO: Obtener las bolas entroneradas del turno anterior
-            isLoading: estaCargando, 
+            isLoading: estaCargando,
             gameOver: juegoTerminado, // --- NUEVO: Obtener el estado de fin de partida
-            isFirstTurn: esPrimerTurno // --- NUEVO: Obtener la bandera del primer turno.
+            isFirstTurn: esPrimerTurno, // --- NUEVO: Obtener la bandera del primer turno.
+            firstFoulForgiven: primeraFaltaPerdonada = false // --- NUEVO: Variable para perdonar la primera falta específica
             } = estadoInicialJuego;    // Muestra si el turno terminó porque el contador llegó a cero.
 
         const bolasAsignadasAntesDelTurno = bolasAsignadasAlInicioTurno; // Guardar el estado inicial de asignación de bolas.
@@ -42,17 +45,37 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
             // --- CORRECCIÓN: Asegurar que bolasAsignadasAlInicioTurno sea false si no hay asignaciones.
 
-            // Esto maneja el caso en que el estado de Firestore podría estar inconsistente.
+                        // Esto maneja el caso en que el estado de Firestore podría estar inconsistente.
 
-            if (bolasAsignadasAlInicioTurno && Object.values(playerAssignmentsAlInicioTurno).every(assignment => assignment === null)) {
+                        if (bolasAsignadasAlInicioTurno && Object.values(playerAssignmentsAlInicioTurno).every(assignment => assignment === null)) {
 
-                bolasAsignadasAlInicioTurno = false;
+                            console.warn("Inconsistencia detectada: ballsAssigned es true pero playerAssignments son null. Forzando ballsAssigned a false.");
 
-            }
+                            bolasAsignadasAlInicioTurno = false;
 
-        
+                            // También corregir en Firestore si estamos en modo online
 
-            // --- SOLUCIÓN: Procesar la asignación de bolas ANTES de comprobar las faltas.
+                            if (gameRef) {
+
+                                import('./login/auth.js').then(({ db, doc, updateDoc }) => {
+
+                                    updateDoc(gameRef, {
+
+                                        playerAssignments: { 1: null, 2: null },
+
+                                        ballsAssigned: false
+
+                                    }).catch(err => console.error("Error al corregir asignaciones inconsistentes en Firestore:", err));
+
+                                });
+
+                            }
+
+                        }
+
+                    
+
+                        // --- SOLUCIÓN: Procesar la asignación de bolas ANTES de comprobar las faltas.
 
             // Si la mesa está abierta y se ha metido una bola de color, se asignan los grupos inmediatamente.
 
@@ -276,7 +299,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        console.log("DEBUG: Antes de calcular jugadorEntroneroSuBola:");
+                                                console.log("DEBUG: Antes de calcular jugadorEntroneroSuBola:");
 
         
 
@@ -284,7 +307,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        console.log("DEBUG: bolasEntroneradasEsteTurno:", JSON.parse(JSON.stringify(bolasEntroneradasEsteTurno)));
+                                                console.log("DEBUG: bolasEntroneradasEsteTurno:", JSON.parse(JSON.stringify(bolasEntroneradasEsteTurno)));
 
         
 
@@ -292,7 +315,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        console.log("DEBUG: bolasAsignadasAlInicioTurno:", bolasAsignadasAlInicioTurno);
+                                                console.log("DEBUG: bolasAsignadasAlInicioTurno:", bolasAsignadasAlInicioTurno);
 
         
 
@@ -300,7 +323,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        console.log("DEBUG: playerAssignmentsAlInicioTurno:", JSON.parse(JSON.stringify(playerAssignmentsAlInicioTurno)));
+                                                console.log("DEBUG: playerAssignmentsAlInicioTurno:", JSON.parse(JSON.stringify(playerAssignmentsAlInicioTurno)));
 
         
 
@@ -308,7 +331,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        console.log("DEBUG: jugadorActual:", jugadorActual);
+                                                console.log("DEBUG: jugadorActual:", jugadorActual);
 
         
 
@@ -316,7 +339,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-            
+                                                console.log("DEBUG: acabaDeAsignar:", acabaDeAsignar); // Add this log
 
         
 
@@ -324,7 +347,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        const jugadorEntroneroSuBola = bolasEntroneradasEsteTurno.some(ball => {
+                                    
 
         
 
@@ -332,7 +355,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                            if (ball.number === null || ball.number === 8) return false;
+                                                const jugadorEntroneroSuBola = bolasEntroneradasEsteTurno.some(ball => {
 
         
 
@@ -340,7 +363,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                            if (!bolasAsignadasAlInicioTurno) {
+                                    
 
         
 
@@ -348,7 +371,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                return true;
+                                                    if (ball.number === null || ball.number === 8) return false;
 
         
 
@@ -356,7 +379,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                            }
+                                    
 
         
 
@@ -364,7 +387,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                            const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                                                    if (!bolasAsignadasAlInicioTurno) {
 
         
 
@@ -372,7 +395,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                            return tipoBola === playerAssignmentsAlInicioTurno[jugadorActual];
+                                                        console.log(`DEBUG: Mesa abierta. Bola ${ball.number} entronerada. Se considera propia.`);
 
         
 
@@ -380,7 +403,87 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        });
+                                                        return true;
+
+        
+
+
+
+        
+
+                                    
+
+        
+
+
+
+        
+
+                                                    }
+
+        
+
+
+
+        
+
+                                    
+
+        
+
+
+
+        
+
+                                                    const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+
+        
+
+
+
+        
+
+                                                    const isMyBall = tipoBola === playerAssignmentsAlInicioTurno[jugadorActual];
+
+        
+
+
+
+        
+
+                                                    console.log(`DEBUG: Bola ${ball.number} entronerada. Tipo: ${tipoBola}. Tipo del jugador: ${playerAssignmentsAlInicioTurno[jugadorActual]}. ¿Es propia?: ${isMyBall}`);
+
+        
+
+
+
+        
+
+                                                    return isMyBall;
+
+        
+
+
+
+        
+
+                                    
+
+        
+
+
+
+        
+
+                                                });
+
+        
+
+
+
+        
+
+                                    
 
         
 
@@ -396,7 +499,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                        
+                                                
 
         
 
@@ -700,119 +803,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                        // --- NUEVO: Falta por entronerar una bola del oponente ---
-
-        
-
-
-
-        
-
-                        
-
-        
-
-
-
-        
-
-                                                                        if (bolasAsignadasAlInicioTurno && !faltaCometida) {
-
-        
-
-
-
-        
-
-                        
-
-        
-
-
-
-        
-
-                                                                            const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
-
-        
-
-
-
-        
-
-                        
-
-        
-
-
-
-        
-
-                                                                            const bolaOponenteEntronerada = bolasEntroneradasEsteTurno.some(ball => {
-
-        
-
-
-
-        
-
-                        
-
-        
-
-
-
-        
-
-                                                                                if (ball.number === null || ball.number === 8) return false; // Ignorar blanca y 8
-
-        
-
-
-
-        
-
-                        
-
-        
-
-
-
-        
-
-                                                                                const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-
-        
-
-
-
-        
-
-                        
-
-        
-
-
-
-        
-
-                                                                                return tipoBola !== tipoBolaJugador;
-
-        
-
-
-
-        
-
-                        
-
-        
-
-
-
-        
-
-                                                                            });
+                                                                                                                                                                                                                        // --- NUEVO: Falta por entronerar una bola del oponente ---
 
         
 
@@ -844,7 +835,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                            if (bolaOponenteEntronerada) {
+                                                                                                                                                                                                                        // --- CORRECCIÓN: La falta solo aplica si NO se entroneró también una bola propia.
 
         
 
@@ -860,7 +851,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                faltaCometida = true;
+                                                
 
         
 
@@ -876,7 +867,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+                                                                                                                                                                                                                        if (bolasAsignadasAlInicioTurno && !faltaCometida && !jugadorEntroneroSuBola && bolasEntroneradasEsteTurno.length > 0) {
 
         
 
@@ -892,7 +883,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                motivoFalta = `${currentUsernameForFoul} entroneró una bola del oponente.`;
+                                                
 
         
 
@@ -908,7 +899,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                            }
+                                                                                                                                                                                                                            const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
 
         
 
@@ -924,7 +915,375 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                        }
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                            const bolaOponenteEntronerada = bolasEntroneradasEsteTurno.some(ball => {
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                                if (ball.number === null || ball.number === 8) return false; // Ignorar blanca y 8
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                                const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                                return tipoBola !== tipoBolaJugador;
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                            });
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                            if (bolaOponenteEntronerada) {
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                                faltaCometida = true;
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                                motivoFalta = `${currentUsernameForFoul} entroneró una bola del oponente.`;
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                            }
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                        }
 
         
 
@@ -1082,31 +1441,47 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
                                                                         if (primeraBola.number !== 8 && tipoPrimeraBola !== tipoBolaJugador) {
 
-        
 
-                                                                            const bolasEntroneradasNumeros = bolasEntroneradasEsteTurno.map(b => b.number).join(', ') || 'ninguna';
 
-        
 
-                                                                            console.log(`Falta detectada: Jugador ${jugadorActual} golpeó una bola incorrecta. Tipo asignado: ${tipoBolaJugador}. Bola golpeada: #${primeraBola.number} (tipo: ${tipoPrimeraBola}). Bolas entroneradas: ${bolasEntroneradasNumeros}.`);
 
-        
+                                                                            if (!primeraFaltaPerdonada) {
 
-                                                                            
+                                                                                primeraFaltaPerdonada = true;
 
-        
+                                                                            } else {
 
-                                                                            faltaCometida = true;
+                                                                                const bolasEntroneradasNumeros = bolasEntroneradasEsteTurno.map(b => b.number).join(', ') || 'ninguna';
 
-        
 
-                                                                            const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
 
-        
 
-                                                                            motivoFalta = `${currentUsernameForFoul} no golpeó primero una bola de su tipo.`;
 
-        
+                                                                                console.log(`Falta detectada: Jugador ${jugadorActual} golpeó una bola incorrecta. Tipo asignado: ${tipoBolaJugador}. Bola golpeada: #${primeraBola.number} (tipo: ${tipoPrimeraBola}). Bolas entroneradas: ${bolasEntroneradasNumeros}.`);
+
+
+
+
+
+                                                                                faltaCometida = true;
+
+
+
+
+
+                                                                                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+
+
+
+
+                                                                                motivoFalta = `${currentUsernameForFoul} no golpeó primero una bola de su tipo.`;
+
+                                                                            }
+
+
+
+
 
                                                                         }
 
@@ -1131,221 +1506,10 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
    
     // --- SOLUCIÓN: Lógica de Victoria/Derrota al meter la bola 8 ---
-    const currentUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
     const bola8Entronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === 8);
     if (bola8Entronerada) {
-                        if (faltaCometida) {
-                            console.log("Entering loss branch due to foul with 8-ball");
-                            // Si se comete cualquier falta al meter la bola 8, se pierde la partida.
-                            setGameOver(true);
-                            localStorage.setItem('gameEnded', 'true'); // Signal game end
-                            localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-                            const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid; // Define winnerUid here
-                            const betAmount = onlineGameData.betAmount || 0;
-                            const totalWinnings = betAmount * 2;
-        
-                            showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 y cometiste una falta.`, loserUid);
-        
-                            // Award winnings to the opponent
-                            if (winnerUid) {
-                                const winnerDocRef = doc(db, "saldo", winnerUid);
-                                const winnerSnap = await getDoc(winnerDocRef);
-                                if (winnerSnap.exists()) {
-                                    const currentBalance = winnerSnap.data().balance || 0;
-                                    const deduction = totalWinnings * 0.05;
-                                    const winningsAfterDeduction = totalWinnings - deduction;
-                                    await updateDoc(winnerDocRef, {
-                                        balance: currentBalance + winningsAfterDeduction
-                                    });
-                                    console.log(`Winner ${winnerUid} received ${winningsAfterDeduction}. New balance: ${currentBalance + winningsAfterDeduction}`);
-                                }
-                            }
-
-                                                        // Deduct from loser
-                                                        if (loserUid) {
-                                                            const loserDocRef = doc(db, "saldo", loserUid);
-                                                            const loserSnap = await getDoc(loserDocRef);
-                                                            if (loserSnap.exists()) {
-                                                                const currentBalance = loserSnap.data().balance || 0;
-                                                                await updateDoc(loserDocRef, {
-                                                                    balance: currentBalance - betAmount
-                                                                });
-                                                                console.log(`Loser ${loserUid} lost ${betAmount}. New balance: ${currentBalance - betAmount}`);
-                                                            }
-                                                        }        
-                            // Update game status in Firestore
-                            if (gameRef) {
-                                await updateDoc(gameRef, {
-                                    status: "ended",
-                                    winner: winnerUid,
-                                    loser: loserUid,
-                                    endedAt: Date.now(),
-                                    juegoTerminado: true
-                                });
-                                // Save game history
-                                const actualAmountWon = totalWinnings * 0.95; // After 5% house rake
-                                await addDoc(collection(db, "gameHistory"), {
-                                    winnerUid: winnerUid,
-                                    loserUid: loserUid,
-                                    amountWon: actualAmountWon,
-                                    amountLost: betAmount,
-                                    date: Date.now(),
-                                    gameId: gameRef.id
-                                });
-                            }
-                        } else {
-            // No hay falta. Comprobar si el jugador tenía derecho a meter la 8.
-            const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
-            let jugadorTieneBolasRestantes = false;
-            if (bolasAsignadasAlInicioTurno && tipoBolaJugador) {
-                jugadorTieneBolasRestantes = balls.some(ball => {
-                    if (!ball.isActive || ball.number === null || ball.number === 8) return false;
-                    const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
-                    return tipoBola === tipoBolaJugador;
-                });
-            }
-                                if (jugadorTieneBolasRestantes || !bolasAsignadasAlInicioTurno) {
-                                    console.log("Entering loss branch due to early 8-ball");
-                                    // Si aún le quedaban bolas o la mesa estaba abierta, pierde.
-                                    setGameOver(true);
-                                    localStorage.setItem('gameEnded', 'true'); // Signal game end
-                                    localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-                            const loserUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                            const winnerUid = (loserUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
-                            const betAmount = onlineGameData.betAmount || 0;
-                            const totalWinnings = betAmount * 2;
-
-                                    showFoulMessage(`Falta de ${currentUsername}: Metiste la bola 8 antes de tiempo.`, loserUid);
-
-                                    // Award winnings to the opponent
-                                    if (winnerUid) {
-                                        const winnerDocRef = doc(db, "saldo", winnerUid);
-                                        const winnerSnap = await getDoc(winnerDocRef);
-                                        if (winnerSnap.exists()) {
-                                            const currentBalance = winnerSnap.data().balance || 0;
-                                            const deduction = totalWinnings * 0.05;
-                                            const winningsAfterDeduction = totalWinnings - deduction;
-                                            await updateDoc(winnerDocRef, {
-                                                balance: currentBalance + winningsAfterDeduction
-                                            });
-                                            console.log(`Winner ${winnerUid} received ${winningsAfterDeduction} (after 5% house rake). New balance: ${currentBalance + winningsAfterDeduction}`);
-                                        }
-                                    }
-
-                                    // Update game status in Firestore
-                                    if (gameRef) {
-                                        await updateDoc(gameRef, {
-                                            status: "ended",
-                                            winner: winnerUid,
-                                            loser: loserUid,
-                                            endedAt: Date.now(),
-                                            juegoTerminado: true
-                                        });
-                                        // Save game history
-                                        await addDoc(collection(db, "gameHistory"), {
-                                            winnerUid: winnerUid,
-                                            loserUid: loserUid,
-                                            amountWon: totalWinnings,
-                                            amountLost: betAmount,
-                                            date: Date.now(),
-                                            gameId: gameRef.id
-                                        });
-                                    }
-                                } else {
-                    console.log("Entering win branch");
-                    // ¡El jugador ha ganado!
-                    console.log("Player has won the game!");
-                                    setGameOver(true);
-                                    localStorage.setItem('gameEnded', 'true'); // Signal game end
-                                    localStorage.setItem('gameEndedTimestamp', Date.now()); // Timestamp for cleanup
-                                    const winnerUid = onlineGameData[`player${jugadorActual}`]?.uid;
-                                    const loserUid = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.uid : onlineGameData.player1?.uid;
-                                    const betAmount = onlineGameData.betAmount || 0;
-                                    const totalWinnings = betAmount * 2;
-                                    const winnerUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
-                                    const loserUsername = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.username || `Jugador ${onlineGameData.player2?.playerNumber}` : onlineGameData.player1?.username || `Jugador ${onlineGameData.player1?.playerNumber}`;
-                                    const winnerAvatar = onlineGameData[`player${jugadorActual}`]?.avatar || '';
-                                    const loserAvatar = (winnerUid === onlineGameData.player1?.uid) ? onlineGameData.player2?.avatar || '' : onlineGameData.player1?.avatar || '';
-                
-                                    console.log("Winner UID:", winnerUid, "Loser UID:", loserUid, "Bet Amount:", betAmount);
-                
-                                    if (winnerUid) {
-                                        const winnerDocRef = doc(db, "saldo", winnerUid);
-                                        const winnerSnap = await getDoc(winnerDocRef);
-                                        if (winnerSnap.exists()) {
-                                            const currentBalance = winnerSnap.data().balance || 0;
-                                            const deduction = totalWinnings * 0.05;
-                                            const winningsAfterDeduction = totalWinnings - deduction;
-                                            await updateDoc(winnerDocRef, {
-                                                balance: currentBalance + winningsAfterDeduction
-                                            });
-                                            console.log(`Winner ${winnerUid} received ${winningsAfterDeduction} (after 5% house rake). New balance: ${currentBalance + winningsAfterDeduction}`);
-                                        }
-                                    }
-                
-                                    // Update game status in Firestore
-                                    if (gameRef) {
-                                        console.log("Updating game status in Firestore");
-                                        await updateDoc(gameRef, {
-                                            status: "ended",
-                                            winner: winnerUid,
-                                            loser: loserUid,
-                                            endedAt: Date.now(),
-                                            juegoTerminado: true
-                                        });
-                                        // Save game history
-                                        await addDoc(collection(db, "gameHistory"), {
-                                            winnerUid: winnerUid,
-                                            loserUid: loserUid,
-                                            amountWon: totalWinnings,
-                                            amountLost: betAmount,
-                                            date: Date.now(),
-                                            gameId: gameRef.id
-                                        });
-                
-                                        // --- NUEVO: Guardar resultados en la colección 'gameResults' para el ganador ---
-                                        const actualWinnerAmount = totalWinnings * 0.95; // After 5% house rake
-                                        console.log("Attempting to save game results for winner");
-                                        try {
-                                            await addDoc(collection(db, "gameResults"), {
-                                                userUid: winnerUid,
-                                                winnerUsername: winnerUsername,
-                                                winnerAvatar: winnerAvatar,
-                                                winnerAmount: actualWinnerAmount,
-                                                loserUsername: loserUsername,
-                                                loserAvatar: loserAvatar,
-                                                loserAmount: betAmount,
-                                                timestamp: Date.now()
-                                            });
-                                            console.log("Game results saved for winner:", winnerUid);
-                                        } catch (error) {
-                                            console.error("Error saving game results for winner:", error);
-                                        }
-                
-                                        // --- NUEVO: Guardar resultados en la colección 'gameResults' para el perdedor ---
-                                        console.log("Attempting to save game results for loser");
-                                        try {
-                                            await addDoc(collection(db, "gameResults"), {
-                                                userUid: loserUid,
-                                                winnerUsername: winnerUsername,
-                                                winnerAvatar: winnerAvatar,
-                                                winnerAmount: actualWinnerAmount,
-                                                loserUsername: loserUsername,
-                                                loserAvatar: loserAvatar,
-                                                loserAmount: betAmount,
-                                                timestamp: Date.now()
-                                            });
-                                            console.log("Game results saved for loser:", loserUid);
-                                        } catch (error) {
-                                            console.error("Error saving game results for loser:", error);
-                                        }
-                                    } else {
-                                        console.log("No gameRef, not saving results");
-                                    }
-                                    showFoulMessage(`¡Felicidades, ${currentUsername} has ganado la partida!`, winnerUid);
-                                }
-        }
+        console.log('Partida terminada: bola 8 entronerada');
+        return handleEndGame(faltaCometida, gameRef, onlineGameData, estadoInicialJuego, balls);
     }
 
     // --- Lógica de cambio de turno ---
@@ -1419,6 +1583,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             ...currentOnlineData,
             playerAssignments: playerAssignmentsAlInicioTurno,
             ballsAssigned: bolasAsignadasAlInicioTurno,
+            firstFoulForgiven: primeraFaltaPerdonada, // --- NUEVO: Actualizar el estado local de falta perdonada
             currentPlayerUid: nextPlayerUid, // Asegurarse de que el UID del jugador actual se actualice localmente
         });
 
@@ -1445,6 +1610,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             currentPlayerUid: nextPlayerUid,
             playerAssignments: playerAssignmentsAlInicioTurno,
             ballsAssigned: bolasAsignadasAlInicioTurno,
+            firstFoulForgiven: primeraFaltaPerdonada, // --- NUEVO: Actualizar el estado de falta perdonada
             foulInfo: faltaCometida ? { reason: motivoFalta, timestamp: Date.now() } : null,
             // --- MANTENIDO POR COMPATIBILIDAD: Aunque ahora es redundante, otros clientes pueden usarlo ---
             cueBallPosition: bolaBlancaEntronerada ? { x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2 } : null,
@@ -1475,10 +1641,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     // --- LIMPIEZA Y FINALIZACIÓN DEL TURNO ---
     // Es crucial limpiar el estado del turno (bolas entroneradas, primera bola golpeada) DESPUÉS 
     // de que toda la lógica de revisión y actualización de Firebase se haya completado.
-    // Esto previene errores como turnos infinitos o faltas incorrectas en la siguiente jugada.
     handleTurnEnd();
-    clearFirstHitBall();
-    clearPocketedBalls(); // --- SOLUCIÓN: Limpiar las bolas entroneradas para el siguiente turno.
 
     // Reiniciar variables locales para mayor claridad, aunque se reinician en cada llamada.
     faltaCometida = false;

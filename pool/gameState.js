@@ -39,7 +39,7 @@ export function startShot() {
     if (gameOver) return; // No permitir tiros si el juego ha terminado
     shotInProgress = true;
     shotStartTime = performance.now(); // --- NUEVO: Registrar el tiempo de inicio
-    pocketedThisTurn = []; // Reiniciar las bolas entroneradas para el nuevo tiro
+    pocketedThisTurn.length = 0; // Reiniciar las bolas entroneradas para el nuevo tiro
     firstBallHitThisTurn = null; // --- NUEVO: Reiniciar en cada tiro
     isTurnTimerActiveState = false; // --- SOLUCIÓN: Detener el temporizador cuando se realiza un tiro
 }
@@ -259,8 +259,8 @@ export function setPocketedLastTurn(balls) {
  * Se llama después de que un turno ha sido completamente revisado.
  */
 export function clearPocketedBalls() {
-    setPocketedLastTurn(pocketedThisTurn);
-    pocketedThisTurn = [];
+    setPocketedLastTurn([...pocketedThisTurn]); // --- FIX: Copiar el array para evitar que se borre con la referencia.
+    pocketedThisTurn.length = 0; // --- FIX: Limpiar el array en lugar de reasignarlo. Esto asegura que todas las referencias al array se actualicen.
     console.log("RESET OK: 'bolasEntroneradasEsteTurno' se ha reseteado a [].");
 }
 
