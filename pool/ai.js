@@ -12,7 +12,7 @@ const AI_DIFFICULTY = {
     HARD: { accuracy: 0.95, maxPower: 1.0, thinkTime: 500 }
 };
 
-const CURRENT_DIFFICULTY = AI_DIFFICULTY.HARD;
+const CURRENT_DIFFICULTY = { accuracy: 1.0, maxPower: 1.0, thinkTime: 500 };
 
 // --- FUNCIONES DE GEOMETRÍA MEJORADAS ---
 
@@ -311,7 +311,7 @@ function calculateAIShot(gameState, balls) {
                             pocket,
                             bankPoint,
                             cushion,
-                            difficulty,
+                            difficulty: difficulty + 120, // Penalización mayor para preferir directos
                             distance: getDistanceBetween(cueBall, target)
                         });
                     }
@@ -392,16 +392,21 @@ async function executeAITurn(gameState, balls, applyServerShot, gameRef, revisar
     }
     console.log('[IA] aiShot válido, procediendo');
 
+    // Solo abrir el modal si se aplica efecto (spin no es cero)
+    const hasSpin = aiShot.spin.x !== 0 || aiShot.spin.y !== 0;
+
     await updateDoc(gameRef, {
         aimingSpin: aiShot.spin,
-        isSpinModalOpen: true
+        isSpinModalOpen: hasSpin
     });
 
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    if (hasSpin) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await updateDoc(gameRef, {
-        isSpinModalOpen: false
-    });
+        await updateDoc(gameRef, {
+            isSpinModalOpen: false
+        });
+    }
 
     await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
 
