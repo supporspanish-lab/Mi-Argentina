@@ -82,13 +82,13 @@ const createBall = (props) => {
                 if (child.isMesh) {
                     child.castShadow = true; // --- MODIFICACIÓN: Las bolas proyectan sombras
                     child.visible = true;
-                    // --- MODIFICACIÓN: Volver a MeshStandardMaterial para que reaccione a la luz ---
+                    // --- MODIFICACIÓN: Cambiar a MeshBasicMaterial para eliminar iluminación 3D ---
                     if (child.material) {
                         const oldMaterial = child.material;
                         child.material = new THREE.MeshStandardMaterial({
                             map: oldMaterial.map,
-                            roughness: 0.3,
-                            metalness: 0.2,
+                            roughness: 0.5, // Ajusta según sea necesario para el brillo
+                            metalness: 0.1, // Ajusta según sea necesario para el brillo
                         });
                         oldMaterial.dispose(); // Liberar memoria del material antiguo
                     }
@@ -97,14 +97,14 @@ const createBall = (props) => {
         } else {
             console.warn(`Modelo GLB para '${targetName}' no encontrado. Usando esfera de reserva.`);
             const texture = createBallTexture(props.number, props.color);
-            const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3, metalness: 0.2 });
+            const material = new THREE.MeshBasicMaterial({ map: texture });
             const ballGeometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
             ballMesh = new THREE.Mesh(ballGeometry, material);
             ballMesh.castShadow = true;
         }
     } else {
         const texture = createBallTexture(props.number, props.color);
-        const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3, metalness: 0.2 });
+        const material = new THREE.MeshBasicMaterial({ map: texture });
         const ballGeometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
         ballMesh = new THREE.Mesh(ballGeometry, material);
         ballMesh.castShadow = true;
@@ -201,9 +201,9 @@ export function setupBalls(isInitialSetup = false, singleBallData = null, isOnli
     // --- MODIFICADO: Solo rackear las bolas si NO es un juego online ---
     if (!isOnlineGame) {
         const ballColors = {
-            1: '#f1c40f', 2: '#3498db', 3: '#e74c3c', 4: '#9b59b6', 5: '#e67e22',
-            6: '#2ecc71', 7: '#a52a2a', 8: 'black', 9: '#f1c40f', 10: '#3498db',
-            11: '#e74c3c', 12: '#9b59b6', 13: '#e67e22', 14: '#2ecc71', 15: '#a52a2a'
+            1: '#ffff00', 2: '#0000ff', 3: '#ff0000', 4: '#ff00ff', 5: '#ff8000',
+            6: '#00ff00', 7: '#800000', 8: 'black', 9: '#ffff00', 10: '#0000ff',
+            11: '#ff0000', 12: '#ff00ff', 13: '#ff8000', 14: '#00ff00', 15: '#800000'
         };
 
         const startX = TABLE_WIDTH * 0.78;
@@ -286,10 +286,8 @@ export function updateBallModelAndTexture(ball) {
                 child.visible = true;
                 if (child.material) {
                     const oldMaterial = child.material;
-                    child.material = new THREE.MeshStandardMaterial({
+                    child.material = new THREE.MeshBasicMaterial({
                         map: oldMaterial.map,
-                        roughness: 0.3,
-                        metalness: 0.2,
                     });
                     oldMaterial.dispose();
                 }
@@ -299,7 +297,7 @@ export function updateBallModelAndTexture(ball) {
         // Fallback a una esfera si el modelo no se encuentra
         console.warn(`Modelo GLB para '${newModelName}' no encontrado. Usando esfera de reserva.`);
         const texture = createBallTexture(ball.number, ball.color);
-        const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3, metalness: 0.2 });
+        const material = new THREE.MeshBasicMaterial({ map: texture });
         const ballGeometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
         newMesh = new THREE.Mesh(ballGeometry, material);
         newMesh.castShadow = true;
@@ -320,14 +318,45 @@ export function createBallTexture(ballNumber, ballColor) {
     canvas.height = canvasSize;
     const context = canvas.getContext('2d');
 
+    const cx = canvasSize / 2;
+    const cy = canvasSize / 2;
+    const radius = canvasSize / 2;
+
     context.beginPath();
-    context.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2, 0, Math.PI * 2);
+    context.arc(cx, cy, radius, 0, Math.PI * 2);
     context.fillStyle = ballColor;
     context.fill();
 
+    // Añadir gradiente radial para simular iluminación desde arriba-izquierda
+    context.globalCompositeOperation = 'multiply';
+    const radialGradient = context.createRadialGradient(cx - radius * 0.2, cy - radius * 0.2, 0, cx, cy, radius);
+    radialGradient.addColorStop(0, 'rgba(255,255,255,0.7)'); // Brillo suave
+    radialGradient.addColorStop(0.5, 'rgba(0,0,0,0.3)'); // Sombra moderada
+    radialGradient.addColorStop(1, 'rgba(0,0,0,0.5)'); // Sombra en el borde
+    context.fillStyle = radialGradient;
+    context.fill();
+
+    // Añadir gradiente horizontal para sombras en los costados
+    const horizGradient = context.createLinearGradient(0, 0, canvasSize, 0);
+    horizGradient.addColorStop(0, 'rgba(0,0,0,0.4)'); // Sombra a la izquierda
+    horizGradient.addColorStop(0.5, 'rgba(255,255,255,0.0)'); // Centro neutro
+    horizGradient.addColorStop(1, 'rgba(0,0,0,0.4)'); // Sombra a la derecha
+    context.fillStyle = horizGradient;
+    context.fill();
+
+    // --- NUEVO: Añadir un gradiente radial para un brillo más enfocado ---
+    context.globalCompositeOperation = 'overlay'; // O 'screen' o 'lighten'
+    const highlightGradient = context.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, radius * 0.1, cx, cy, radius * 0.7);
+    highlightGradient.addColorStop(0, 'rgba(255,255,255,1)'); // Brillo más intenso
+    highlightGradient.addColorStop(1, 'rgba(255,255,255,0)');
+    context.fillStyle = highlightGradient;
+    context.fill();
+
+    context.globalCompositeOperation = 'source-over';
+
     if (ballNumber !== null) {
         context.beginPath();
-        context.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2 * 0.4, 0, Math.PI * 2);
+        context.arc(cx, cy, radius * 0.4, 0, Math.PI * 2);
         context.fillStyle = 'white';
         context.fill();
 
@@ -335,7 +364,7 @@ export function createBallTexture(ballNumber, ballColor) {
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.fillStyle = (ballNumber === 8) ? 'white' : 'black';
-        context.fillText(ballNumber.toString(), canvasSize / 2, canvasSize / 2);
+        context.fillText(ballNumber.toString(), cx, cy);
     }
 
     return new THREE.CanvasTexture(canvas);
