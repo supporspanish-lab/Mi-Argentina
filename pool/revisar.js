@@ -572,7 +572,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                if (primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida) {
+                                                                                                if (primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida && !acabaDeAsignar) {
 
         
 

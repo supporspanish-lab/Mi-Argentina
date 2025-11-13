@@ -488,22 +488,38 @@
 
     <!-- SDKs de Firebase -->
     <script type="module">
-        // --- Lógica de la Interfaz de Usuario ---
-        import { loginWithUsernameOrEmail, sendResetPasswordEmail, db } from './auth.js'; // Importar db para la lógica de perfil
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('login-form');
-            const loginContainer = document.getElementById('login-container');
-            const particlesContainer = document.getElementById('particles-container');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const switchToLogin = document.getElementById('switchToLogin');
-            const switchToReset = document.getElementById('switchToReset'); // NUEVO
-            const subtitle = document.querySelector('.app-subtitle');
-            const submitButton = document.querySelector('.btn-primary');
-            const passwordGroup = document.getElementById('password-group'); // MODIFICADO: Usar ID
-            const loginInput = document.getElementById('login-input'); // NUEVO
-            const errorMessageElement = document.getElementById('error-message'); // NUEVO
-
+                    // --- Lógica de la Interfaz de Usuario ---
+                    import { loginWithUsernameOrEmail, sendResetPasswordEmail, db, onSessionStateChanged } from './auth.js'; // Importar db para la lógica de perfil
+        
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const loginForm = document.getElementById('login-form');
+                        const loginContainer = document.getElementById('login-container');
+                        const particlesContainer = document.getElementById('particles-container');
+                        const loadingSpinner = document.getElementById('loading-spinner');
+                        const switchToLogin = document.getElementById('switchToLogin');
+                        const switchToReset = document.getElementById('switchToReset'); // NUEVO
+                        const subtitle = document.querySelector('.app-subtitle');
+                        const submitButton = document.querySelector('.btn-primary');
+                        const passwordGroup = document.getElementById('password-group'); // MODIFICADO: Usar ID
+                        const loginInput = document.getElementById('login-input'); // NUEVO
+                        const errorMessageElement = document.getElementById('error-message'); // NUEVO
+                        const loginContent = document.getElementById('login-content'); // Obtener el contenido del login
+        
+                        // Ocultar el contenido del login inicialmente
+                        loginContent.style.display = 'none';
+                        loadingSpinner.style.opacity = '1'; // Mostrar spinner de carga
+        
+                        // Verificar el estado de autenticación al cargar la página
+                        onSessionStateChanged(user => {
+                            if (user) {
+                                // Si el usuario está logeado, redirigir a home.html
+                                window.location.href = 'home.html';
+                            } else {
+                                // Si no está logeado, ocultar el spinner y mostrar el contenido del login
+                                loadingSpinner.style.opacity = '0';
+                                loginContent.style.display = 'block';
+                            }
+                        });
             const createDustParticles = (count) => {
                 
                 // Clear any previous particles
