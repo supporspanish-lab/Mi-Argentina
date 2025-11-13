@@ -292,11 +292,11 @@
             color: white;
             padding: 5px 10px;
             border-radius: 15px;
-            font-size: 0.9vw;
+            font-size: 1.2vw; /* Aumentado */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 150px; /* Limitar el ancho de la burbuja */
+            max-width: 200px; /* Aumentado */
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
             pointer-events: none; /* Para que no interfiera con los clics */
@@ -313,12 +313,12 @@
         }
 
         .player-chat-bubble.fade-out {
-            animation: fadeOutBubble 10s forwards; /* Aumentar duración a 10 segundos */
+            animation: fadeOutBubble 15s forwards; /* Aumentar duración a 15 segundos */
         }
 
         @keyframes fadeOutBubble {
             0% { opacity: 1; }
-            80% { opacity: 1; } /* Permanece opaco por 8 segundos */
+            90% { opacity: 1; } /* Permanece opaco por 13.5 segundos */
             100% { opacity: 0; }
         }
 
@@ -1371,6 +1371,9 @@
         const player1ChatBubble = document.getElementById('player1-chat-bubble');
         const player2ChatBubble = document.getElementById('player2-chat-bubble');
 
+        // --- NUEVO: Contador para mensajes mostrados en burbujas ---
+        let lastDisplayedMessageCount = 0;
+
         // --- NUEVO: Objeto de audio para el sonido de mensaje ---
         const messageSound = new Audio('login/audio/mensaje.mp3');
         messageSound.volume = 0.5; // Ajusta el volumen si es necesario
@@ -1388,7 +1391,7 @@
                 setTimeout(() => {
                     bubbleElement.classList.remove('show');
                     bubbleElement.textContent = '';
-                }, 3000); // Duración de la animación fadeOutBubble
+                }, 15000); // Duración de la animación fadeOutBubble aumentada a 15s
             }, 100); // Pequeño retraso para asegurar que la clase 'show' se aplique primero
         }
 
@@ -1617,27 +1620,25 @@
                                 // --- NUEVO: Renderizar mensajes del chat ---
                                 renderMessages(gameData.messages, gameChatMessages, currentUserUid);
 
-                                // --- NUEVO: Mostrar burbujas de chat para mensajes nuevos ---
-                                if (gameData.messages && gameData.messages.length > 0) {
+                                // --- NUEVO: Mostrar burbujas de chat solo para mensajes nuevos ---
+                                if (gameData.messages && gameData.messages.length > lastDisplayedMessageCount) {
                                     const lastMessage = gameData.messages[gameData.messages.length - 1];
                                     if (lastMessage.uid !== currentUserUid) {
                                         // Es un mensaje del oponente
-                                        // Determinar si el oponente es player1 o player2
                                         if (gameData.player1 && gameData.player1.uid === lastMessage.uid) {
                                             displayChatBubble(lastMessage.text, player1ChatBubble);
                                         } else if (gameData.player2 && gameData.player2.uid === lastMessage.uid) {
                                             displayChatBubble(lastMessage.text, player2ChatBubble);
                                         }
                                     } else {
-                                        // Es un mensaje del usuario actual, ya se mostró en sendGameMessage
-                                        // Pero si el mensaje se envió desde otro dispositivo del mismo usuario,
-                                        // también debería mostrarse aquí.
+                                        // Mensaje propio
                                         if (currentPlayerIsPlayer1) {
                                             displayChatBubble(lastMessage.text, player1ChatBubble);
                                         } else if (currentPlayerIsPlayer2) {
                                             displayChatBubble(lastMessage.text, player2ChatBubble);
                                         }
                                     }
+                                    lastDisplayedMessageCount = gameData.messages.length; // Actualizar contador
                                 }
 
                                 // --- NUEVO: Redirigir a home.html si el juego ha terminado ---
