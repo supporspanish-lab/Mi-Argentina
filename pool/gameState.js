@@ -261,7 +261,7 @@ export function setPocketedLastTurn(balls) {
 export function clearPocketedBalls() {
     setPocketedLastTurn([...pocketedThisTurn]); // --- FIX: Copiar el array para evitar que se borre con la referencia.
     pocketedThisTurn.length = 0; // --- FIX: Limpiar el array en lugar de reasignarlo. Esto asegura que todas las referencias al array se actualicen.
-    console.log("RESET OK: 'bolasEntroneradasEsteTurno' se ha reseteado a [].");
+    console.log('%c[GameState] CLEAR POCKETED BALLS: pocketedThisTurn reseteado a []', 'color: red; font-weight: bold; background: yellow;');
 }
 
 /**
@@ -270,6 +270,7 @@ export function clearPocketedBalls() {
  */
 export function clearFirstHitBall() {
     firstBallHitThisTurn = null;
+    console.log('%c[GameState] CLEAR FIRST HIT BALL: firstBallHitThisTurn reseteado a null', 'color: blue; font-weight: bold; background: cyan;');
 }
 
 export function completeFirstTurn() {

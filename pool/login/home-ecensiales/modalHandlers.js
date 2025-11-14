@@ -502,89 +502,18 @@ const sendFriendMessage = async () => {
 };
 
 export const setupTournamentInfoModal = () => {
-    participateTournamentBtn.addEventListener('click', async () => {
-        const { currentUser, currentUserProfile } = getState();
-        if (!currentUser || !currentUserProfile) {
-            alert('Debes iniciar sesión para participar en torneos.');
-            return;
-        }
-
-        // Close modal
-        tournamentInfoModal.classList.remove('visible');
-
-        // Create tournament game against AI
-        await createTournamentGame();
-    });
-
-    tournamentInfoModal.addEventListener('click', (e) => {
-        if (e.target === tournamentInfoModal) {
-            tournamentInfoModal.classList.remove('visible');
-        }
-    });
+    if (tournamentInfoModal) {
+        tournamentInfoModal.addEventListener('click', (e) => {
+            if (e.target === tournamentInfoModal) {
+                tournamentInfoModal.classList.remove('visible');
+            }
+        });
+    }
 };
 
 export const showTournamentInfo = () => {
-    entryCostDisplay.textContent = window.tournamentEntryCost;
-    prizeDisplay.textContent = window.tournamentPrize;
-    tournamentInfoModal.classList.add('visible');
-};
-
-const createTournamentGame = async () => {
-    const { currentUser, currentUserProfile } = getState();
-    console.log('[TORNEO] Creando partida de torneo contra IA');
-
-    // Create game against AI
-    const gamesRef = collection(db, "games");
-
-    const ballPositions = [];
-    const RACK_SPACING_DIAMETER = 28;
-    const TABLE_WIDTH = 1000;
-    const TABLE_HEIGHT = 500;
-    const startX = TABLE_WIDTH * 0.78;
-    const startY = TABLE_HEIGHT / 2;
-    const ballOrder = [1, 14, 2, 15, 8, 3, 13, 4, 12, 5, 11, 6, 10, 7, 9];
-    let ballIndex = 0;
-
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j <= i; j++) {
-            const ballNumber = ballOrder[ballIndex++];
-            ballPositions.push({
-                number: ballNumber,
-                x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
-                y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
-                isActive: true
-            });
-        }
+    if (tournamentInfoModal) {
+        tournamentInfoModal.classList.add('visible');
     }
-    ballPositions.push({
-        number: null,
-        x: TABLE_WIDTH / 4,
-        y: TABLE_HEIGHT / 2,
-        isActive: true
-    });
-
-    // Jugador humano siempre empieza primero en torneos
-    const startingPlayer = currentUser.uid;
-    console.log('[TORNEO] Jugador inicial (humano):', startingPlayer);
-
-    const newGameRef = await addDoc(collection(db, "games"), {
-        player1: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null },
-        player2: { uid: 'ai_player', username: 'IA', profileImageName: null },
-        status: "starting",
-        createdAt: new Date(),
-        currentPlayerUid: startingPlayer,
-        balls: ballPositions,
-        turn: 1,
-        betAmount: window.tournamentEntryCost,
-        isPrivate: true,
-        isPractice: false,
-        isTournament: true,
-        tournamentPrize: window.tournamentPrize,
-        balancesDeducted: false
-    });
-
-    console.log('[TORNEO] Partida creada con ID:', newGameRef.id, 'jugador inicial:', startingPlayer);
-
-    // Start the game immediately
-    window.location.href = `../index.html?gameId=${newGameRef.id}`;
 };
+
