@@ -265,10 +265,12 @@ export const setupInfoModal = () => {
         infoModal.classList.add('visible');
     });
 
-    // Close info modal
-    closeInfoModalBtn.addEventListener('click', () => {
-        infoModal.classList.remove('visible');
-    });
+    // Close info modal (only if button exists)
+    if (closeInfoModalBtn) {
+        closeInfoModalBtn.addEventListener('click', () => {
+            infoModal.classList.remove('visible');
+        });
+    }
 
     // Close on click outside
     infoModal.addEventListener('click', (e) => {
