@@ -1,5 +1,8 @@
 const CACHE_NAME = 'pool-game-cache-v2';
 
+// Check if running in secure context
+const isSecureContext = self.location.protocol === 'https:' || self.location.hostname === 'localhost';
+
 // A list of all the essential files to be cached when the service worker is installed.
 const ASSETS_TO_CACHE = [
     './', // --- CORRECCIÓN: Usar ruta relativa para el directorio raíz
@@ -104,13 +107,22 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 3. Estrategia "Network First" para el resto de los archivos (HTML, JS, CSS)
+  if (!isSecureContext) {
+      // En contexto inseguro, no cachear, solo fetch
+      event.respondWith(fetch(event.request));
+      return;
+  }
   event.respondWith(
       fetch(event.request).then(networkResponse => {
           const responseToCache = networkResponse.clone(); // Clonar la respuesta
           caches.open(CACHE_NAME).then(cache => {
               if (networkResponse.status === 200) { // Only cache full responses
-                  cache.put(event.request, responseToCache);
+                  cache.put(event.request, responseToCache).catch(error => {
+                      console.error('Service Worker: Failed to cache response:', error);
+                  });
               }
+          }).catch(error => {
+              console.error('Service Worker: Failed to open cache:', error);
           });
           return networkResponse; // Devolver la respuesta original
       }).catch(() => {

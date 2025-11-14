@@ -16,13 +16,13 @@
             if (document.fullscreenEnabled || document.webkitFullscreenEnabled || document.mozFullScreenEnabled || document.msFullscreenEnabled) {
                 const elem = document.documentElement;
                 if (elem.requestFullscreen) {
-                    elem.requestFullscreen();
+                    elem.requestFullscreen().catch(() => {});
                 } else if (elem.webkitRequestFullscreen) {
-                    elem.webkitRequestFullscreen();
+                    elem.webkitRequestFullscreen().catch(() => {});
                 } else if (elem.mozRequestFullScreen) {
-                    elem.mozRequestFullScreen();
+                    elem.mozRequestFullScreen().catch(() => {});
                 } else if (elem.msRequestFullscreen) {
-                    elem.msRequestFullscreen();
+                    elem.msRequestFullscreen().catch(() => {});
                 }
             }
         });

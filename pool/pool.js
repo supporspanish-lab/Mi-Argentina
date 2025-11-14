@@ -16,7 +16,6 @@ import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
 import { shoot } from './shooting.js';
-import { executeAITurn, calculateAIShot } from './ai.js';
 
 // --- Fixed Timestep Physics Configuration ---
 const FIXED_TIMESTEP = 1 / 60; // 60 physics updates per second
@@ -71,7 +70,6 @@ let currentGameState = {}; // Guardará el estado del juego recibido
 let serverPowerPercent = 0; // --- NUEVO: Variable para la potencia recibida del servidor.
 let lastProcessedShotTimestamp = 0; // Para no aplicar el mismo tiro dos veces
 let lastFoulTimestamp = 0; // Para no mostrar el mismo mensaje de falta dos veces
-let aiTurnExecuting = false; // Para evitar ejecutar múltiples turnos de IA simultáneamente
 
 window.addEventListener('receiveaim', (event) => {
     const gameData = event.detail;
@@ -816,7 +814,6 @@ async function gameLoop(currentTime) {
 
 // --- NUEVO: Función para aplicar un tiro recibido del servidor ---
 function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
-    console.log('[IA] applyServerShot: cueBallStartPos', cueBallStartPos, 'current cueBall pos', cueBall.mesh.position);
     if (areBallsMoving(balls)) return;
 
     const maxPower = 7;
@@ -826,9 +823,11 @@ function applyServerShot(angle, powerPercent, spin, cueBallStartPos) {
     if (cueBallStartPos) {
         const dist = Math.sqrt((cueBall.mesh.position.x - cueBallStartPos.x) ** 2 + (cueBall.mesh.position.y - cueBallStartPos.y) ** 2);
         if (dist > 5) { // Solo reposicionar si está lejos (más de 5 unidades)
-            console.log('[IA] Reposicionando cueBall a', cueBallStartPos, 'desde', cueBall.mesh.position);
+            cueBall.x = cueBallStartPos.x;
+            cueBall.y = cueBallStartPos.y;
             cueBall.mesh.position.x = cueBallStartPos.x;
             cueBall.mesh.position.y = cueBallStartPos.y;
+            if (cueBall.body) cueBall.body.position.set(cueBallStartPos.x, cueBallStartPos.y, cueBall.mesh.position.z);
             if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(cueBallStartPos.x, cueBallStartPos.y, 0.1);
         }
     }
@@ -1040,25 +1039,6 @@ function connectToGame(gameId) {
 
             // --- NUEVO: Disparar el evento receiveaim aquí para que pool.js procese los datos del servidor ---
             window.dispatchEvent(new CustomEvent('receiveaim', { detail: gameData }));
-
-            // --- NUEVO: Ejecutar turno de IA si es su turno ---
-            if (gameData.currentPlayerUid === 'ai_player' && !aiTurnExecuting) {
-                console.log('[IA] Trigger activado: turno de IA');
-                aiTurnExecuting = true;
-                const aiShot = calculateAIShot(gameData, balls);
-                console.log('[IA] aiShot calculado:', aiShot ? 'válido' : 'null');
-                if (aiShot) {
-                    if (smoothedAimAngle === null) smoothedAimAngle = 0;
-                    serverAimAngle = aiShot.angle;
-                    serverPowerPercent = aiShot.power;
-                } else {
-                    aiTurnExecuting = false;
-                    return;
-                }
-                executeAITurn(gameData, balls, applyServerShot, gameRef, revisarEstado).finally(() => {
-                    aiTurnExecuting = false;
-                });
-            }
         });
 
         // --- NUEVO: Listener para enviar la posición de la bola blanca al servidor ---

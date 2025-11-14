@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de la Mesa</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #000;
+            background-image: url('imajenes/mesa.png');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        h1 {
+            position: absolute;
+            top: 20px;
+            color: #333;
+        }
+        .handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border: 1px solid black;
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Configuración de la Mesa de Pool</h1>
+    <div id="canvasContainer" style="position: relative; display: inline-block;">
+        <canvas id="tableCanvas" width="1000" height="500"></canvas>
+        <div id="handlesContainer"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tableCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Dimensiones de la mesa
+        const TABLE_WIDTH = 1000;
+        const TABLE_HEIGHT = 500;
+
+        // Handles para el contorno de la mesa (de config.js)
+        const handles = [
+            // 0
+            { x: TABLE_WIDTH * 0.0809, y: TABLE_HEIGHT * 0.0817 },
+            // 1
+            { x: TABLE_WIDTH * 0.1001, y: TABLE_HEIGHT * 0.1182 },
+            // 2
+            { x: TABLE_WIDTH * 0.4686, y: TABLE_HEIGHT * 0.1220 },
+            // 3
+            { x: TABLE_WIDTH * 0.4745, y: TABLE_HEIGHT * 0.0863 },
+            // 4
+            { x: TABLE_WIDTH * 0.4763, y: TABLE_HEIGHT * 0.0550 },
+            // 5
+            { x: TABLE_WIDTH * 0.4837, y: TABLE_HEIGHT * 0.0369 },
+            // 6
+            { x: TABLE_WIDTH * 0.5004, y: TABLE_HEIGHT * 0.0311 },
+            // 7
+            { x: TABLE_WIDTH * 0.5105, y: TABLE_HEIGHT * 0.0393 },
+            // 8
+            { x: TABLE_WIDTH * 0.5173, y: TABLE_HEIGHT * 0.0447 },
+            // 9
+            { x: TABLE_WIDTH * 0.5206, y: TABLE_HEIGHT * 0.0521 },
+            // 10
+            { x: TABLE_WIDTH * 0.5216, y: TABLE_HEIGHT * 0.0542 },
+            // 11
+            { x: TABLE_WIDTH * 0.5231, y: TABLE_HEIGHT * 0.0702 },
+            // 12
+            { x: TABLE_WIDTH * 0.5251, y: TABLE_HEIGHT * 0.0916 },
+            // 13
+            { x: TABLE_WIDTH * 0.5312, y: TABLE_HEIGHT * 0.1216 },
+            // 14
+            { x: TABLE_WIDTH * 0.9002, y: TABLE_HEIGHT * 0.1223 },
+            // 15
+            { x: TABLE_WIDTH * 0.9127, y: TABLE_HEIGHT * 0.0894 },
+            // 16
+            { x: TABLE_WIDTH * 0.9312, y: TABLE_HEIGHT * 0.0585 },
+            // 17
+            { x: TABLE_WIDTH * 0.9413, y: TABLE_HEIGHT * 0.0542 },
+            // 18
+            { x: TABLE_WIDTH * 0.9454, y: TABLE_HEIGHT * 0.0455 },
+            // 19
+            { x: TABLE_WIDTH * 0.9493, y: TABLE_HEIGHT * 0.0365 },
+            // 20
+            { x: TABLE_WIDTH * 0.9539, y: TABLE_HEIGHT * 0.0389 },
+            // 21
+            { x: TABLE_WIDTH * 0.9640, y: TABLE_HEIGHT * 0.0451 },
+            // 22
+            { x: TABLE_WIDTH * 0.9742, y: TABLE_HEIGHT * 0.0554 },
+            // 23
+            { x: TABLE_WIDTH * 0.9747, y: TABLE_HEIGHT * 0.0710 },
+            // 24
+            { x: TABLE_WIDTH * 0.9769, y: TABLE_HEIGHT * 0.0982 },
+            // 25
+            { x: TABLE_WIDTH * 0.9664, y: TABLE_HEIGHT * 0.1163 },
+            // 26
+            { x: TABLE_WIDTH * 0.9300, y: TABLE_HEIGHT * 0.1828 },
+            // 27
+            { x: TABLE_WIDTH * 0.9292, y: TABLE_HEIGHT * 0.8201 },
+            // 28
+            { x: TABLE_WIDTH * 0.9500, y: TABLE_HEIGHT * 0.8577 },
+            // 29
+            { x: TABLE_WIDTH * 0.9609, y: TABLE_HEIGHT * 0.8767 },
+            // 30
+            { x: TABLE_WIDTH * 0.9718, y: TABLE_HEIGHT * 0.8964 },
+            // 31
+            { x: TABLE_WIDTH * 0.9759, y: TABLE_HEIGHT * 0.9150 },
+            // 32
+            { x: TABLE_WIDTH * 0.9738, y: TABLE_HEIGHT * 0.9421 },
+            // 33
+            { x: TABLE_WIDTH * 0.9607, y: TABLE_HEIGHT * 0.9582 },
+            // 34
+            { x: TABLE_WIDTH * 0.9454, y: TABLE_HEIGHT * 0.9652 },
+            // 35
+            { x: TABLE_WIDTH * 0.9161, y: TABLE_HEIGHT * 0.9099 },
+            // 36
+            { x: TABLE_WIDTH * 0.8993, y: TABLE_HEIGHT * 0.8777 },
+            // 37
+            { x: TABLE_WIDTH * 0.5311, y: TABLE_HEIGHT * 0.8813 },
+            // 38
+            { x: TABLE_WIDTH * 0.5259, y: TABLE_HEIGHT * 0.9080 },
+            // 39
+            { x: TABLE_WIDTH * 0.5253, y: TABLE_HEIGHT * 0.9405 },
+            // 40
+            { x: TABLE_WIDTH * 0.5163, y: TABLE_HEIGHT * 0.9615 },
+            // 41
+            { x: TABLE_WIDTH * 0.5045, y: TABLE_HEIGHT * 0.9701 },
+            // 42
+            { x: TABLE_WIDTH * 0.4901, y: TABLE_HEIGHT * 0.9689 },
+            // 43
+            { x: TABLE_WIDTH * 0.4720, y: TABLE_HEIGHT * 0.9475 },
+            // 44
+            { x: TABLE_WIDTH * 0.4697, y: TABLE_HEIGHT * 0.9117 },
+            // 45
+            { x: TABLE_WIDTH * 0.4635, y: TABLE_HEIGHT * 0.8769 },
+            // 46
+            { x: TABLE_WIDTH * 0.0993, y: TABLE_HEIGHT * 0.8766 },
+            // 47
+            { x: TABLE_WIDTH * 0.0741, y: TABLE_HEIGHT * 0.9239 },
+            // 48
+            { x: TABLE_WIDTH * 0.0661, y: TABLE_HEIGHT * 0.9431 },
+            // 49
+            { x: TABLE_WIDTH * 0.0502, y: TABLE_HEIGHT * 0.9642 },
+            // 50
+            { x: TABLE_WIDTH * 0.0319, y: TABLE_HEIGHT * 0.9400 },
+            // 51
+            { x: TABLE_WIDTH * 0.0200, y: TABLE_HEIGHT * 0.8985 },
+            // 52
+            { x: TABLE_WIDTH * 0.0350, y: TABLE_HEIGHT * 0.8709 },
+            // 53
+            { x: TABLE_WIDTH * 0.0470, y: TABLE_HEIGHT * 0.8532 },
+            // 54
+            { x: TABLE_WIDTH * 0.0681, y: TABLE_HEIGHT * 0.8196 },
+            // 55
+            { x: TABLE_WIDTH * 0.0684, y: TABLE_HEIGHT * 0.1791 },
+            // 56
+            { x: TABLE_WIDTH * 0.0389, y: TABLE_HEIGHT * 0.1311 },
+            // 57
+            { x: TABLE_WIDTH * 0.0229, y: TABLE_HEIGHT * 0.1044 },
+            // 58
+            { x: TABLE_WIDTH * 0.0221, y: TABLE_HEIGHT * 0.0768 },
+            // 59
+            { x: TABLE_WIDTH * 0.0340, y: TABLE_HEIGHT * 0.0480 },
+            // 60
+            { x: TABLE_WIDTH * 0.0466, y: TABLE_HEIGHT * 0.0336 },
+            // 61
+            { x: TABLE_WIDTH * 0.0567, y: TABLE_HEIGHT * 0.0373 },
+            // 62
+            { x: TABLE_WIDTH * 0.0656, y: TABLE_HEIGHT * 0.0488 },
+            // 63
+            { x: TABLE_WIDTH * 0.0729, y: TABLE_HEIGHT * 0.0605 }
+        ];
+
+        // Troneras con centros aproximados
+        const pockets = [
+            { center: { x: 50, y: 25 }, radius: 25 },
+            { center: { x: 950, y: 25 }, radius: 25 },
+            { center: { x: 50, y: 475 }, radius: 25 },
+            { center: { x: 950, y: 475 }, radius: 25 },
+            { center: { x: 500, y: 25 }, radius: 25 },
+            { center: { x: 500, y: 475 }, radius: 25 }
+        ];
+
+        // Dibujar el contorno de la mesa con líneas rojas usando handles
+        function drawTableOutline() {
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(handles[0].x, handles[0].y);
+            for (let i = 1; i < handles.length; i++) {
+                ctx.lineTo(handles[i].x, handles[i].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // Dibujar las troneras
+        function drawPockets() {
+            ctx.fillStyle = 'black';
+            pockets.forEach(pocket => {
+                ctx.beginPath();
+                ctx.arc(pocket.center.x, pocket.center.y, pocket.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Crear handles arrastrables
+        const handlesContainer = document.getElementById('handlesContainer');
+        const handleElements = [];
+
+        handles.forEach((handle, index) => {
+            const handleDiv = document.createElement('div');
+            handleDiv.className = 'handle';
+            handleDiv.textContent = index;
+            handleDiv.style.left = `${handle.x - 10}px`; // Centrar el cuadrado
+            handleDiv.style.top = `${handle.y - 10}px`;
+            handleDiv.dataset.index = index;
+            handlesContainer.appendChild(handleDiv);
+            handleElements.push(handleDiv);
+        });
+
+        // Variables para arrastrar
+        let isDragging = false;
+        let draggedHandle = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        // Función para actualizar el canvas
+        function updateCanvas() {
+            ctx.clearRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+            drawTableOutline();
+            drawPockets();
+        }
+
+        // Eventos de mouse
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('handle')) {
+                isDragging = true;
+                draggedHandle = e.target;
+                const rect = draggedHandle.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && draggedHandle) {
+                const containerRect = handlesContainer.getBoundingClientRect();
+                const x = e.clientX - containerRect.left - offsetX + 10;
+                const y = e.clientY - containerRect.top - offsetY + 10;
+                const index = parseInt(draggedHandle.dataset.index);
+                handles[index].x = Math.max(0, Math.min(TABLE_WIDTH, x));
+                handles[index].y = Math.max(0, Math.min(TABLE_HEIGHT, y));
+                draggedHandle.style.left = `${handles[index].x - 10}px`;
+                draggedHandle.style.top = `${handles[index].y - 10}px`;
+                updateCanvas();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            draggedHandle = null;
+        });
+
+        // Dibujar todo
+        drawTableOutline();
+        drawPockets();
+    </script>
+</body>
+</html>
