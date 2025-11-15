@@ -114,7 +114,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
             const ballNumber = ballOrder[ballIndex++];
             ballPositions.push({
                 number: ballNumber,
-                x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                x: startX + i * (RACK_SPACING_DIAMETER * 0.866) + 20,
                 y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
                 isActive: true
             });
@@ -122,7 +122,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     }
     ballPositions.push({
         number: null,
-        x: TABLE_WIDTH / 4,
+        x: TABLE_WIDTH / 4 + 20,
         y: TABLE_HEIGHT / 2,
         isActive: true
     });
@@ -134,18 +134,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     //     return;
     // }
 
-    // Removed balance deduction as per user request
-    // const player1BalanceTransaction = {
-    //     amount: -betAmount,
-    //     type: 'bet',
-    //     gameId: null,
-    //     timestamp: new Date()
-    // };
-
-    // await updateUserProfile(currentUser.uid, {
-    //     balance: currentUserProfile.balance - betAmount,
-    //     transactions: arrayUnion(player1BalanceTransaction)
-    // });
+    // Balance deduction moved to start game
 
     const newGameRef = await addDoc(collection(db, "games"), {
         player1: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null },
@@ -229,7 +218,7 @@ export const createPracticeGame = async () => {
             const ballNumber = ballOrder[ballIndex++];
             ballPositions.push({
                 number: ballNumber,
-                x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                x: startX + i * (RACK_SPACING_DIAMETER * 0.866) + 20,
                 y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
                 isActive: true
             });
@@ -237,7 +226,7 @@ export const createPracticeGame = async () => {
     }
     ballPositions.push({
         number: null,
-        x: TABLE_WIDTH / 4,
+        x: TABLE_WIDTH / 4 + 20,
         y: TABLE_HEIGHT / 2,
         isActive: true
     });
@@ -270,6 +259,35 @@ export const setupStartGameButton = () => {
         if (confirm('¿Estás seguro de que quieres iniciar la partida?')) {
             if (userWaitingGameId) {
                 const gameDocRef = doc(db, "games", userWaitingGameId);
+                const gameSnap = await getDoc(gameDocRef);
+                if (gameSnap.exists()) {
+                    const gameData = gameSnap.data();
+                    if (!gameData.balancesDeducted) {
+                        // Deduct from player1
+                        const player1Profile = await fetchUserProfile(gameData.player1.uid);
+                        await updateUserProfile(gameData.player1.uid, {
+                            balance: player1Profile.balance - gameData.betAmount,
+                            transactions: arrayUnion({
+                                amount: -gameData.betAmount,
+                                type: 'bet',
+                                gameId: userWaitingGameId,
+                                timestamp: new Date()
+                            })
+                        });
+                        // Deduct from player2
+                        const player2Profile = await fetchUserProfile(gameData.player2.uid);
+                        await updateUserProfile(gameData.player2.uid, {
+                            balance: player2Profile.balance - gameData.betAmount,
+                            transactions: arrayUnion({
+                                amount: -gameData.betAmount,
+                                type: 'bet',
+                                gameId: userWaitingGameId,
+                                timestamp: new Date()
+                            })
+                        });
+                        await updateDoc(gameDocRef, { balancesDeducted: true });
+                    }
+                }
                 await updateDoc(gameDocRef, { status: "starting" });
             }
         }
@@ -443,6 +461,7 @@ const joinGameAndSetupListener = async (gameData) => {
         player2: { uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null },
         status: "players_joined",
         currentPlayerUid: Math.random() < 0.5 ? gameData.player1.uid : currentUser.uid,
+        balancesDeducted: false
     });
 
     setUserWaitingGameId(gameData.id);

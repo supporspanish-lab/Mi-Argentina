@@ -55,8 +55,20 @@ export function startFirstTurn() {
 }
 
 export function setPlacingCueBall(isPlacing) { // --- NUEVO: Función para controlar el estado de colocación
-    
+
     isPlacingCueBall = isPlacing;
+}
+
+/**
+ * Nueva función para activar el modo de arrastre de la bola blanca (bola en mano).
+ * Se llama cuando la bola blanca es entronerada y el siguiente jugador puede arrastrarla.
+ * También se usa en faltas para permitir al oponente arrastrarla sin reposicionamiento.
+ * Espera 1 segundo antes de activar el arrastre.
+ */
+export function Bolaenmanoarrastre() {
+    setTimeout(() => {
+        setPlacingCueBall(true);
+    }, 1000);
 }
 
 export function toggleDamping() { // --- NUEVO: Función para alternar el estado del frenado

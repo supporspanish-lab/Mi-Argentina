@@ -461,7 +461,10 @@
                     <!-- NUEVO: Modal de Fin de Partida -->
                     <div id="always-visible-modal" class="modal-overlay">
                         <div class="modal-box">
-                            <h3>¡Partida Terminada!</h3>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0;">¡Partida Terminada!</h3>
+                                <button id="close-winner-modal-btn" style="background: none; border: none; color: #e74c3c; font-size: 24px; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+                            </div>
                             <div class="game-result-players">
                                 <div class="player-result winner">
                                     <span class="result-label">Ganador</span>
@@ -883,11 +886,31 @@
     // Add event listener to close modal when clicking outside the modal-box
     alwaysVisibleModal.addEventListener('click', async (event) => {
       if (event.target === alwaysVisibleModal) {
-        alwaysVisibleModal.style.display = 'none'; // Explicitly hide it
+        alwaysVisibleModal.style.opacity = '0';
+        alwaysVisibleModal.style.visibility = 'hidden';
+        alwaysVisibleModal.style.zIndex = 'auto';
+        setTimeout(() => {
+          alwaysVisibleModal.style.display = 'none';
+        }, 200); // Wait for transition
         await clearGameResults(); // Clear data from Firebase
         console.log('Game Over Modal closed by clicking outside.');
       }
     });
+
+    // Add event listener for the X button
+    const closeWinnerModalBtn = document.getElementById('close-winner-modal-btn');
+    if (closeWinnerModalBtn) {
+      closeWinnerModalBtn.addEventListener('click', async () => {
+        alwaysVisibleModal.style.opacity = '0';
+        alwaysVisibleModal.style.visibility = 'hidden';
+        alwaysVisibleModal.style.zIndex = 'auto';
+        setTimeout(() => {
+          alwaysVisibleModal.style.display = 'none';
+        }, 200); // Wait for transition
+        await clearGameResults();
+        console.log('Game Over Modal closed by X button.');
+      });
+    }
   });
   </script>
 </body>

@@ -175,10 +175,10 @@ export function setupBalls(isInitialSetup = false, singleBallData = null, isOnli
     const cueBallData = {
         number: null, color: 'white',
         distanceTraveled: 0, // --- NUEVO: Reiniciar distancia para la bola blanca
-        x: TABLE_WIDTH / 5, y: TABLE_HEIGHT / 2,
+        x: TABLE_WIDTH / 5 + 20, y: TABLE_HEIGHT / 2,
         radius: BALL_RADIUS, isActive: true,
         spin: { x: 0, y: 0 } // --- NUEVO: Reiniciar el efecto
-    }; 
+    };
     cueBall = createBall(cueBallData);
     balls.push(cueBall);
 
@@ -220,7 +220,7 @@ export function setupBalls(isInitialSetup = false, singleBallData = null, isOnli
                     number: ballNumber,
                     distanceTraveled: 0, // --- NUEVO: Inicializar distancia para las bolas de color
                     color: ballColors[ballNumber],
-                    x: startX + i * (RACK_SPACING_DIAMETER * 0.866),
+                    x: startX + i * (RACK_SPACING_DIAMETER * 0.866) + 20,
                     y: startY + j * RACK_SPACING_DIAMETER - i * (RACK_SPACING_DIAMETER / 2),
                     radius: BALL_RADIUS, isActive: true
                 };

@@ -223,12 +223,14 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
         // Esta línea estaba dibujando la guía basándose en el input local, creando un conflicto
         // con la lógica del servidor en pool.js. Al eliminarla, solo la lógica del servidor
         // podrá dibujar la línea, asegurando la sincronización.
+        document.body.classList.add('aiming');
     } else {
         hideAimingGuides();
         if (cueBall && cueBall.mesh && !cueBall.isPocketed) {
             cueBall.mesh.visible = true;
             if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true; // También su sombra
         }
+        document.body.classList.remove('aiming');
     }
 
     // --- Lógica para el indicador de "bola en mano" ---

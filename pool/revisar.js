@@ -1,5 +1,5 @@
 // --- Módulo de Revisión ---
-import { getGameState, showFoulMessage, setCurrentPlayer, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData, setOnlineGameData } from './gameState.js';
+import { getGameState, showFoulMessage, setCurrentPlayer, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData, setOnlineGameData, Bolaenmanoarrastre } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
@@ -219,13 +219,17 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                    cueBall.mesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, BALL_RADIUS);
+                                    // Reposicionar la bola en las coordenadas físicas
+                                    cueBall.x = TABLE_WIDTH / 4;
+                                    cueBall.y = TABLE_HEIGHT / 2;
+
 
         
 
                                     if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
 
-        
+                                    // Activar el modo de arrastre para el siguiente jugador
+                                    Bolaenmanoarrastre();
 
                                 }
 
@@ -675,7 +679,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                if (primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida && !acabaDeAsignar) {
+                                                                                                if (bolasAsignadasAlInicioTurno && primeraBolaGolpeadaEsteTurno && !jugadorEntroneroSuBola && !faltaCometida && !acabaDeAsignar) {
 
         
 
@@ -1542,6 +1546,11 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         showFoulMessage(`Falta de ${currentUsername}: ${motivoFalta}`);
     }
 
+    // --- NUEVO: Activar arrastre de bola blanca para el oponente en faltas (excepto no meter bola válida y mismas bolas)
+    if (faltaCometida && motivoFalta !== "no metió una bola válida." && !motivoFalta.includes("mismas bolas")) {
+        Bolaenmanoarrastre();
+    }
+
     // --- CORRECCIÓN: Lógica de Cliente Autoritativo para actualizar el servidor ---
     if (gameRef) {
         
@@ -1614,6 +1623,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             foulInfo: faltaCometida ? { reason: motivoFalta, timestamp: Date.now() } : null,
             // --- MANTENIDO POR COMPATIBILIDAD: Aunque ahora es redundante, otros clientes pueden usarlo ---
             cueBallPosition: bolaBlancaEntronerada ? { x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2 } : null,
+            ballInHandFor: null, // Inicialmente null, se enviará con retraso
 
             turnTimestamp: Date.now(), // Marcar el momento de la actualización del turno
         };
@@ -1626,6 +1636,18 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         // Enviar la actualización autoritativa al servidor
         updateDoc(gameRef, updatePayload).then(() => {
+            // --- NUEVO: Enviar ballInHandFor con retraso de 1 segundo si la bola blanca fue entronerada
+            if (bolaBlancaEntronerada) {
+                setTimeout(() => {
+                    updateDoc(gameRef, { ballInHandFor: nextPlayerUid }).catch(err => console.error("Error al enviar ballInHandFor:", err));
+                }, 1000);
+            }
+            // --- NUEVO: Enviar ballInHandFor con retraso si hay falta (excepto no meter bola válida y mismas bolas)
+            if (faltaCometida && motivoFalta !== "no metió una bola válida." && !motivoFalta.includes("mismas bolas")) {
+                setTimeout(() => {
+                    updateDoc(gameRef, { ballInHandFor: nextPlayerUid }).catch(err => console.error("Error al enviar ballInHandFor por falta:", err));
+                }, 1000);
+            }
             // --- NUEVO: Limpiar foulInfo del servidor después de un breve retraso
             // para evitar que el mensaje se muestre repetidamente.
             if (faltaCometida) {

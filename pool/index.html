@@ -1171,6 +1171,14 @@
                 width: 80%;
             }
         }
+
+        /* --- SOLUCIÓN: Deshabilitar transiciones durante apuntado para evitar parpadeo --- */
+        .aiming .player-avatar {
+            transition: none;
+        }
+        .aiming .player-chat-bubble {
+            transition: none;
+        }
     </style>
 </head>
 <body>
@@ -1591,10 +1599,36 @@
                                         // --- NUEVO: Verificar que los datos se guardaron antes de continuar ---
                                         if (localStorage.getItem('gameEnded') === 'true') {
                                             console.log('Verificación exitosa: Los datos se guardaron en localStorage.');
+                                    
+                                            // Update balances
+                                            if (winnerUid) {
+                                                const winnerDocRef = doc(db, "saldo", winnerUid);
+                                                const winnerSnap = await getDoc(winnerDocRef);
+                                                if (winnerSnap.exists()) {
+                                                    const currentBalance = winnerSnap.data().balance || 0;
+                                                    await updateDoc(winnerDocRef, { balance: currentBalance + actualWinnerAmount });
+                                                }
+                                            }
+                                    
+                                            // Save to gameResults for modal
+                                            const resultData = {
+                                                winnerUsername: winnerUsername,
+                                                winnerAvatar: winnerAvatar,
+                                                winnerAmount: actualWinnerAmount.toLocaleString('es-ES', { style: 'currency', currency: 'USD' }),
+                                                loserUsername: loserUsername,
+                                                loserAvatar: loserAvatar,
+                                                loserAmount: betAmount.toLocaleString('es-ES', { style: 'currency', currency: 'USD' }),
+                                                timestamp: Date.now()
+                                            };
+                                            await addDoc(collection(db, "gameResults"), { ...resultData, userUid: winnerUid });
+                                            await addDoc(collection(db, "gameResults"), { ...resultData, userUid: loserUid });
+                                    
                                             await updateDoc(gameRef, {
-                                                juegoTerminado: true,
+                                                status: "ended",
                                                 winner: winnerUid,
                                                 loser: currentUserUid,
+                                                endedAt: Date.now(),
+                                                juegoTerminado: true
                                             });
                                             // Save game history
                                             await addDoc(collection(db, "gameHistory"), {

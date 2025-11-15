@@ -171,6 +171,9 @@ window.addEventListener('receiveaim', (event) => {
             cueBall.mesh.visible = true;
             if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
             setPlacingCueBall(true); // Asegurarse de que el estado de colocación esté activo.
+        } else {
+            // Si no tengo bola en mano, desactivar el modo de colocación.
+            setPlacingCueBall(false);
         }
     }
 

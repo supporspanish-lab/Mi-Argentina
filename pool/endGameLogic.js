@@ -114,7 +114,7 @@ async function processGameEnd(winnerUid, loserUid, onlineGameData, gameRef, mess
     showFoulMessage(message, winnerUid); // Muestra el mensaje al ganador/perdedor según corresponda
 
     // Reproducir sonido de fin de partida
-    const audio = new Audio('../audio/terminado.mpeg');
+    const audio = new Audio('../audio/terminado.mp3');
     audio.play().catch(e => console.warn("Could not play end game sound:", e));
 
     const betAmount = onlineGameData.betAmount || 0;

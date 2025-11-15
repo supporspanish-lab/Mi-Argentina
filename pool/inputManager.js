@@ -62,7 +62,7 @@ function onPointerDown(e) {
     if (isPlacingCueBall) {
         // Comprobar si el clic está sobre la bola blanca para empezar a moverla
         const dist = Math.hypot(worldPos.x - cueBall.mesh.position.x, worldPos.y - cueBall.mesh.position.y);
-        if (dist < BALL_RADIUS * 2) { // Un área de toque un poco más grande que la bola
+        if (dist < BALL_RADIUS * 3) { // Área de toque más grande para facilitar el arrastre
             movingCueBall = true;
             pointerDown = true; // El puntero está presionado solo si se mueve la bola
         } else {
