@@ -885,11 +885,13 @@
 
     // Function to clear game results from Firebase
     const clearGameResults = async () => {
-      const docId = alwaysVisibleModal.dataset.docId;
-      if (docId) {
-        await deleteDoc(doc(db, "gameResults", docId));
-        console.log('Game results deleted from Firebase.');
-      }
+      const { currentUser } = getState();
+      if (!currentUser) return;
+      const q = query(collection(db, "gameResults"), where("userUid", "==", currentUser.uid));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      console.log('All game results deleted from Firebase.');
     };
 
     // Load results on DOMContentLoaded
