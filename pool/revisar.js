@@ -1636,6 +1636,11 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         }).catch((err) =>
             console.error("Error al sincronizar el estado final del turno:", err),
         );
+
+        // Reproducir sonido de cambio de turno si el turno cambió
+        if (shouldSwitchTurn) {
+            playSound('turnoFinalizado');
+        }
     }
 
     // --- LIMPIEZA Y FINALIZACIÓN DEL TURNO ---

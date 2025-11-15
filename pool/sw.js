@@ -31,10 +31,11 @@ const ASSETS_TO_CACHE = [
     'imajenes/zombra.png',
     'imajenes/BolasMetidas/efecto.png', // --- SOLUCIÓN: Añadir la nueva imagen del selector de efecto
     'imajenes/moneda/moneda.png', // Add the coin image
-    'audio/ballHit2.wav',
+    'audio/ballHit2.mpeg',
     'audio/cushionHit.wav',
     'audio/EntrarPelotaTronera.mp3',
     'audio/cueHit.wav',
+    'audio/TurnoFinalizado.mpeg',
     'modelos/billiard_balls.glb',
     // Login page assets
     'login/login.html',

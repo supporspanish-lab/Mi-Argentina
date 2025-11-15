@@ -59,6 +59,9 @@ export function shoot(powerPercent) {
         // Disparamos un evento global que será capturado para enviar los datos al servidor.
         window.dispatchEvent(new CustomEvent('sendShot', { detail: { ...shotData, gameState: getGameState() } }));
 
+        // Aplicar el disparo localmente para el jugador que dispara, para una respuesta inmediata.
+        window.applyLocalShot(currentShotAngle, powerPercent, spin, { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y });
+
         // Reproducir sonido localmente para una respuesta inmediata al jugador que dispara.
         playSound('cueHit', 1.0);
         isShooting = false; // Resetear estado de disparo
