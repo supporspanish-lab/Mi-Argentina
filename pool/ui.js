@@ -237,21 +237,56 @@ export async function handleInput() { // --- SOLUCIÓN: Marcar la función como 
     const moveIndicator = document.getElementById('move-indicator');
     if (moveIndicator) {
         if (isPlacing) {
-            moveIndicator.style.display = 'block';
-            moveIndicator.style.animation = 'fade-pulse 1s ease-in-out infinite'; // Animación infinita
-
-            // Actualizar la posición del indicador en cada frame
-            if (cueBall && cueBall.mesh) { // --- Guarda para asegurar que la bola blanca exista
+            // La animación ahora se dispara desde cuePlacement.js
+            // y ya no se controla en cada frame aquí.
+            // Mantenemos la lógica de posicionamiento si es necesario en el futuro,
+            // pero la animación de pulso infinita se ha ido.
+            if (cueBall && cueBall.mesh) {
                 const screenPos = toScreenPosition(cueBall.mesh, camera);
                 moveIndicator.style.left = `${screenPos.x}px`;
-                moveIndicator.style.top = `${screenPos.y+50}px`;
+                moveIndicator.style.top = `${screenPos.y}px`;
             }
         } else {
             moveIndicator.style.display = 'none';
-            moveIndicator.style.animation = ''; // Detener animación
         }
     }
 }
+
+/**
+ * --- NUEVO: Muestra una animación de "bola en mano" por 2 segundos.
+ */
+export function showHandAnimation() {
+    const moveIndicator = document.getElementById('move-indicator');
+    if (!moveIndicator) return;
+
+    // 1. Asegurarse de que la transición esté reseteada y el elemento visible
+    moveIndicator.style.transition = 'none';
+    moveIndicator.style.opacity = '1';
+    moveIndicator.style.display = 'block';
+
+    // Posicionar el indicador
+    if (cueBall && cueBall.mesh) {
+        const screenPos = toScreenPosition(cueBall.mesh, camera);
+        // Ajustamos la posición para que el centro de la imagen coincida con la bola
+        moveIndicator.style.left = `${screenPos.x}px`;
+        moveIndicator.style.top = `${screenPos.y}px`;
+    }
+
+    // 2. Forzar un reflow para que la opacidad inicial se aplique antes de la transición
+    void moveIndicator.offsetWidth;
+
+    // 3. Iniciar el desvanecimiento después de 1.5 segundos
+    setTimeout(() => {
+        moveIndicator.style.transition = 'opacity 0.5s ease-out';
+        moveIndicator.style.opacity = '0';
+    }, 1500);
+
+    // 4. Ocultar el elemento completamente después de que la animación termine
+    setTimeout(() => {
+        moveIndicator.style.display = 'none';
+    }, 2000); // 1500ms visible + 500ms de fade-out
+}
+
 
 /**
  * --- SOLUCIÓN: Actualiza la UI para resaltar al jugador activo.

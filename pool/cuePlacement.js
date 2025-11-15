@@ -1,11 +1,13 @@
 // --- Módulo de Colocación de la Bola Blanca ---
 import { cueBall, balls } from './ballManager.js';
 import { handles, pockets, BALL_RADIUS } from './config.js';
+import { showHandAnimation } from './ui.js';
 
 let isMovingCueBallState = false;
 
 export function startCueBallMove() {
     isMovingCueBallState = true;
+    showHandAnimation();
 }
 
 export function moveCueBall(position) {
