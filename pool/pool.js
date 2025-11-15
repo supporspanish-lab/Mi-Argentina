@@ -1042,9 +1042,15 @@ function connectToGame(gameId) {
             
             // --- NUEVO: Detectar nuevo turno (o continuación) y reiniciar temporizador ---
             if (gameData.turnTimestamp && gameData.turnTimestamp !== previousTurnTimestamp) {
-                import('./gameState.js').then(({ setCurrentPlayer, clearPocketedBalls }) => {
+                import('./gameState.js').then(({ setCurrentPlayer, clearPocketedBalls, getGameState }) => {
                     setCurrentPlayer(activePlayerNumber); // Esto resetea el temporizador de turno
                     clearPocketedBalls(); // Limpiar el array de bolas entroneradas para el nuevo turno
+                    // --- NUEVO: Verificar que el array esté completamente limpio ---
+                    const gameState = getGameState();
+                    if (gameState.pocketedThisTurn && gameState.pocketedThisTurn.length > 0) {
+                        console.warn('pocketedThisTurn no estaba vacío después de clearPocketedBalls, limpiando de nuevo.');
+                        clearPocketedBalls();
+                    }
                 });
             }
             previousTurnTimestamp = gameData.turnTimestamp; // Guardar el timestamp para la próxima comparación

@@ -9,10 +9,10 @@ export const TABLE_HEIGHT = 500;
 export const TABLE_ASPECT_RATIO = TABLE_WIDTH / TABLE_HEIGHT;
 
 // Radio de la bola
-export const BALL_RADIUS = 16;
+export const BALL_RADIUS = 18;
 
 // Espaciado para el rack inicial
-export const RACK_SPACING_DIAMETER = 32; // --- CORRECCIÓN: Ajustado al nuevo radio (16 * 2)
+export const RACK_SPACING_DIAMETER = 36; // --- CORRECCIÓN: Ajustado al nuevo radio (18 * 2)
 
 // Puntos de control para los bordes de la mesa
 export let handles = [];

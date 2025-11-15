@@ -206,7 +206,7 @@ export function setupBalls(isInitialSetup = false, singleBallData = null, isOnli
             11: '#ff0000', 12: '#ff00ff', 13: '#ff8000', 14: '#00ff00', 15: '#800000'
         };
 
-        const startX = TABLE_WIDTH * 0.78;
+        const startX = TABLE_WIDTH * 0.65;
         const startY = TABLE_HEIGHT / 2;
         let ballCount = 1;
 
