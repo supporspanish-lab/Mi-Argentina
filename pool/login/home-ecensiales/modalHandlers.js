@@ -243,7 +243,7 @@ export const setupWonGamesModal = () => {
     // Open won games modal
     openWonGamesModalBtn.addEventListener('click', () => {
         wonGamesModal.classList.add('visible');
-        loadWonGames();
+        loadGameHistory();
     });
 
     // Close won games modal
@@ -280,7 +280,7 @@ export const setupInfoModal = () => {
     });
 };
 
-const loadWonGames = async () => {
+const loadGameHistory = async () => {
     wonGamesList.innerHTML = '<p>Cargando...</p>';
     try {
         const currentUser = auth.currentUser;
@@ -288,22 +288,42 @@ const loadWonGames = async () => {
             wonGamesList.innerHTML = '<p>No has iniciado sesión.</p>';
             return;
         }
-        const q = query(collection(db, "gameHistory"), where("winnerUid", "==", currentUser.uid));
-        const querySnapshot = await getDocs(q);
+        // Consultar partidas ganadas
+        const qWon = query(collection(db, "gameHistory"), where("winnerUid", "==", currentUser.uid));
+        const wonSnapshot = await getDocs(qWon);
+        // Consultar partidas perdidas
+        const qLost = query(collection(db, "gameHistory"), where("loserUid", "==", currentUser.uid));
+        const lostSnapshot = await getDocs(qLost);
+
+        // Combinar resultados
+        const games = [];
+        wonSnapshot.forEach((doc) => {
+            const data = doc.data();
+            games.push({ ...data, type: 'won' });
+        });
+        lostSnapshot.forEach((doc) => {
+            const data = doc.data();
+            games.push({ ...data, type: 'lost' });
+        });
+
+        // Ordenar por fecha descendente
+        games.sort((a, b) => b.date - a.date);
+
         wonGamesList.innerHTML = '';
-        if (querySnapshot.empty) {
-            wonGamesList.innerHTML = '<p>No hay partidas ganadas registradas aún.</p>';
+        if (games.length === 0) {
+            wonGamesList.innerHTML = '<p>No hay partidas registradas aún.</p>';
         } else {
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
+            games.forEach((data) => {
                 const item = document.createElement('div');
                 item.className = 'won-game-item';
-                item.textContent = `Ganó $${data.amountWon} el ${new Date(data.date).toLocaleDateString()}`;
+                const amount = data.type === 'won' ? data.amountWon : data.amountLost;
+                const result = data.type === 'won' ? 'Ganó' : 'Perdió';
+                item.textContent = `${result} $${amount} el ${new Date(data.date).toLocaleDateString()}`;
                 wonGamesList.appendChild(item);
             });
         }
     } catch (error) {
-        console.error('Error al cargar partidas ganadas:', error);
+        console.error('Error al cargar historial de partidas:', error);
         wonGamesList.innerHTML = '<p>Error al cargar las partidas.</p>';
     }
 };
