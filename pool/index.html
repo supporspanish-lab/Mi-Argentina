@@ -833,6 +833,33 @@
             color: white;
             font-size: 2.5vw;
         }
+        /* --- NUEVO: Estilos para el botón de salir del modo espectador --- */
+        #exit-spectator-btn {
+            position: fixed;
+            top: 0;
+            left: 5vw;
+            transform: none;
+            width: 5vw;
+            height: 5vh;
+            background-color: #e74c3c;
+            border: none;
+            border-bottom-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+            cursor: pointer;
+            z-index: 201;
+            display: none; /* Oculto por defecto */
+            align-items: center;
+            justify-content: center;
+            padding: 0.5vw;
+            transition: background-color 0.2s ease-in-out;
+        }
+        #exit-spectator-btn:hover {
+            background-color: #c0392b;
+        }
+        #exit-spectator-btn span {
+            color: white;
+            font-size: 2.5vw;
+        }
         /* --- NUEVO: Estilos para el modal de chat en el juego (copia de home.html) --- */
         #game-chat-modal {
             display: none; /* Oculto por defecto */
@@ -1199,6 +1226,7 @@
             </div>
         </div>
         <button id="options-toggle-btn"><span>&#9881;</span></button>
+        <button id="exit-spectator-btn"><span>Salir</span></button>
 
 
         <!-- --- NUEVO: Controles para cambiar el tamaño de la mesa --- -->

@@ -1024,6 +1024,19 @@ function connectToGame(gameId) {
                 localPlayerNumber = 0; // Somos espectadores
             }
 
+            // Mostrar el botón de salir del modo espectador solo para espectadores
+            const exitSpectatorBtn = document.getElementById('exit-spectator-btn');
+            if (exitSpectatorBtn) {
+                if (localPlayerNumber === 0) {
+                    exitSpectatorBtn.style.display = 'flex';
+                    exitSpectatorBtn.addEventListener('click', () => {
+                        window.location.href = 'login/home.html';
+                    });
+                } else {
+                    exitSpectatorBtn.style.display = 'none';
+                }
+            }
+
             // Actualizar el indicador de turno activo
             const activePlayerNumber = gameData.currentPlayerUid === gameData.player1?.uid ? 1 : 2;
             

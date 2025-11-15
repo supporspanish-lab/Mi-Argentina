@@ -1,4 +1,4 @@
-import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, infoBtn, infoModal, closeInfoModalBtn, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge, profileImg, profileSvg, tournamentInfoModal, entryCostDisplay, prizeDisplay, participateTournamentBtn } from './domElements.js';
+import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, infoBtn, infoModal, closeInfoModalBtn, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge, profileImg, profileSvg } from './domElements.js';
 import { updateUserProfile } from '../auth.js';
 import { getState, setCurrentUserProfile } from './state.js';
 import { updateErrorConsole, isMaintenanceModalOpen } from './utils.js';
@@ -501,19 +501,4 @@ const sendFriendMessage = async () => {
     }
 };
 
-export const setupTournamentInfoModal = () => {
-    if (tournamentInfoModal) {
-        tournamentInfoModal.addEventListener('click', (e) => {
-            if (e.target === tournamentInfoModal) {
-                tournamentInfoModal.classList.remove('visible');
-            }
-        });
-    }
-};
-
-export const showTournamentInfo = () => {
-    if (tournamentInfoModal) {
-        tournamentInfoModal.classList.add('visible');
-    }
-};
 

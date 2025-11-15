@@ -104,8 +104,3 @@ export const infoBtn = document.getElementById('info-btn');
 export const infoModal = document.getElementById('info-modal');
 export const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
 
-// --- NUEVO: Elementos del modal de información del torneo ---
-export const tournamentInfoModal = document.getElementById('tournament-info-modal');
-export const entryCostDisplay = document.getElementById('entry-cost-display');
-export const prizeDisplay = document.getElementById('prize-display');
-export const participateTournamentBtn = document.getElementById('participate-tournament-btn');

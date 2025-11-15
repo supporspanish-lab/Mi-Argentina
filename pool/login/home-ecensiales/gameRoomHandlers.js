@@ -4,7 +4,6 @@ import { getState, setUserWaitingGameId, setLastMessageCount, setPollingInterval
 import { setPlayerAvatar, renderMessages, cleanupWaitingGame, fetchUserProfile } from './utils.js';
 import { updateUserProfile } from '../auth.js';
 import { getBackgroundAudio } from './home.js';
-import { showTournamentInfo } from './modalHandlers.js';
 
 export const endGame = () => {
     const audio = getBackgroundAudio();
@@ -29,14 +28,14 @@ export const endGame = () => {
     window.dispatchEvent(new Event('focus'));
 };
 
-const startGameFullscreen = (gameId) => {
+const startGameFullscreen = (gameId, isSpectator = false) => {
     const audio = getBackgroundAudio();
     if (audio) {
         audio.pause();
     }
 
     appContainer.style.display = 'none'; // Hide the home.html UI
-    gameIframe.src = `../index.html?gameId=${gameId}`; // Set iframe source
+    gameIframe.src = `../index.html?gameId=${gameId}${isSpectator ? '&spectator=true' : ''}`; // Set iframe source with spectator flag
     gameContainer.style.display = 'block'; // Show the game container
 };
 
@@ -102,7 +101,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     const deletePromises = oldGamesSnap.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
     const ballPositions = [];
-    const RACK_SPACING_DIAMETER = 28;
+    const RACK_SPACING_DIAMETER = 32;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
     const startX = TABLE_WIDTH * 0.78;
@@ -159,7 +158,8 @@ export const createGame = async (betAmount, isPrivate = false) => {
         betAmount: betAmount,
         isPrivate: isPrivate,
         isPractice: false,
-        balancesDeducted: false
+        balancesDeducted: false,
+        spectators: []
     });
 
     setUserWaitingGameId(newGameRef.id);
@@ -216,7 +216,7 @@ export const createPracticeGame = async () => {
 
     const gamesRef = collection(db, "games");
     const ballPositions = [];
-    const RACK_SPACING_DIAMETER = 28;
+    const RACK_SPACING_DIAMETER = 32;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
     const startX = TABLE_WIDTH * 0.78;
@@ -256,7 +256,8 @@ export const createPracticeGame = async () => {
         practiceMoneyGain: 1,
         twoTurnsAsOne: true,
         balancesDeducted: false,
-        player1BalanceTransaction: null
+        player1BalanceTransaction: null,
+        spectators: []
     });
 setUserWaitingGameId(newGameRef.id);
     setGameStarted(true);
@@ -348,9 +349,10 @@ const createGameCard = (gameData) => {
             cursor = 'pointer';
             onClickAction = () => joinGameAndSetupListener(gameData);
         } else if (gameData.status === 'starting' || gameData.status === 'players_joined') {
-            statusText = isUserInGame ? 'En tu sala' : 'En Partida';
-            statusColor = isUserInGame ? '#3498db' : '#2ecc71';
-            cursor = 'default';
+            statusText = isUserInGame ? 'En tu sala' : 'Espectar';
+            statusColor = isUserInGame ? '#3498db' : '#f39c12';
+            cursor = isUserInGame ? 'default' : 'pointer';
+            onClickAction = isUserInGame ? null : () => spectateGame(gameData);
         } else if (gameData.status === 'ended') {
             statusText = 'Terminada';
             statusColor = '#95a5a6';
@@ -397,6 +399,30 @@ const createGameCard = (gameData) => {
         card.addEventListener('click', card.onclick);
     }
     return card;
+};
+
+// --- NUEVO: Función para espectar una partida ---
+export const spectateGame = async (gameData) => {
+    const { currentUser, currentUserProfile } = getState();
+    if (!currentUser || !currentUserProfile) return;
+
+    if (!confirm('¿Quieres espectar esta partida? No podrás jugar, solo observar.')) return;
+
+    const gameDocRef = doc(db, "games", gameData.id);
+    const gameSnap = await getDoc(gameDocRef);
+
+    if (!gameSnap.exists() || (gameSnap.data().status !== "starting" && gameSnap.data().status !== "players_joined")) {
+        alert('Esta partida ya no está disponible para espectar.');
+        return;
+    }
+
+    // Agregar al usuario como espectador
+    await updateDoc(gameDocRef, {
+        spectators: arrayUnion({ uid: currentUser.uid, username: currentUserProfile.username, profileImageName: currentUserProfile.profileImageName || null })
+    });
+
+    // Iniciar el juego en modo espectador
+    startGameFullscreen(gameData.id, true); // true para spectator
 };
 
 // --- NUEVO: Función para unirse a una partida y configurar el listener ---
@@ -536,13 +562,6 @@ export const updateGameLists = async () => {
             practiceCard.innerHTML = `<img src="../video/practica.png" alt="Practica" class="create-icon"><span class="create-text">Practica</span>`;
             practiceCard.addEventListener('click', () => createPracticeGame());
             verticalList.appendChild(practiceCard);
-        }
-        if (!verticalList.querySelector('.practice-torneo-game') && window.tournamentEnabled) {
-            const practiceTorneoCard = document.createElement('div');
-            practiceTorneoCard.className = 'game-card practice-torneo-game';
-            practiceTorneoCard.innerHTML = `<img src="../video/torneo.png" alt="Torneo" class="create-icon"><span class="create-text">Torneo</span><div class="tournament-prize">Premio: $${window.tournamentPrize}</div>`;
-            practiceTorneoCard.addEventListener('click', () => showTournamentInfo());
-            verticalList.appendChild(practiceTorneoCard);
         }
     }
 

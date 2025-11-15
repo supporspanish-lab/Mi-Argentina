@@ -330,21 +330,6 @@
             <p id="pb-status-message" style="margin-top: 15px; font-weight: bold;"></p>
         </div>
 
-        <!-- NUEVO: Sección para activar/desactivar torneo -->
-        <div class="section-container">
-            <h2>Configuración de Torneo</h2>
-            <button id="toggle-tournament-btn" class="action-button" style="background-color: var(--primary-color); color: #000;">Activar Torneo</button>
-            <p id="tournament-status" style="margin-top: 15px; font-weight: bold;"></p>
-            <div class="form-group">
-                <label for="tournament-prize">Premio del Torneo (Saldo):</label>
-                <input type="number" id="tournament-prize" min="0" step="100">
-            </div>
-            <div class="form-group">
-                <label for="tournament-entry-cost">Costo de Entrada ($):</label>
-                <input type="number" id="tournament-entry-cost" min="0" step="100">
-            </div>
-            <button id="save-tournament-settings-btn" class="action-button" style="background-color: var(--primary-color); color: #000; margin-top: 10px;">Guardar Configuración</button>
-        </div>
 
         <button class="back-button" onclick="window.history.back();">Volver</button>
     </div>
@@ -611,50 +596,6 @@
             }
         });
 
-        // --- NUEVO: Lógica para configuración de torneo ---
-        const toggleTournamentBtn = document.getElementById('toggle-tournament-btn');
-        const tournamentStatus = document.getElementById('tournament-status');
-        const tournamentPrizeInput = document.getElementById('tournament-prize');
-        const tournamentEntryCostInput = document.getElementById('tournament-entry-cost');
-        const saveTournamentSettingsBtn = document.getElementById('save-tournament-settings-btn');
-
-        async function loadTournamentSettings() {
-            const settingsRef = doc(db, "tournamentSettings", "settings");
-            const settingsSnap = await getDoc(settingsRef);
-            if (settingsSnap.exists()) {
-                const data = settingsSnap.data();
-                const isEnabled = data.enabled !== false; // Default true
-                tournamentStatus.textContent = `Estado: ${isEnabled ? 'Activado' : 'Desactivado'}`;
-                toggleTournamentBtn.textContent = isEnabled ? 'Desactivar Torneo' : 'Activar Torneo';
-                tournamentPrizeInput.value = data.prize || 1000;
-                tournamentEntryCostInput.value = data.entryCost || 100;
-            } else {
-                tournamentStatus.textContent = 'Estado: Activado';
-                toggleTournamentBtn.textContent = 'Desactivar Torneo';
-                tournamentPrizeInput.value = 1000;
-                tournamentEntryCostInput.value = 100;
-            }
-        }
-
-        toggleTournamentBtn.addEventListener('click', async () => {
-            const settingsRef = doc(db, "tournamentSettings", "settings");
-            const settingsSnap = await getDoc(settingsRef);
-            const data = settingsSnap.exists() ? settingsSnap.data() : { enabled: false, prize: 0, entryCost: 0 };
-            const newEnabled = !data.enabled;
-            await setDoc(settingsRef, { ...data, enabled: newEnabled });
-            loadTournamentSettings();
-        });
-
-        saveTournamentSettingsBtn.addEventListener('click', async () => {
-            const prize = parseInt(tournamentPrizeInput.value) || 0;
-            const entryCost = parseInt(tournamentEntryCostInput.value) || 0;
-            const settingsRef = doc(db, "tournamentSettings", "settings");
-            const settingsSnap = await getDoc(settingsRef);
-            const data = settingsSnap.exists() ? settingsSnap.data() : { enabled: false };
-            await setDoc(settingsRef, { ...data, prize, entryCost });
-            alert('Configuración guardada.');
-            loadTournamentSettings();
-        });
 
         // Load data when the page loads
         document.addEventListener('DOMContentLoaded', () => {
@@ -663,7 +604,6 @@
                     // User is signed in, proceed to load data
                     loadUsers();
                     loadGameRooms();
-                    loadTournamentSettings();
                 } else {
                     // No user is signed in, redirect to login page
                     window.location.href = 'login.html';

@@ -664,17 +664,17 @@
         <div class="modal-box">
             <h3>Realizar Apuesta</h3>
             <p>Ingresa el monto que deseas apostar. Mínimo: $1,000.</p>
-            <div class="input-group" style="margin: 15px 0;">
-                 <input type="number" id="bet-amount-input" class="form-input" placeholder="Monto de la apuesta" min="1000" step="100">
-            </div>
-            <div class="input-group" style="margin: 15px 0; display: flex; align-items: center; justify-content: center;">
+            <div class="input-group" style="margin: 5px 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: 0;">
                 <input type="checkbox" id="private-room-checkbox" style="margin-right: 10px;">
                 <label for="private-room-checkbox" style="cursor: pointer;">Sala Privada</label>
             </div>
+            <div class="input-group" style="margin: 5px 0;">
+                  <input type="number" id="bet-amount-input" class="form-input" placeholder="Monto de la apuesta" min="1000" step="100">
+            </div>
             <p id="bet-error-message" style="color: #e74c3c; min-height: 1em;"></p>
             <div class="modal-buttons">
-                <button id="cancel-bet-btn" class="cancel-button" style="background-color: #555; border-color: #777;">Cancelar</button>
-                <button id="confirm-bet-btn" class="play-button" style="font-size: 18px; padding: 15px 30px;">Apostar y Crear</button>
+                <button id="cancel-bet-btn" class="cancel-button" style="background-color: #555; border-color: #777; font-size: 14px; padding: 10px 20px;">Cancelar</button>
+                <button id="confirm-bet-btn" class="play-button" style="font-size: 14px; padding: 10px 20px;">Apostar y Crear</button>
             </div>
         </div>
     </div>
@@ -690,15 +690,6 @@
             </div>
         </div>
    
-        <!-- --- NUEVO: Modal de información del torneo --- -->
-        <div id="tournament-info-modal" class="modal-overlay">
-            <div class="modal-box">
-                <h3>Información del Torneo</h3>
-                <p>Costo de Entrada: $<span id="entry-cost-display"></span></p>
-                <p>Premio: $<span id="prize-display"></span></p>
-                <button id="participate-tournament-btn" class="play-button">Participar</button>
-            </div>
-        </div>
     <!-- CORRECCIÓN: Cargar main.js, que es el punto de entrada principal de la aplicación -->
     <script type="module" src="./home-ecensiales/main.js" defer></script>
     <!-- NUEVO: Script para el video de fondo aleatorio en canvas -->
@@ -791,25 +782,10 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  async function loadTournamentSettings() {
-      const settingsRef = doc(db, "tournamentSettings", "settings");
-      const settingsSnap = await getDoc(settingsRef);
-      if (settingsSnap.exists()) {
-          const data = settingsSnap.data();
-          window.tournamentEnabled = data.enabled !== false; // Default true if not set
-          window.tournamentPrize = data.prize || 1000;
-          window.tournamentEntryCost = data.entryCost || 100;
-      } else {
-          window.tournamentEnabled = true; // Default enabled
-          window.tournamentPrize = 1000;
-          window.tournamentEntryCost = 100;
-      }
-  }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOMContentLoaded fired in home.html');
-    await loadTournamentSettings();
-    updateGameLists();
+   console.log('DOMContentLoaded fired in home.html');
+   updateGameLists();
 
     const alwaysVisibleModal = document.getElementById('always-visible-modal');
     const winnerAvatarImg = document.getElementById('winner-avatar');

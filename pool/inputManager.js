@@ -27,10 +27,6 @@ let lastAimingUpdateTime = 0;
 const AIMING_UPDATE_THROTTLE = 50; // ms (20 actualizaciones por segundo para mayor fluidez)
 
 let currentShotAngle = 0;
-// --- NUEVO: Variables para un arrastre de ángulo relativo ---
-let dragStartAngle = 0; // Ángulo del puntero al iniciar el arrastre
-let angleOnDragStart = 0; // Ángulo de la línea guía al iniciar el arrastre
-let lastPointerAngle = 0; // --- NUEVO: Ángulo del puntero en el frame anterior
 
 /**
  * Inicializa todos los listeners de eventos para el input.

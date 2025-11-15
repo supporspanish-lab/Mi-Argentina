@@ -553,6 +553,12 @@
                     createDustParticles(800);
                     loadingSpinner.style.opacity = '0';
 
+                    // Request fullscreen for non-PWA users
+                    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+                    if (!isPWA && document.fullscreenEnabled) {
+                        document.documentElement.requestFullscreen().catch(err => console.warn('Could not enter fullscreen:', err));
+                    }
+
                     setTimeout(() => {
                         window.location.href = 'home.html';
                     }, 3000);
@@ -649,6 +655,9 @@
             const loginContainer = document.getElementById('login-container');
             const updateMessageElement = document.getElementById('update-message'); // SOLUCIÓN: Definir la variable
 
+            // Flag to prevent multiple reloads
+            let hasReloadedForUpdate = false;
+
             // No ocultar el contenedor de login inicialmente, ya que el mensaje de actualización es un banner.
             // loginContainer.classList.add('hidden'); // REMOVED
 
@@ -670,7 +679,8 @@
                                 } else if (event.data.type === 'UPDATE_FOUND') {
                                     updateMessageElement.textContent = 'Actualizando...';
                                     updateMessageContainer.classList.remove('update-message-hidden'); // Asegurarse de que sea visible
-                                } else if (event.data.type === 'UPDATE_ACTIVATED') {
+                                } else if (event.data.type === 'UPDATE_ACTIVATED' && !hasReloadedForUpdate) {
+                                    hasReloadedForUpdate = true;
                                     updateMessageElement.textContent = 'Actualización completa. Recargando...';
                                     setTimeout(() => window.location.reload(), 1000);
                                 } else if (event.data.type === 'NO_UPDATE') {
