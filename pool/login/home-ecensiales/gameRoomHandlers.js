@@ -101,7 +101,7 @@ export const createGame = async (betAmount, isPrivate = false) => {
     const deletePromises = oldGamesSnap.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
     const ballPositions = [];
-    const RACK_SPACING_DIAMETER = 40;
+    const RACK_SPACING_DIAMETER = 32;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
     const startX = TABLE_WIDTH * 0.65;
@@ -216,7 +216,7 @@ export const createPracticeGame = async () => {
 
     const gamesRef = collection(db, "games");
     const ballPositions = [];
-    const RACK_SPACING_DIAMETER = 36;
+    const RACK_SPACING_DIAMETER = 32;
     const TABLE_WIDTH = 1000;
     const TABLE_HEIGHT = 500;
     const startX = TABLE_WIDTH * 0.65;
