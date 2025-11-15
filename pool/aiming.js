@@ -68,8 +68,9 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
     if (cueMesh) {
         const cueLength = cueMesh.children[0].geometry.parameters.width;
         // --- SOLUCIÓN: Hacer que el taco retroceda con la potencia ---
-        const cueOffset = (cueLength / 2) + BALL_RADIUS + 5;
-        cueMesh.position.x = cueBall.mesh.position.x - Math.cos(shotAngle) * cueOffset; 
+        const retreatFactor = powerPercent * 20; // Retroceso adicional basado en la potencia (hasta 20 unidades)
+        const cueOffset = (cueLength / 2) + BALL_RADIUS + 5 + retreatFactor;
+        cueMesh.position.x = cueBall.mesh.position.x - Math.cos(shotAngle) * cueOffset;
         cueMesh.position.y = cueBall.mesh.position.y - Math.sin(shotAngle) * cueOffset;
         cueMesh.rotation.z = shotAngle;
     }
