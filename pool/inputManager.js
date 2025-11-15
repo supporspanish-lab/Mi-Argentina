@@ -164,17 +164,23 @@ function onPointerUp(e) {
         // Se ha terminado de colocar la bola blanca
         movingCueBall = false;
         const newPosition = { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y };
+
+        // Actualizar las propiedades físicas de la bola blanca para que coincidan con la posición visual.
+        cueBall.x = newPosition.x;
+        cueBall.y = newPosition.y;
+
+        // Enviar la actualización al oponente si es una partida online
         const onlineGameData = getOnlineGameData();
         const myUid = auth.currentUser?.uid;
         if (onlineGameData.ballInHandFor === myUid) {
             window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: newPosition } }));
-            setPlacingCueBall(false); // --- CORRECCIÓN: Indicar que ya no estamos colocando la bola.
         }
-        // --- MODIFICACIÓN: Ya no se cambia el estado aquí. El modo "bola en mano" persiste hasta el disparo.
+        
+        // Indicar que ya no estamos colocando la bola. Esto es clave para permitir apuntar después.
+        setPlacingCueBall(false);
     }
 
     // Resetear estados de input
-    // --- SOLUCIÓN: Al soltar el clic, simplemente se resetea el estado 'pointerDown'.
     pointerDown = false;
     pullingBack = false;
     movingCueBall = false;

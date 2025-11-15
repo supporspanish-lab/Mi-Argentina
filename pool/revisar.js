@@ -1427,7 +1427,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                // FALTA: Golpear una bola del oponente primero.
+                                                                                                                                // FALTA: Golpear una bola del oponente primero.
 
         
 
@@ -1435,63 +1435,335 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                } else {
+                                                                
 
         
 
-                                                                        const tipoPrimeraBola = (primeraBola.number >= 1 && primeraBola.number <= 7) ? 'solids' : 'stripes';
+            
 
         
 
-                                                                        if (primeraBola.number !== 8 && tipoPrimeraBola !== tipoBolaJugador) {
-
-
-
-
-
-                                                                            if (!primeraFaltaPerdonada) {
-
-                                                                                primeraFaltaPerdonada = true;
-
-                                                                            } else {
-
-                                                                                const bolasEntroneradasNumeros = bolasEntroneradasEsteTurno.map(b => b.number).join(', ') || 'ninguna';
-
-
-
-
-
-                                                                                console.log(`Falta detectada: Jugador ${jugadorActual} golpeó una bola incorrecta. Tipo asignado: ${tipoBolaJugador}. Bola golpeada: #${primeraBola.number} (tipo: ${tipoPrimeraBola}). Bolas entroneradas: ${bolasEntroneradasNumeros}.`);
-
-
-
-
-
-                                                                                faltaCometida = true;
-
-
-
-
-
-                                                                                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
-
-
-
-
-
-                                                                                motivoFalta = `${currentUsernameForFoul} no golpeó primero una bola de su tipo.`;
-
-                                                                            }
-
-
-
-
-
-                                                                        }
+                                                                                                                                } else {
 
         
 
-                                }
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                        const tipoPrimeraBola = (primeraBola.number >= 1 && primeraBola.number <= 7) ? 'solids' : 'stripes';
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                        if (primeraBola.number !== 8 && tipoPrimeraBola !== tipoBolaJugador) {
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            // La regla del "primer perdón" se ha modificado.
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            // Ahora, golpear una bola incorrecta primero SIEMPRE es falta.
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            const bolasEntroneradasNumeros = bolasEntroneradasEsteTurno.map(b => b.number).join(', ') || 'ninguna';
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            console.log(`Falta detectada: Jugador ${jugadorActual} golpeó una bola incorrecta. Tipo asignado: ${tipoBolaJugador}. Bola golpeada: #${primeraBola.number} (tipo: ${tipoPrimeraBola}). Bolas entroneradas: ${bolasEntroneradasNumeros}.`);
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            faltaCometida = true;
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            motivoFalta = `${currentUsernameForFoul} no golpeó primero una bola de su tipo.`;
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            // Aunque la falta siempre se comete, se mantiene la variable 'primeraFaltaPerdonada'
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            // para cumplir con la solicitud de "no eliminar el primer perdón".
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            if (!primeraFaltaPerdonada) {
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                                primeraFaltaPerdonada = true;
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                            }
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                        }
+
+        
+
+            
+
+        
+
+                                                                
+
+        
+
+            
+
+        
+
+                                                                                                                                }
 
         
 
