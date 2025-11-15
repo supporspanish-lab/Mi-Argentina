@@ -27,6 +27,9 @@ let lastAimingUpdateTime = 0;
 const AIMING_UPDATE_THROTTLE = 50; // ms (20 actualizaciones por segundo para mayor fluidez)
 
 let currentShotAngle = 0;
+let angleOnDragStart = 0;
+let dragStartAngle = 0;
+let lastPointerAngle = 0;
 
 /**
  * Inicializa todos los listeners de eventos para el input.
