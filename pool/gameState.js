@@ -68,7 +68,7 @@ export function setPlacingCueBall(isPlacing) { // --- NUEVO: Función para contr
 export function Bolaenmanoarrastre() {
     setTimeout(() => {
         setPlacingCueBall(true);
-    }, 1000);
+    }, 500);
 }
 
 export function toggleDamping() { // --- NUEVO: Función para alternar el estado del frenado

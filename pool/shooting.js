@@ -59,8 +59,8 @@ export function shoot(powerPercent) {
         // Disparamos un evento global que será capturado para enviar los datos al servidor.
         window.dispatchEvent(new CustomEvent('sendShot', { detail: { ...shotData, gameState: getGameState() } }));
 
-        // Aplicar el disparo localmente para el jugador que dispara, para una respuesta inmediata.
-        window.applyLocalShot(currentShotAngle, powerPercent, spin, { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y });
+        // --- MODIFICACIÓN: No aplicar el disparo localmente, esperar al servidor para sincronización.
+        // window.applyLocalShot(currentShotAngle, powerPercent, spin, { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y });
 
         // Marcar el tiro como procesado para evitar que se aplique de nuevo desde el servidor.
         window.lastProcessedShotTimestamp = shotData.timestamp;

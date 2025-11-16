@@ -11,7 +11,7 @@ import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './f
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
 import { initCueBallEffects, updateCueBallEffects, showShotEffect } from './cueBallEffects.js';
 import { prepareAimingResources, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
-import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, INACTIVITY_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData } from './gameState.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, INACTIVITY_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData, setCurrentPlayer } from './gameState.js';
 import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
@@ -68,7 +68,7 @@ export const sendCueBallUpdate = throttle(async (position) => {
             console.error("Error al sincronizar la posición de la bola blanca:", error);
         }
     }
-}, 500); // Throttle to 500ms
+}, 100); // Throttle to 100ms for smoother real-time updates when dragging ball in hand
 
 let shakeIntensity = 0;
 let shakeDuration = 0;
@@ -1068,16 +1068,22 @@ function connectToGame(gameId) {
             
             // --- NUEVO: Detectar nuevo turno (o continuación) y reiniciar temporizador ---
             if (gameData.turnTimestamp && gameData.turnTimestamp !== previousTurnTimestamp) {
-                import('./gameState.js').then(({ setCurrentPlayer, clearPocketedBalls, getGameState }) => {
-                    setCurrentPlayer(activePlayerNumber); // Esto resetea el temporizador de turno
-                    clearPocketedBalls(); // Limpiar el array de bolas entroneradas para el nuevo turno
-                    // --- NUEVO: Verificar que el array esté completamente limpio ---
-                    const gameState = getGameState();
-                    if (gameState.pocketedThisTurn && gameState.pocketedThisTurn.length > 0) {
-                        console.warn('pocketedThisTurn no estaba vacío después de clearPocketedBalls, limpiando de nuevo.');
-                        clearPocketedBalls();
-                    }
-                });
+                setCurrentPlayer(activePlayerNumber); // Esto resetea el temporizador de turno
+                // --- LOG: Mostrar cuántas bolas se limpian al recibir el turno ---
+                const gameStateBefore = getGameState();
+                const ballsToClear = gameStateBefore.pocketedThisTurn ? gameStateBefore.pocketedThisTurn.length : 0;
+                console.log(`%c[Turno Recibido] Limpiando ${ballsToClear} bolas entroneradas del turno anterior`, 'color: blue; font-weight: bold;');
+                clearPocketedBalls(); // Limpiar el array de bolas entroneradas para el nuevo turno antes de cualquier otro procesamiento
+                // --- LOG: Verificar que el array esté vacío después de limpiar ---
+                const gameStateAfter = getGameState();
+                const ballsAfterClear = gameStateAfter.pocketedThisTurn ? gameStateAfter.pocketedThisTurn.length : 0;
+                console.log(`%c[Turno Recibido] Bolas restantes en el array después de limpiar: ${ballsAfterClear}`, 'color: blue; font-weight: bold;');
+                // --- NUEVO: Verificar que el array esté completamente limpio ---
+                const gameState = getGameState();
+                if (gameState.pocketedThisTurn && gameState.pocketedThisTurn.length > 0) {
+                    console.warn('pocketedThisTurn no estaba vacío después de clearPocketedBalls, limpiando de nuevo.');
+                    clearPocketedBalls();
+                }
             }
             previousTurnTimestamp = gameData.turnTimestamp; // Guardar el timestamp para la próxima comparación
 

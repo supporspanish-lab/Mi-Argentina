@@ -177,66 +177,32 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                // Lógica para reposicionar la bola blanca.
+                                // Lógica para reposicionar la bola blanca con retraso de 0.5 segundos.
 
-        
 
                                 if (cueBall) {
 
-        
-
-                                    cueBall.isPocketed = false;
-
-        
-
-                                    cueBall.pocketedState = null;
-
-        
-
-                                    cueBall.isActive = true; 
-
-        
-
-                                    cueBall.mesh.visible = true; // Asegurar que vuelva a ser blanca
-
-        
-
-                                    // --- CORRECCIÓN: Frenar la bola blanca completamente al reposicionarla.
-
-        
-
-                                    cueBall.vx = 0;
-
-        
-
-                                    cueBall.vy = 0;
-
-        
-
-                                    if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
-
-        
-
-                                    // La bola aparece en la zona de saque inicial.
-
-        
-
-                                    // Reposicionar la bola en las coordenadas físicas
-                                    cueBall.x = TABLE_WIDTH / 4;
-                                    cueBall.y = TABLE_HEIGHT / 2;
-
-
-        
-
-                                    if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
-
-                                    // Activar el modo de arrastre para el siguiente jugador
-                                    Bolaenmanoarrastre();
+                                    setTimeout(() => {
+                                        cueBall.isPocketed = false;
+                                        cueBall.pocketedState = null;
+                                        cueBall.isActive = true;
+                                        cueBall.mesh.visible = true; // Asegurar que vuelva a ser blanca
+                                        // --- CORRECCIÓN: Frenar la bola blanca completamente al reposicionarla.
+                                        cueBall.vx = 0;
+                                        cueBall.vy = 0;
+                                        if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
+                                        // La bola aparece en la zona de saque inicial.
+                                        // Reposicionar la bola en las coordenadas físicas
+                                        cueBall.x = TABLE_WIDTH / 4;
+                                        cueBall.y = TABLE_HEIGHT / 2;
+                                        cueBall.mesh.position.x = TABLE_WIDTH / 4;
+                                        cueBall.mesh.position.y = TABLE_HEIGHT / 2;
+                                        if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
+                                        // Activar el modo de arrastre para el siguiente jugador
+                                        Bolaenmanoarrastre();
+                                    }, 1000);
 
                                 }
-
-        
-
                             }
 
         
@@ -1863,34 +1829,38 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     if (faltaCometida && motivoFalta !== "no metió una bola válida." && !motivoFalta.includes("mismas bolas")) {
         Bolaenmanoarrastre();
 
-        // --- SOLUCIÓN: Mostrar la imagen de "bola en mano" durante 3 segundos ---
-        const bolaManoImg = document.getElementById('bolaMano');
-        if (bolaManoImg) {
-            // Calcular la posición en pantalla de la bola blanca
-            const topUiContainer = document.getElementById('top-ui-container');
-            const topUiHeight = topUiContainer ? topUiContainer.offsetHeight : 0;
-            const availableWidth = window.innerWidth;
-            const availableHeight = window.innerHeight - topUiHeight;
+        // --- SOLUCIÓN: Mostrar la imagen de "bola en mano" durante 3 segundos con retraso de 1 segundo ---
+        setTimeout(() => {
+            const bolaManoImg = document.getElementById('bolaMano');
+            if (bolaManoImg) {
+                // Calcular la posición en pantalla de la bola blanca
+                const topUiContainer = document.getElementById('top-ui-container');
+                const topUiHeight = topUiContainer ? topUiContainer.offsetHeight : 0;
+                const availableWidth = window.innerWidth;
+                const availableHeight = window.innerHeight - topUiHeight;
 
-            const vector = new THREE.Vector3(cueBall.mesh.position.x, cueBall.mesh.position.y, 0);
-            vector.project(camera);
+                const vector = new THREE.Vector3(cueBall.mesh.position.x, cueBall.mesh.position.y, 0);
+                vector.project(camera);
 
-            const screenX = (vector.x + 1) * availableWidth / 2;
-            const screenY = topUiHeight + (-vector.y + 1) * availableHeight / 2;
+                const screenX = (vector.x + 1) * availableWidth / 2;
+                const screenY = topUiHeight + (-vector.y + 1) * availableHeight / 2;
 
-            // Posicionar la imagen centrada en la bola blanca
-            bolaManoImg.style.left = `${screenX - 50}px`; // Centrar horizontalmente (imagen de 100px)
-            bolaManoImg.style.top = `${screenY - 50}px`; // Centrar verticalmente (imagen de 100px)
-            bolaManoImg.classList.add('blinking'); // Añadir animación de parpadeo
-            bolaManoImg.style.pointerEvents = 'none'; // Evitar que interfiera con los eventos del canvas
-            bolaManoImg.style.transform = 'none'; // Remover el centrado automático
-            bolaManoImg.style.display = 'block';
+                // Posicionar la imagen centrada en la bola blanca
+                bolaManoImg.style.left = `${screenX - 25}px`; // Centrar horizontalmente (imagen de 50px)
+                bolaManoImg.style.top = `${screenY - 25}px`; // Centrar verticalmente (imagen de 50px)
+                bolaManoImg.style.width = '50px';
+                bolaManoImg.style.height = '50px';
+                bolaManoImg.classList.add('blinking'); // Añadir animación de parpadeo
+                bolaManoImg.style.pointerEvents = 'none'; // Evitar que interfiera con los eventos del canvas
+                bolaManoImg.style.transform = 'none'; // Remover el centrado automático
+                bolaManoImg.style.display = 'block';
 
-            setTimeout(() => {
-                bolaManoImg.style.display = 'none';
-                bolaManoImg.classList.remove('blinking'); // Remover animación al ocultar
-            }, 3000);
-        }
+                setTimeout(() => {
+                    bolaManoImg.style.display = 'none';
+                    bolaManoImg.classList.remove('blinking'); // Remover animación al ocultar
+                }, 3000);
+            }
+        }, 500);
     }
 
     // --- CORRECCIÓN: Lógica de Cliente Autoritativo para actualizar el servidor ---
