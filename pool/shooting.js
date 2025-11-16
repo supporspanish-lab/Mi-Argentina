@@ -62,6 +62,9 @@ export function shoot(powerPercent) {
         // Aplicar el disparo localmente para el jugador que dispara, para una respuesta inmediata.
         window.applyLocalShot(currentShotAngle, powerPercent, spin, { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y });
 
+        // Marcar el tiro como procesado para evitar que se aplique de nuevo desde el servidor.
+        window.lastProcessedShotTimestamp = shotData.timestamp;
+
         // Reproducir sonido localmente para una respuesta inmediata al jugador que dispara.
         playSound('cueHit', 1.0);
         isShooting = false; // Resetear estado de disparo

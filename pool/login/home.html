@@ -798,6 +798,7 @@
     const loserUsernameSpan = document.getElementById('loser-username');
     const loserAmountSpan = document.getElementById('loser-amount');
     const notificationBar = document.getElementById('notification-bar');
+    let gameResultSoundPlayed = false; // --- FIX: Flag to prevent sound looping
 
     if (!alwaysVisibleModal) console.error('alwaysVisibleModal not found!');
     if (!winnerAvatarImg) console.error('winnerAvatarImg not found!');
@@ -821,6 +822,14 @@
         console.log('Number of game results:', docs.length);
         const data = docs[0].data();
 
+        // --- FIX: Play sound only once ---
+        if (!gameResultSoundPlayed) {
+          const audio = new Audio('../audio/terminado.mp3');
+          audio.play().catch(e => console.warn("Could not play end game sound from home:", e));
+          gameResultSoundPlayed = true; // Set flag to true after playing
+        }
+        // --------------------------------
+
         console.log('Datos del resultado del juego:', data);
 
         winnerAvatarImg.src = data.winnerAvatar;
@@ -837,6 +846,7 @@
         alwaysVisibleModal.dataset.docId = docs[0].id;
       } else {
           alwaysVisibleModal.style.display = 'none';
+          gameResultSoundPlayed = false; // --- FIX: Reset flag when no results are found
       }
     };
 
@@ -871,6 +881,7 @@
       const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
       console.log('All game results deleted from Firebase.');
+      gameResultSoundPlayed = false; // --- FIX: Reset flag after clearing results
     };
 
     // Load results on DOMContentLoaded

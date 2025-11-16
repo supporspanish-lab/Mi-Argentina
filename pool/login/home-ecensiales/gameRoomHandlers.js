@@ -579,7 +579,13 @@ export const updateGameLists = async () => {
             const practiceCard = document.createElement('div');
             practiceCard.className = 'game-card practice-game';
             practiceCard.innerHTML = `<img src="../video/practica.png" alt="Practica" class="create-icon"><span class="create-text">Practica</span>`;
-            practiceCard.addEventListener('click', () => createPracticeGame());
+            let isCreatingPractice = false;
+            practiceCard.addEventListener('click', () => {
+                if (!isCreatingPractice) {
+                    isCreatingPractice = true;
+                    createPracticeGame();
+                }
+            });
             verticalList.appendChild(practiceCard);
         }
     }

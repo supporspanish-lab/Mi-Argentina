@@ -1,4 +1,6 @@
 // --- Módulo de Revisión ---
+import * as THREE from 'three';
+import { camera } from './scene.js';
 import { getGameState, showFoulMessage, setCurrentPlayer, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData, setOnlineGameData, Bolaenmanoarrastre } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
@@ -839,7 +841,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                        // --- CORRECCIÓN: La falta solo aplica si NO se entroneró también una bola propia.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                // --- CORRECCIÓN: La falta ahora aplica incluso si se entroneró una bola propia.
 
         
 
@@ -871,7 +873,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                        if (bolasAsignadasAlInicioTurno && !faltaCometida && !jugadorEntroneroSuBola && bolasEntroneradasEsteTurno.length > 0) {
+                                                                                                                                                                                                                                if (bolasAsignadasAlInicioTurno && !faltaCometida && bolasEntroneradasEsteTurno.length > 0) {
 
         
 
@@ -903,7 +905,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                            const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
+                                                                                                                                                                                                                                    const tipoBolaJugador = playerAssignmentsAlInicioTurno[jugadorActual];
 
         
 
@@ -935,7 +937,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                            const bolaOponenteEntronerada = bolasEntroneradasEsteTurno.some(ball => {
+                                                                                                                                                                                                                                    const bolaOponenteEntronerada = bolasEntroneradasEsteTurno.some(ball => {
 
         
 
@@ -967,7 +969,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                                if (ball.number === null || ball.number === 8) return false; // Ignorar blanca y 8
+                                                                                                                                                                                                                                        if (ball.number === null || ball.number === 8) return false; // Ignorar blanca y 8
 
         
 
@@ -999,7 +1001,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                                const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
+                                                                                                                                                                                                                                        const tipoBola = (ball.number >= 1 && ball.number <= 7) ? 'solids' : 'stripes';
 
         
 
@@ -1031,7 +1033,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                                return tipoBola !== tipoBolaJugador;
+                                                                                                                                                                                                                                        // Es una falta si la bola no es del tipo del jugador
 
         
 
@@ -1063,7 +1065,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                            });
+                                                                                                                                                                                                                                        return tipoBola !== tipoBolaJugador;
 
         
 
@@ -1095,7 +1097,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                
+                                                                                                                                                                                                                                    });
 
         
 
@@ -1127,7 +1129,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                            if (bolaOponenteEntronerada) {
+                                                                                                                                                                                                                        
 
         
 
@@ -1159,7 +1161,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                                faltaCometida = true;
+                                                                                                                                                                                                                                    if (bolaOponenteEntronerada) {
 
         
 
@@ -1191,7 +1193,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                                const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
+                                                                                                                                                                                                                                        faltaCometida = true;
 
         
 
@@ -1223,7 +1225,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                                motivoFalta = `${currentUsernameForFoul} entroneró una bola del oponente.`;
+                                                                                                                                                                                                                                        const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
 
         
 
@@ -1255,7 +1257,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                        motivoFalta = `${currentUsernameForFoul} entroneró una bola del oponente.`;
 
         
 
@@ -1287,7 +1289,39 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                    }
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                
+
+        
+
+
+
+        
+
+                        
+
+        
+
+
+
+        
+
+                                                                                                                                                                                                                                }
 
         
 
@@ -1783,6 +1817,13 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
    
     // --- SOLUCIÓN: Lógica de Victoria/Derrota al meter la bola 8 ---
     const bola8Entronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === 8);
+
+    // --- NUEVO: Falta por meter la bola 8 y la blanca al mismo tiempo ---
+    if (bola8Entronerada && bolasEntroneradasEsteTurno.some(ball => ball.number === null)) {
+        faltaCometida = true;
+        motivoFalta = "Metió la bola 8 y la blanca al mismo tiempo.";
+    }
+
     if (bola8Entronerada) {
         console.log('Partida terminada: bola 8 entronerada');
         return handleEndGame(faltaCometida, gameRef, onlineGameData, estadoInicialJuego, balls);
@@ -1821,6 +1862,35 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     // --- NUEVO: Activar arrastre de bola blanca para el oponente en faltas (excepto no meter bola válida y mismas bolas)
     if (faltaCometida && motivoFalta !== "no metió una bola válida." && !motivoFalta.includes("mismas bolas")) {
         Bolaenmanoarrastre();
+
+        // --- SOLUCIÓN: Mostrar la imagen de "bola en mano" durante 3 segundos ---
+        const bolaManoImg = document.getElementById('bolaMano');
+        if (bolaManoImg) {
+            // Calcular la posición en pantalla de la bola blanca
+            const topUiContainer = document.getElementById('top-ui-container');
+            const topUiHeight = topUiContainer ? topUiContainer.offsetHeight : 0;
+            const availableWidth = window.innerWidth;
+            const availableHeight = window.innerHeight - topUiHeight;
+
+            const vector = new THREE.Vector3(cueBall.mesh.position.x, cueBall.mesh.position.y, 0);
+            vector.project(camera);
+
+            const screenX = (vector.x + 1) * availableWidth / 2;
+            const screenY = topUiHeight + (-vector.y + 1) * availableHeight / 2;
+
+            // Posicionar la imagen centrada en la bola blanca
+            bolaManoImg.style.left = `${screenX - 50}px`; // Centrar horizontalmente (imagen de 100px)
+            bolaManoImg.style.top = `${screenY - 50}px`; // Centrar verticalmente (imagen de 100px)
+            bolaManoImg.classList.add('blinking'); // Añadir animación de parpadeo
+            bolaManoImg.style.pointerEvents = 'none'; // Evitar que interfiera con los eventos del canvas
+            bolaManoImg.style.transform = 'none'; // Remover el centrado automático
+            bolaManoImg.style.display = 'block';
+
+            setTimeout(() => {
+                bolaManoImg.style.display = 'none';
+                bolaManoImg.classList.remove('blinking'); // Remover animación al ocultar
+            }, 3000);
+        }
     }
 
     // --- CORRECCIÓN: Lógica de Cliente Autoritativo para actualizar el servidor ---

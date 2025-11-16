@@ -25,7 +25,9 @@ export function initializeSpinControls() {
         // Si no estamos en modo edición, evitamos que el clic afecte al juego y mostramos el modal.
         e.preventDefault();
         e.stopPropagation();
-        // --- CORRECCIÓN: No mostrar el modal directamente. Enviar la orden al servidor. ---
+        // Mostrar el modal localmente para respuesta inmediata
+        showSpinModal();
+        // Enviar la orden al servidor para sincronización
         window.dispatchEvent(new CustomEvent('setspinmodal', { detail: { visible: true } }));
     };
     miniSpinSelector.addEventListener('mousedown', handleMiniSelectorInteraction);
@@ -36,7 +38,9 @@ export function initializeSpinControls() {
         // Si el clic es en el fondo oscuro (overlay) y no en el selector grande...
         if (e.target === spinModalOverlay) {
             e.stopPropagation();
-            // --- CORRECCIÓN: No ocultar el modal directamente. Enviar la orden al servidor. ---
+            // Ocultar el modal localmente para respuesta inmediata
+            hideSpinModal();
+            // Enviar la orden al servidor para sincronización
             window.dispatchEvent(new CustomEvent('setspinmodal', { detail: { visible: false } }));
         }
     });

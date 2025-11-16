@@ -16,6 +16,9 @@ export function moveCueBall(position) {
     if (cueBall.shadowMesh) {
         cueBall.shadowMesh.position.set(position.x, position.y, 0.1);
     }
+    // Actualizar las propiedades físicas para mantener consistencia
+    cueBall.x = position.x;
+    cueBall.y = position.y;
 }
 
 export function stopCueBallMove() {

@@ -59,6 +59,17 @@ export const sendSpinUpdate = throttle(async (spin) => {
     }
 }, 100); // Reduced throttle limit for smoother updates
 
+// --- NEW: Function to send cue ball position update to Firestore (throttled) ---
+export const sendCueBallUpdate = throttle(async (position) => {
+    if (gameRef) {
+        try {
+            await updateDoc(gameRef, { cueBallPosition: position });
+        } catch (error) {
+            console.error("Error al sincronizar la posición de la bola blanca:", error);
+        }
+    }
+}, 500); // Throttle to 500ms
+
 let shakeIntensity = 0;
 let shakeDuration = 0;
 let originalCameraPosition = new THREE.Vector3();
@@ -144,6 +155,10 @@ window.addEventListener('receiveaim', (event) => {
     // --- NUEVO: Lógica para recibir el estado de "bola en mano" y la posición ---
     const myUid = auth.currentUser?.uid;
     if (gameData.cueBallPosition && cueBall && cueBall.mesh) {
+        // Si el jugador tiene bola en mano, no actualizar la posición desde el servidor.
+        if (gameData.ballInHandFor === myUid) {
+            return;
+        }
         // Si el servidor indica una posición para la bola blanca, la aplicamos.
         // La comprobación de isMovingCueBall() (en inputManager) evitará que esto sobreescriba la posición
         // mientras el jugador arrastra la bola.
@@ -919,6 +934,7 @@ function connectToGame(gameId) {
 
         // Escuchar los cambios en la partida en tiempo real.
         let previousTurnTimestamp = null; // Para detectar inicio/cambio de turno
+        let lastSyncedTurnTimestamp = null; // Para sincronizar bolas solo una vez por turno
         const unsubscribe = onSnapshot(gameRef, async (docSnap) => {
             if (!docSnap.exists()) {
                 console.error("La partida no existe o fue eliminada.");
@@ -930,6 +946,12 @@ function connectToGame(gameId) {
             const gameData = docSnap.data() || {};
             if (gameData.juegoTerminado) {
                 if (unsubscribe) unsubscribe();
+
+                // --- FIX: Exit fullscreen before redirecting ---
+                if (document.fullscreenElement && document.exitFullscreen) {
+                    document.exitFullscreen().catch(err => console.error("Error al salir de pantalla completa:", err));
+                }
+                // ---------------------------------------------
 
                 if (window.parent && typeof window.parent.endGame === 'function') {
                     window.parent.endGame();
@@ -986,8 +1008,9 @@ function connectToGame(gameId) {
                 }).catch(err => console.error("Error al actualizar username de jugador 1:", err));
             }
 
-            if (gameData.balls && !areBallsMoving(balls)) {
+            if (gameData.turnTimestamp && gameData.turnTimestamp !== lastSyncedTurnTimestamp && gameData.balls && !areBallsMoving(balls)) {
                 syncBallPositionsFromServer(gameData.balls, gameData, localUserId);
+                lastSyncedTurnTimestamp = gameData.turnTimestamp;
             }
 
             // Si el puesto de jugador 2 está libre y nosotros no somos el jugador 1, lo reclamamos.
@@ -1067,11 +1090,7 @@ function connectToGame(gameId) {
         // --- NUEVO: Listener para enviar la posición de la bola blanca al servidor ---
         window.addEventListener('sendcueballmove', (event) => {
             const { position } = event.detail;
-            if (gameRef) {
-                updateDoc(gameRef, {
-                    cueBallPosition: { x: position.x, y: position.y }
-                }).catch(err => console.error("Error al actualizar cueBallPosition:", err));
-            }
+            sendCueBallUpdate(position);
         });
 
         // --- NUEVO: Listener para limpiar la posición de la bola blanca en el servidor ---

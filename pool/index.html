@@ -220,6 +220,12 @@
             position: absolute;
             top: 0;
             left: 0;
+            /* --- NUEVO: Evitar selección y menú contextual --- */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -webkit-touch-callout: none; /* iOS Safari */
         }
         /* --- NUEVO: Estilo para la información de bolas entroneradas --- */
         #pocketedInfo {
@@ -1179,9 +1185,21 @@
         .aiming .player-chat-bubble {
             transition: none;
         }
+
+        /* --- NUEVO: Animación de parpadeo para la imagen de bola en mano --- */
+        #bolaMano.blinking {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- --- SOLUCIÓN: Añadir la imagen para "bola en mano" --- -->
+    <img id="bolaMano" src="imajenes/mover.png" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; width: 100px; height: 100px;">
 
     <!-- --- NUEVO: Pantalla para pedir al usuario que rote el dispositivo --- -->
     <div id="rotate-device-overlay">
@@ -1370,7 +1388,6 @@
             <h2>¡Oh no! Ocurrió un error inesperado.</h2>
             <p>Por favor, copia este error y envíalo al desarrollador para ayudar a solucionarlo.</p>
             <pre id="error-details"></pre>
-            <button id="copy-error-btn" style="padding: 10px; font-size: 16px; cursor: pointer;">Copiar Error</button>
         </div>
     </div>
 
@@ -1937,24 +1954,11 @@
 
         const errorOverlay = document.getElementById('error-overlay');
         const errorDetails = document.getElementById('error-details');
-        const copyErrorBtn = document.getElementById('copy-error-btn');
 
         function showErrorModal(errorInfo) {
             errorDetails.textContent = errorInfo;
             errorOverlay.style.display = 'flex';
         }
-
-        copyErrorBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(errorDetails.textContent).then(() => {
-                copyErrorBtn.textContent = '¡Copiado!';
-                setTimeout(() => {
-                    copyErrorBtn.textContent = 'Copiar Error';
-                }, 2000);
-            }).catch(err => {
-                console.error('No se pudo copiar el error: ', err);
-                copyErrorBtn.textContent = 'Error al copiar';
-            });
-        });
 
         // Capturar errores de JavaScript estándar
         window.onerror = function (message, source, lineno, colno, error) {
@@ -2228,5 +2232,12 @@
             </div>
         </div>
     </div>
+   <!-- --- NUEVO: Evitar menú contextual en el canvas --- -->
+    <script>
+        const canvas = document.getElementById('poolCanvas');
+        if (canvas) {
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+    </script>
 
 </body></html>

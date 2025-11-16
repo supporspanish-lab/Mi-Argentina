@@ -351,6 +351,7 @@ export function updateTurnTimerUI(player, percent) {
  */
 function toScreenPosition(object, camera) {
     const vector = new THREE.Vector3();
+    const canvas = document.getElementById('poolCanvas');
 
     // Forzar la actualización de las matrices del objeto y sus ancestros
     object.updateWorldMatrix(true, false);
@@ -363,9 +364,11 @@ function toScreenPosition(object, camera) {
     // Proyectar la posición 3D en el espacio 2D de la cámara
     vector.project(camera);
 
+    const rect = canvas.getBoundingClientRect();
+
     // Convertir de coordenadas de dispositivo normalizadas (-1 a 1) a coordenadas de píxeles
-    const x = (vector.x + 1) * window.innerWidth / 2;
-    const y = -(vector.y - 1) * window.innerHeight / 2;
+    const x = ((vector.x + 1) / 2) * rect.width + rect.left;
+    const y = (-(vector.y - 1) / 2) * rect.height + rect.top;
     return { x, y };
 }
 

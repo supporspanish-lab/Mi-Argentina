@@ -112,7 +112,7 @@ const createBall = (props) => {
 
     // --- CORRECCIÓN: Añadir la malla de la bola al contenedor, no directamente a la escena ---
     ballContainer.add(ballMesh);
-    ballContainer.position.set(props.x, props.y, BALL_RADIUS);
+    ballContainer.position.set(props.x, props.y, 0.1); // Acercar las bolas a la mesa
 
     // --- NUEVO: Crear y añadir la sombra suave debajo de la bola ---
     // --- NUEVO: Añadir un punto rojo a la bola blanca ---
@@ -129,7 +129,7 @@ const createBall = (props) => {
 
     const shadowGeometry = new THREE.PlaneGeometry(BALL_RADIUS * 3.0, BALL_RADIUS * 3.0); // --- NUEVO: Geometría para el plano de la sombra
     const shadowMesh = new THREE.Mesh(shadowGeometry, shadowMaterial); // --- NUEVO: Crear la malla de la sombra
-    shadowMesh.position.set(props.x, props.y, 0.1); // --- NUEVO: Posicionar la sombra justo sobre la mesa
+    shadowMesh.position.set(props.x, props.y, 0.05); // --- NUEVO: Posicionar la sombra justo sobre la mesa, debajo de las bolas
     scene.add(shadowMesh); // --- NUEVO: Añadir la sombra a la escena
 
     scene.add(ballContainer); // --- CORRECCIÓN: Añadir el contenedor a la escena

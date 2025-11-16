@@ -38,6 +38,7 @@ export function prepareAimingResources() {
         const cueMaterial = new THREE.MeshBasicMaterial({
             map: cueTexture,
             transparent: true,
+            depthTest: false, // Renderizar siempre encima
             // alphaTest: 0.5 // Eliminado para suavizar los bordes del taco
         });
         const cueStickMesh = new THREE.Mesh(cueGeometry, cueMaterial);
@@ -46,7 +47,7 @@ export function prepareAimingResources() {
         const shadowTexture = new THREE.TextureLoader(loadingManager).load('imajenes/zombra.png');
         // Hacemos la sombra un poco más ancha y larga que el taco para el efecto de desenfoque
         const shadowGeometry = new THREE.PlaneGeometry(cueLength * 1.05, cueHeight * 1.5);
-        const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, opacity: 0.4 });
+        const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, opacity: 0.4, depthTest: false });
         cueShadowMesh = new THREE.Mesh(shadowGeometry, shadowMaterial);
 
         cueMesh = new THREE.Group();
@@ -54,7 +55,12 @@ export function prepareAimingResources() {
         cueMesh.add(cueShadowMesh); // Añadimos la sombra al mismo grupo que el taco
         cueShadowMesh.position.z = -0.5; // La ponemos ligeramente debajo del taco
 
+        // Asegurar que las partes del taco se rendericen encima
+        cueStickMesh.renderOrder = 10;
+        cueShadowMesh.renderOrder = 10;
+
         cueMesh.position.z = BALL_RADIUS + 0.5; // Posicionamos el grupo entero
+        cueMesh.renderOrder = 10; // Renderizar encima de las bolas
         scene.add(cueMesh);
     });
 }
@@ -83,8 +89,9 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
     const aimingLineEndPoint = { x: centerRayOrigin.x + maxLineLength * rayDirection.x, y: centerRayOrigin.y + maxLineLength * rayDirection.y };
 
     if (!aimingLine) {
-        const points = [new THREE.Vector3(centerRayOrigin.x, centerRayOrigin.y, BALL_RADIUS + 0.1), new THREE.Vector3(aimingLineEndPoint.x, aimingLineEndPoint.y, BALL_RADIUS + 0.1)];
+        const points = [new THREE.Vector3(centerRayOrigin.x, centerRayOrigin.y, 0.3), new THREE.Vector3(aimingLineEndPoint.x, aimingLineEndPoint.y, 0.3)];
         aimingLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 10, gapSize: 5, transparent: true, opacity: 0.8 }));
+        aimingLine.renderOrder = 1; // Renderizar encima de las bolas
         scene.add(aimingLine);
     }
     const positions = aimingLine.geometry.attributes.position.array;    
@@ -239,9 +246,10 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
         const endPoint2 = { x: hitBall.mesh.position.x + objectBallDir.x * 35, y: hitBall.mesh.position.y + objectBallDir.y * 35 };
         if (!cueBallPathLine) { // Reutilizamos la malla, la renombramos mentalmente
             cueBallPathLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffa500, dashSize: 8, gapSize: 6 }));
+            cueBallPathLine.renderOrder = 1; // Renderizar encima de las bolas
             scene.add(cueBallPathLine);
         }
-        cueBallPathLine.geometry.setFromPoints([new THREE.Vector3(hitBall.mesh.position.x, hitBall.mesh.position.y, BALL_RADIUS + 0.1), new THREE.Vector3(endPoint2.x, endPoint2.y, BALL_RADIUS + 0.1)]);
+        cueBallPathLine.geometry.setFromPoints([new THREE.Vector3(hitBall.mesh.position.x, hitBall.mesh.position.y, 0.3), new THREE.Vector3(endPoint2.x, endPoint2.y, 0.3)]);
         cueBallPathLine.computeLineDistances();
         cueBallPathLine.visible = true;
 
@@ -260,17 +268,19 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
         const deflectionEndPoint = { x: collisionPoint.x + tangentDir.x * 50, y: collisionPoint.y + tangentDir.y * 50 };
         if (!cueBallDeflectionLine) {
             cueBallDeflectionLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 5, gapSize: 5, opacity: 0.8, transparent: true }));
+            cueBallDeflectionLine.renderOrder = 1; // Renderizar encima de las bolas
             scene.add(cueBallDeflectionLine);
         }
-        cueBallDeflectionLine.geometry.setFromPoints([new THREE.Vector3(collisionPoint.x, collisionPoint.y, BALL_RADIUS + 0.1), new THREE.Vector3(deflectionEndPoint.x, deflectionEndPoint.y, BALL_RADIUS + 0.1)]);
+        cueBallDeflectionLine.geometry.setFromPoints([new THREE.Vector3(collisionPoint.x, collisionPoint.y, 0.3), new THREE.Vector3(deflectionEndPoint.x, deflectionEndPoint.y, 0.3)]);
         cueBallDeflectionLine.computeLineDistances();
 
         // Círculo en el punto de impacto
         if (!cueBallPathEndCircle) {
             cueBallPathEndCircle = new THREE.Mesh(new THREE.RingGeometry(BALL_RADIUS - 2, BALL_RADIUS, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
+            cueBallPathEndCircle.renderOrder = 1; // Renderizar encima de las bolas
             scene.add(cueBallPathEndCircle);
         }
-        cueBallPathEndCircle.position.set(collisionPoint.x, collisionPoint.y, BALL_RADIUS + 0.1);
+        cueBallPathEndCircle.position.set(collisionPoint.x, collisionPoint.y, 0.3);
         cueBallPathEndCircle.material.color.set(isInvalidHit ? 0xe74c3c : 0xffffff);
         cueBallPathEndCircle.visible = true;
 
@@ -282,9 +292,10 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
                 xShape.moveTo(-xSize, -xSize); xShape.lineTo(xSize, xSize);
                 xShape.moveTo(-xSize, xSize); xShape.lineTo(xSize, -xSize);
                 invalidTargetX = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(xShape.getPoints()), new THREE.LineBasicMaterial({ color: 0xe74c3c, linewidth: 2 }));
+                invalidTargetX.renderOrder = 1; // Renderizar encima de las bolas
                 scene.add(invalidTargetX);
             }
-            invalidTargetX.position.set(collisionPoint.x, collisionPoint.y, BALL_RADIUS + 0.2);
+            invalidTargetX.position.set(collisionPoint.x, collisionPoint.y, 0.35);
             invalidTargetX.visible = true;
         } else if (invalidTargetX) {
             invalidTargetX.visible = false;
@@ -299,9 +310,10 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
             // Círculo en el punto de impacto con la pared
             if (!cueBallPathEndCircle) {
                 cueBallPathEndCircle = new THREE.Mesh(new THREE.RingGeometry(BALL_RADIUS - 2, BALL_RADIUS, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
+                cueBallPathEndCircle.renderOrder = 1; // Renderizar encima de las bolas
                 scene.add(cueBallPathEndCircle);
             }
-            cueBallPathEndCircle.position.set(boundaryEndPoint.x, boundaryEndPoint.y, BALL_RADIUS + 0.1);
+            cueBallPathEndCircle.position.set(boundaryEndPoint.x, boundaryEndPoint.y, 0.3);
             cueBallPathEndCircle.material.color.set(0xffffff);
             cueBallPathEndCircle.visible = true;
 
@@ -313,9 +325,10 @@ export function updateAimingGuides(shotAngle, gameState, powerPercent = 0, showP
 
             if (!secondaryAimingLine) {
                 secondaryAimingLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 5, gapSize: 5 }));
+                secondaryAimingLine.renderOrder = 1; // Renderizar encima de las bolas
                 scene.add(secondaryAimingLine);
             }
-            secondaryAimingLine.geometry.setFromPoints([new THREE.Vector3(boundaryEndPoint.x, boundaryEndPoint.y, BALL_RADIUS + 0.1), new THREE.Vector3(reflectionEndPoint.x, reflectionEndPoint.y, BALL_RADIUS + 0.1)]);
+            secondaryAimingLine.geometry.setFromPoints([new THREE.Vector3(boundaryEndPoint.x, boundaryEndPoint.y, 0.3), new THREE.Vector3(reflectionEndPoint.x, reflectionEndPoint.y, 0.3)]);
             secondaryAimingLine.computeLineDistances();
             secondaryAimingLine.visible = true;
 

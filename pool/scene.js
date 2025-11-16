@@ -71,6 +71,48 @@ export function loadTableTexture() {
     });
 }
 
+// --- NUEVO: Líneas rojas para los límites de la mesa (handles) ---
+import { initializeHandles, handles } from './config.js';
+initializeHandles(); // Asegurar que handles esté inicializado
+export const handleLines = [];
+export const handleSquares = [];
+handles.forEach((handle, index) => {
+    const nextIndex = (index + 1) % handles.length;
+    const points = [
+        new THREE.Vector3(handle.x, handle.y, 0.2),
+        new THREE.Vector3(handles[nextIndex].x, handles[nextIndex].y, 0.2)
+    ];
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+    const line = new THREE.Line(geometry, material);
+    line.renderOrder = 10; // Renderizar encima de las bolas
+    // scene.add(line); // Eliminado: no mostrar líneas rojas
+    handleLines.push(line);
+
+    // --- NUEVO: Cuadrado rojo con número para cada handle ---
+    const squareSize = 20;
+    const squareGeometry = new THREE.PlaneGeometry(squareSize, squareSize);
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    context.fillStyle = 'red';
+    context.fillRect(0, 0, 64, 64);
+    context.fillStyle = 'white';
+    context.font = 'bold 32px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(index.toString(), 32, 32);
+    const texture = new THREE.CanvasTexture(canvas);
+    const squareMaterial = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+    const squareMesh = new THREE.Mesh(squareGeometry, squareMaterial);
+    squareMesh.position.set(handle.x, handle.y, 0.3);
+    squareMesh.renderOrder = 10; // Renderizar encima de las bolas
+    squareMesh.userData = { handleIndex: index }; // Para identificar cuál es
+    // scene.add(squareMesh); // Eliminado: no mostrar cuadrados rojos
+    handleSquares.push(squareMesh);
+});
+
 // Función para calcular la posición Z de la cámara para que la mesa se ajuste a la pantalla
 export function updateCameraPositionForResponsiveness(width, height) {
     const effectiveWidth = TABLE_WIDTH / zoomState.level;
@@ -228,6 +270,7 @@ function updateLayout() {
 
 
         updateLayout();
+    
 
 
 

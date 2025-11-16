@@ -12,6 +12,8 @@ import { areBallsMoving } from './fisicas.js';
 import { getSpinOffset, wasDraggingSpin } from './spinControls.js';
 import { isValidPlacement } from './cuePlacement.js'; // --- NUEVO: Importar la función de validación
 import { startPowerCharge, stopPowerCharge, getPowerPercent } from './powerControls.js';
+import { handleSquares, handleLines } from './scene.js';
+import { handles } from './config.js';
 
 // --- Constantes ---
 const MAX_SHOT_POWER = 80; // --- AJUSTE: Reducido de 100 a 80 para disminuir aún más la fuerza del tiro.
@@ -21,6 +23,8 @@ let pointerDown = false;
 let pullingBack = false;
 let movingCueBall = false;
 let pointerStartPos = { x: 0, y: 0 };
+let draggedSquare = null;
+const raycaster = new THREE.Raycaster();
 
 // --- NUEVO: Variables para la sincronización del apuntado en tiempo real ---
 let lastAimingUpdateTime = 0;
@@ -30,6 +34,19 @@ let currentShotAngle = 0;
 let angleOnDragStart = 0;
 let dragStartAngle = 0;
 let lastPointerAngle = 0;
+
+function updateHandleLines() {
+    handles.forEach((handle, index) => {
+        const nextIndex = (index + 1) % handles.length;
+        const line = handleLines[index];
+        const positions = line.geometry.attributes.position.array;
+        positions[0] = handle.x;
+        positions[1] = handle.y;
+        positions[3] = handles[nextIndex].x;
+        positions[4] = handles[nextIndex].y;
+        line.geometry.attributes.position.needsUpdate = true;
+    });
+}
 
 /**
  * Inicializa todos los listeners de eventos para el input.
@@ -54,6 +71,18 @@ function onPointerDown(e) {
         return;
     }
 
+    // Check for dragging handle squares first
+    const mouse = new THREE.Vector2();
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(handleSquares);
+    if (intersects.length > 0) {
+        draggedSquare = intersects[0].object;
+        pointerDown = true; // Set to prevent other actions
+        return; // Prevent other actions
+    }
+
     const { isPlacingCueBall } = getGameState();
     const worldPos = getMouseWorldPosition(e.clientX, e.clientY);
 
@@ -62,7 +91,7 @@ function onPointerDown(e) {
     if (isPlacingCueBall) {
         // Comprobar si el clic está sobre la bola blanca para empezar a moverla
         const dist = Math.hypot(worldPos.x - cueBall.mesh.position.x, worldPos.y - cueBall.mesh.position.y);
-        if (dist < BALL_RADIUS * 3) { // Área de toque más grande para facilitar el arrastre
+        if (dist < BALL_RADIUS * 6) { // Área de toque más grande para facilitar el arrastre
             movingCueBall = true;
             pointerDown = true; // El puntero está presionado solo si se mueve la bola
         } else {
@@ -89,6 +118,16 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+    if (draggedSquare) {
+        const worldPos = getMouseWorldPosition(e.clientX, e.clientY);
+        draggedSquare.position.set(worldPos.x, worldPos.y, 0.3);
+        const index = draggedSquare.userData.handleIndex;
+        handles[index].x = worldPos.x;
+        handles[index].y = worldPos.y;
+        updateHandleLines();
+        return;
+    }
+
     const { isPlacingCueBall } = getGameState();
     const worldPos = getMouseWorldPosition(e.clientX, e.clientY);
 
@@ -175,15 +214,15 @@ function onPointerUp(e) {
         if (onlineGameData.ballInHandFor === myUid) {
             window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: newPosition } }));
         }
-        
-        // Indicar que ya no estamos colocando la bola. Esto es clave para permitir apuntar después.
-        setPlacingCueBall(false);
+
+        // Nota: No desactivar placing aquí, se desactiva al disparar en shooting.js
     }
 
     // Resetear estados de input
     pointerDown = false;
     pullingBack = false;
     movingCueBall = false;
+    draggedSquare = null;
 }
 
 /**
