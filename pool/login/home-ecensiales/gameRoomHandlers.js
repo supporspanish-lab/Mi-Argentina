@@ -28,7 +28,7 @@ export const endGame = () => {
     window.dispatchEvent(new Event('focus'));
 };
 
-const startGameFullscreen = (gameId, isSpectator = false) => {
+export const startGameFullscreen = (gameId, isSpectator = false) => {
     const audio = getBackgroundAudio();
     if (audio) {
         audio.pause();
@@ -366,7 +366,19 @@ const createGameCard = (gameData) => {
             statusColor = '#3498db';
             cursor = 'pointer';
             onClickAction = () => joinGameAndSetupListener(gameData);
-        } else if (gameData.status === 'starting' || gameData.status === 'players_joined') {
+        } else if (gameData.status === 'starting') {
+            if (isUserInGame) {
+                statusText = 'Reingresar';
+                statusColor = '#3498db';
+                cursor = 'pointer';
+                onClickAction = () => startGameFullscreen(gameData.id);
+            } else {
+                statusText = 'Espectar';
+                statusColor = '#f39c12';
+                cursor = 'pointer';
+                onClickAction = () => spectateGame(gameData);
+            }
+        } else if (gameData.status === 'players_joined') {
             statusText = isUserInGame ? 'En tu sala' : 'Espectar';
             statusColor = isUserInGame ? '#3498db' : '#f39c12';
             cursor = isUserInGame ? 'default' : 'pointer';

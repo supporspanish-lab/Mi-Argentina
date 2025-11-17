@@ -1,7 +1,7 @@
 // --- Módulo de Disparo ---
 import * as THREE from 'three';
 import { areBallsMoving, updateBallPositions } from './fisicas.js';
-import { getGameState, startShot, setPlacingCueBall, getOnlineGameData } from './gameState.js';
+import { getGameState, startShot, setPlacingCueBall, getOnlineGameData, clearPocketedBalls } from './gameState.js';
 import { playSound } from './audioManager.js';
 import { cueBall, getSceneBalls } from './ballManager.js';
 import { animateCueShot } from './aiming.js';
@@ -33,6 +33,8 @@ export function shoot(powerPercent) {
         return; // No disparar si no hay potencia
     }
 
+    startShot(); // Limpia el estado del turno anterior (bolas entroneradas, etc.) y marca el tiro como en progreso.
+
     if (gameState.isPlacingCueBall) {
         // La validación de posición se hace en cuePlacement.js
         // Aquí asumimos que si se dispara, la posición es válida.
@@ -55,6 +57,9 @@ export function shoot(powerPercent) {
             // Enviar la posición de la bola blanca en el momento del disparo
             cueBallStartPos: { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y }
         };
+
+        // Limpiar el array de bolas entronadas antes de enviar los datos al servidor.
+        clearPocketedBalls();
 
         // Disparamos un evento global que será capturado para enviar los datos al servidor.
         window.dispatchEvent(new CustomEvent('sendShot', { detail: { ...shotData, gameState: getGameState() } }));

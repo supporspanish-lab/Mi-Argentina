@@ -4,6 +4,8 @@ import { playSound } from './audioManager.js';
 import { shotStartTime, getGameState, setFirstHitBall } from './gameState.js'; // --- NUEVO: Importar el tiempo de inicio del tiro
 import { initSpatialManager, updateGrid, getNearbyObjects } from './spatialManager.js';
 import { BALL_RADIUS } from './config.js';
+import { getOnlineGameData } from './gameState.js';
+import { auth } from './login/auth.js';
 
 let physicsInitialized = false;
 
@@ -241,7 +243,10 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
                     const objectBall = ball1.number === null ? ball2 : (ball2.number === null ? ball1 : null);
 
                     if (cueBall && objectBall) {
-                        setFirstHitBall(objectBall);
+                        // --- NUEVO: Solo registrar la primera bola golpeada para el jugador actual ---
+                        if (getOnlineGameData().currentPlayerUid === auth.currentUser?.uid) {
+                            setFirstHitBall(objectBall);
+                        }
                     }
 
                     const impactForce = Math.abs(k);

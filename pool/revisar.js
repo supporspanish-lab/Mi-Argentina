@@ -1,7 +1,7 @@
 // --- Módulo de Revisión ---
 import * as THREE from 'three';
 import { camera } from './scene.js';
-import { getGameState, showFoulMessage, setCurrentPlayer, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData, setOnlineGameData, Bolaenmanoarrastre } from './gameState.js';
+import { getGameState, showFoulMessage, setCurrentPlayer, clearPocketedBalls, clearFirstHitBall, handleTurnEnd, isTurnTimerActive, startTurnTimer, setGameOver, setBallsAssigned, assignPlayerTypes, completeFirstTurn, getOnlineGameData, setOnlineGameData, Bolaenmanoarrastre, setTurnUpdated } from './gameState.js';
 import { balls, cueBall } from './ballManager.js';
 import { updateActivePlayerUI } from './ui.js';
 import { playSound } from './audioManager.js';
@@ -14,9 +14,6 @@ import { handleEndGame } from './endGameLogic.js';
  * Función de prueba para revisar el estado antes de mostrar la UI.
  */
 export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onlineGameData = null) {
-    console.log("--- INICIO REVISAR ESTADO ---");
-    const estadoInicialDebug = getGameState();
-    console.log("Contenido de 'bolasEntroneradasEsteTurno' al iniciar la revisión:", JSON.parse(JSON.stringify(estadoInicialDebug.pocketedThisTurn)));
 
     // --- SOLUCIÓN: Obtener el estado inicial y mantenerlo separado.
     const estadoInicialJuego = getGameState();
@@ -151,58 +148,128 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
                         if (bolaBlancaEntronerada) {
 
-        
 
                             if (!faltaCometida) { // Solo establecer si no se ha cometido otra falta aún
 
-        
+
 
                                 faltaCometida = true;
 
-        
+
 
                                 // Ya no hay bola en mano, solo se reposiciona la bola blanca.
 
-        
+
 
                                 const currentUsernameForFoul = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
 
+
+
+                                                                motivoFalta = `${currentUsernameForFoul} metió la bola blanca.`;
+
+
+
+
+
+                                                                // Activar el modo de arrastre solo en modo offline
+
+                                                                // if (!gameRef) {
+
+                                                                //     Bolaenmanoarrastre();
+
+                                                                // }
+
+
+
+                                                                // Lógica para reposicionar la bola blanca con retraso de 1 segundo.
+
         
 
-                                motivoFalta = `${currentUsernameForFoul} metió la bola blanca.`;
+                                                                if (cueBall) {
 
         
 
-            
+                                
 
         
 
-                                // Lógica para reposicionar la bola blanca con retraso de 0.5 segundos.
+                                                                    setTimeout(() => {
 
+        
 
-                                if (cueBall) {
+                                                                        cueBall.isPocketed = false;
 
-                                    setTimeout(() => {
-                                        cueBall.isPocketed = false;
-                                        cueBall.pocketedState = null;
-                                        cueBall.isActive = true;
-                                        cueBall.mesh.visible = true; // Asegurar que vuelva a ser blanca
-                                        // --- CORRECCIÓN: Frenar la bola blanca completamente al reposicionarla.
-                                        cueBall.vx = 0;
-                                        cueBall.vy = 0;
-                                        if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
-                                        // La bola aparece en la zona de saque inicial.
-                                        // Reposicionar la bola en las coordenadas físicas
-                                        cueBall.x = TABLE_WIDTH / 4;
-                                        cueBall.y = TABLE_HEIGHT / 2;
-                                        cueBall.mesh.position.x = TABLE_WIDTH / 4;
-                                        cueBall.mesh.position.y = TABLE_HEIGHT / 2;
-                                        if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
-                                        // Activar el modo de arrastre para el siguiente jugador
-                                        Bolaenmanoarrastre();
-                                    }, 1000);
+        
 
-                                }
+                                                                        cueBall.pocketedState = null;
+
+        
+
+                                                                        cueBall.isActive = true;
+
+        
+
+                                                                        cueBall.mesh.visible = true; // Asegurar que vuelva a ser blanca
+
+        
+
+                                                                        // --- CORRECCIÓN: Frenar la bola blanca completamente al reposicionarla.
+
+        
+
+                                                                        cueBall.vx = 0;
+
+        
+
+                                                                        cueBall.vy = 0;
+
+        
+
+                                                                        if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
+
+        
+
+                                                                        // La bola aparece en la zona de saque inicial.
+
+        
+
+                                                                        // Reposicionar la bola en las coordenadas físicas
+
+        
+
+                                                                        cueBall.x = TABLE_WIDTH / 4;
+
+        
+
+                                                                        cueBall.y = TABLE_HEIGHT / 2;
+
+        
+
+                                                                        cueBall.mesh.position.x = TABLE_WIDTH / 4;
+
+        
+
+                                                                        cueBall.mesh.position.y = TABLE_HEIGHT / 2;
+
+        
+
+                                                                        if (cueBall.shadowMesh) cueBall.shadowMesh.position.set(TABLE_WIDTH / 4, TABLE_HEIGHT / 2, 0.1);
+
+        
+
+                                                                        // La llamada a Bolaenmanoarrastre() se ha movido fuera del setTimeout
+
+        
+
+                                                                    }, 1000);
+
+        
+
+                                
+
+        
+
+                                                                }
                             }
 
         
@@ -271,7 +338,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                console.log("DEBUG: Antes de calcular jugadorEntroneroSuBola:");
 
         
 
@@ -279,7 +345,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                console.log("DEBUG: bolasEntroneradasEsteTurno:", JSON.parse(JSON.stringify(bolasEntroneradasEsteTurno)));
 
         
 
@@ -287,7 +352,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                console.log("DEBUG: bolasAsignadasAlInicioTurno:", bolasAsignadasAlInicioTurno);
 
         
 
@@ -295,7 +359,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                console.log("DEBUG: playerAssignmentsAlInicioTurno:", JSON.parse(JSON.stringify(playerAssignmentsAlInicioTurno)));
 
         
 
@@ -303,7 +366,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                console.log("DEBUG: jugadorActual:", jugadorActual);
 
         
 
@@ -311,7 +373,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                console.log("DEBUG: acabaDeAsignar:", acabaDeAsignar); // Add this log
 
         
 
@@ -367,7 +428,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                        console.log(`DEBUG: Mesa abierta. Bola ${ball.number} entronerada. Se considera propia.`);
 
         
 
@@ -423,7 +483,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                    console.log(`DEBUG: Bola ${ball.number} entronerada. Tipo: ${tipoBola}. Tipo del jugador: ${playerAssignmentsAlInicioTurno[jugadorActual]}. ¿Es propia?: ${isMyBall}`);
 
         
 
@@ -463,7 +522,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                console.log("DEBUG: Valor final de jugadorEntroneroSuBola:", jugadorEntroneroSuBola);
 
         
 
@@ -583,7 +641,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                        console.log("Falta detectada: Turno infinito por entronerar las mismas bolas.");
 
         
 
@@ -663,7 +720,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                            console.log("DEBUG: Falta por no entronar bola válida detectada.");
 
         
 
@@ -679,7 +735,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                            console.log(`DEBUG: primeraBolaGolpeadaEsteTurno: ${primeraBolaGolpeadaEsteTurno}, jugadorEntroneroSuBola: ${jugadorEntroneroSuBola}, faltaCometida (antes): ${faltaCometida}`);
 
         
 
@@ -1000,6 +1055,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         
 
                                                                                                                                                                                                                                         // Es una falta si la bola no es del tipo del jugador
+                                                                                                                                                                                                                                        // Pero si la bola ya estaba inactiva en el servidor, no es falta (evita falsos positivos por sync)
 
         
 
@@ -1031,6 +1087,10 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
+                                                                                                                                                                                                                                        const serverBall = onlineGameData.balls ? onlineGameData.balls.find(b => b.number === ball.number) : null;
+                                                                                                                                                                                                                                        if (serverBall && !serverBall.isActive) {
+                                                                                                                                                                                                                                            return false; // Ya estaba entronerada, no es falta
+                                                                                                                                                                                                                                        }
                                                                                                                                                                                                                                         return tipoBola !== tipoBolaJugador;
 
         
@@ -1571,7 +1631,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         
 
-                                                                                                                                            console.log(`Falta detectada: Jugador ${jugadorActual} golpeó una bola incorrecta. Tipo asignado: ${tipoBolaJugador}. Bola golpeada: #${primeraBola.number} (tipo: ${tipoPrimeraBola}). Bolas entroneradas: ${bolasEntroneradasNumeros}.`);
 
         
 
@@ -1776,11 +1835,13 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     // --- CORRECCIÓN: Volver a obtener el estado actualizado DESPUÉS de la posible asignación de bolas.
     const estadoActualJuego = getGameState();
 
+    // --- NUEVO: Calcular si el turno debe cambiar (para modo offline)
+    const playerActuallyPocketedBall = bolasEntroneradasEsteTurno.length > 0 && jugadorEntroneroSuBola;
+    let shouldSwitchTurn = false;
+    if (faltaCometida || !playerActuallyPocketedBall) {
+        shouldSwitchTurn = true;
+    }
 
-
-
-
-   
     // --- SOLUCIÓN: Lógica de Victoria/Derrota al meter la bola 8 ---
     const bola8Entronerada = bolasEntroneradasEsteTurno.some(ball => ball.number === 8);
 
@@ -1823,6 +1884,14 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     if (faltaCometida && motivoFalta && !gameRef) { // Solo mostrar localmente en modo offline
         const currentUsername = onlineGameData[`player${jugadorActual}`]?.username || `Jugador ${jugadorActual}`;
         showFoulMessage(`Falta de ${currentUsername}: ${motivoFalta}`);
+    }
+
+    // --- NUEVO: Cambiar el turno en modo offline si es necesario
+    if (!gameRef && shouldSwitchTurn) {
+        const nextPlayerNumber = (jugadorActual === 1 ? 2 : 1);
+        setCurrentPlayer(nextPlayerNumber);
+        updateActivePlayerUI(nextPlayerNumber);
+        playSound('turnoFinalizado');
     }
 
     // --- NUEVO: Activar arrastre de bola blanca para el oponente en faltas (excepto no meter bola válida y mismas bolas)
@@ -1869,7 +1938,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         const finalGameState = getGameState();
 
         // --- CORRECCIÓN: Centralizar la lógica de cambio de turno aquí ---
-        console.log(`DEBUG: Antes de shouldSwitchTurn - faltaCometida: ${faltaCometida}, jugadorEntroneroSuBola: ${jugadorEntroneroSuBola}`);
         // Determinar si el jugador realmente entroneró SU bola.
         // Esto significa que 'bolasEntroneradasEsteTurno' no debe estar vacío, Y el 'jugadorEntroneroSuBola' original debe ser true.
         const playerActuallyPocketedBall = bolasEntroneradasEsteTurno.length > 0 && jugadorEntroneroSuBola;
@@ -1878,7 +1946,6 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
         if (faltaCometida || !playerActuallyPocketedBall) {
             shouldSwitchTurn = true;
         }
-        console.log("DEBUG: 'jugadorEntroneroSuBola' se ha reseteado a false para la lógica de cambio de turno si no se entroneró ninguna bola.");
 
         const nextPlayerNumber = shouldSwitchTurn ? (jugadorActual === 1 ? 2 : 1) : jugadorActual;
         // Actualizar el estado local para el siguiente frame
@@ -1921,12 +1988,17 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
                     };
                 }
                 // Para todas las demás bolas, devolver su estado actual
-                return {
+                const ballData = {
                     number: b.number,
                     x: b.mesh.position.x,
                     y: b.mesh.position.y,
                     isActive: b.isActive,
                 };
+                // --- NUEVO: Agregar timestamp si la bola fue entronerada en este turno ---
+                if (!b.isActive && bolasEntroneradasEsteTurno.some(p => p.number === b.number)) {
+                    ballData.pocketedAt = Date.now();
+                }
+                return ballData;
             }),
             currentPlayerUid: nextPlayerUid,
             playerAssignments: playerAssignmentsAlInicioTurno,
@@ -1948,18 +2020,20 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
 
         // Enviar la actualización autoritativa al servidor
         updateDoc(gameRef, updatePayload).then(() => {
+            // --- NUEVO: Marcar que el turno ha sido actualizado para prevenir llamadas múltiples
+            setTurnUpdated(true);
             // --- NUEVO: Enviar ballInHandFor con retraso de 1 segundo si la bola blanca fue entronerada
-            if (bolaBlancaEntronerada) {
-                setTimeout(() => {
-                    updateDoc(gameRef, { ballInHandFor: nextPlayerUid }).catch(err => console.error("Error al enviar ballInHandFor:", err));
-                }, 1000);
-            }
+            // if (bolaBlancaEntronerada) {
+            //     setTimeout(() => {
+            //         updateDoc(gameRef, { ballInHandFor: nextPlayerUid }).catch(err => console.error("Error al enviar ballInHandFor:", err));
+            //     }, 1000);
+            // }
             // --- NUEVO: Enviar ballInHandFor con retraso si hay falta (excepto no meter bola válida y mismas bolas)
-            if (faltaCometida && motivoFalta !== "no metió una bola válida." && !motivoFalta.includes("mismas bolas")) {
-                setTimeout(() => {
-                    updateDoc(gameRef, { ballInHandFor: nextPlayerUid }).catch(err => console.error("Error al enviar ballInHandFor por falta:", err));
-                }, 1000);
-            }
+            // if (faltaCometida && motivoFalta !== "no metió una bola válida." && !motivoFalta.includes("mismas bolas")) {
+            //     setTimeout(() => {
+            //         updateDoc(gameRef, { ballInHandFor: nextPlayerUid }).catch(err => console.error("Error al enviar ballInHandFor por falta:", err));
+            //     }, 1000);
+            // }
             // --- NUEVO: Limpiar foulInfo del servidor después de un breve retraso
             // para evitar que el mensaje se muestre repetidamente.
             if (faltaCometida) {
@@ -1985,4 +2059,9 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
     // Reiniciar variables locales para mayor claridad, aunque se reinician en cada llamada.
     faltaCometida = false;
     motivoFalta = "";
+
+    // --- Logging adicional para mostrar el motivo de la falta ---
+    if (faltaCometida) {
+        console.log(`%cFalta cometida: ${motivoFalta}. Turno pasa al oponente.`, 'color: pink; font-weight: bold;');
+    }
 }

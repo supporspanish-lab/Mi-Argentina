@@ -11,7 +11,7 @@ import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './f
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
 import { initCueBallEffects, updateCueBallEffects, showShotEffect } from './cueBallEffects.js';
 import { prepareAimingResources, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
-import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, INACTIVITY_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData, setCurrentPlayer } from './gameState.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, INACTIVITY_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData, setCurrentPlayer, getTurnUpdated, setTurnUpdated } from './gameState.js';
 import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
@@ -111,11 +111,14 @@ window.addEventListener('receiveaim', (event) => {
     if (gameData.lastShot && gameData.lastShot.timestamp > lastProcessedShotTimestamp) {
         lastProcessedShotTimestamp = gameData.lastShot.timestamp;
 
-        // --- 
+        // --- FIX: Limpiar el array de bolas entroneradas antes de aplicar el tiro para evitar mezclar con tiros anteriores ---
+        clearPocketedBalls();
+
+        // ---
         // Aplicamos el tiro (tanto el nuestro como el del oponente) desde el servidor
         // para asegurar que ambos juegos estén perfectamente sincronizados.
         const { angle, power, spin, cueBallStartPos } = gameData.lastShot;
-        
+
         // Llamamos a una nueva función que encapsula la lógica de aplicar el tiro
         applyServerShot(angle, power, spin, cueBallStartPos);
     }
@@ -179,17 +182,24 @@ window.addEventListener('receiveaim', (event) => {
         }
 
         // Si el servidor indica que YO tengo bola en mano, me aseguro de que la bola esté activa y visible.
-        if (gameData.ballInHandFor === myUid) {
-            cueBall.isPocketed = false;
-            cueBall.pocketedState = null;
-            cueBall.isActive = true;
-            cueBall.mesh.visible = true;
-            if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
-            setPlacingCueBall(true); // Asegurarse de que el estado de colocación esté activo.
-        } else {
-            // Si no tengo bola en mano, desactivar el modo de colocación.
-            setPlacingCueBall(false);
-        }
+        // if (gameData.ballInHandFor === myUid) {
+        //     // --- SOLUCIÓN: Limpiar el estado del turno anterior al recibir bola en mano ---
+        //     // Esto previene que bolas entroneradas por el oponente en su tiro de falta
+        //     // se procesen incorrectamente en nuestro turno.
+        //     console.log('%c[BALL-IN-HAND] Limpiando estado de turno anterior por bola en mano.', 'color: magenta; font-weight: bold;');
+        //     clearPocketedBalls();
+        //     clearFirstHitBall();
+        //
+        //     cueBall.isPocketed = false;
+        //     cueBall.pocketedState = null;
+        //     cueBall.isActive = true;
+        //     cueBall.mesh.visible = true;
+        //     if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
+        //     setPlacingCueBall(true); // Asegurarse de que el estado de colocación esté activo.
+        // } else {
+        //     // Si no tengo bola en mano, desactivar el modo de colocación.
+        //     setPlacingCueBall(false);
+        // }
     }
 
 });
@@ -324,9 +334,12 @@ async function gameLoop(currentTime) {
 
             if (!alreadyPocketed) {
 
-                addPocketedBall(ball);
+                // --- NUEVO: Solo el jugador actual acumula bolas entroneradas localmente ---
+                if (currentGameState.currentPlayerUid === auth.currentUser?.uid) {
+                    addPocketedBall(ball);
+                }
 
-                if (gameRef && isMyTurn) {
+                if (gameRef && currentGameState.currentPlayerUid === auth.currentUser?.uid) {
 
                     const gameState = getGameState();
 
@@ -450,31 +463,41 @@ async function gameLoop(currentTime) {
 
         // --- CORRECCIÓN: Lógica de Cliente Autoritativo y modo offline ---
 
-        if (gameRef) {
+        if (!getTurnUpdated()) {
 
-            // MODO ONLINE: Solo el jugador cuyo turno es, revisa el estado.
+            if (gameRef) {
 
-            if (currentGameState.currentPlayerUid === auth.currentUser?.uid) {
+                // MODO ONLINE: Solo el jugador cuyo turno es, revisa el estado.
 
-                await revisarEstado(false, gameRef, currentGameState);
+                if (currentGameState.currentPlayerUid === auth.currentUser?.uid) {
 
-            }
-
-        } else {
-
-            // MODO OFFLINE: Se revisa el estado localmente.
-
-            await revisarEstado(false, null, getGameState());
+                    await revisarEstado(false, gameRef, currentGameState);
 
                 }
 
-                clearPocketedBalls();
+            } else {
 
-                clearFirstHitBall();
+                // MODO OFFLINE: Se revisa el estado localmente.
 
-                handleTurnEnd(); // Limpiar estado local para ambos jugadores.
+                await revisarEstado(false, null, getGameState());
 
             }
+
+        }
+
+        // --- Logging adicional para rastrear el estado del array pocketedThisTurn ---
+
+        console.log(`%cAntes de clear: pocketedThisTurn.length = ${getGameState().pocketedThisTurn.length}`, 'color: orange; font-weight: bold;');
+
+        clearPocketedBalls();
+
+        clearFirstHitBall();
+
+        handleTurnEnd(); // Limpiar estado local para ambos jugadores.
+
+        console.log(`%cDespués de clear: pocketedThisTurn.length = ${getGameState().pocketedThisTurn.length}`, 'color: green; font-weight: bold;');
+
+    }
 
 
 
@@ -1069,6 +1092,7 @@ function connectToGame(gameId) {
             // --- NUEVO: Detectar nuevo turno (o continuación) y reiniciar temporizador ---
             if (gameData.turnTimestamp && gameData.turnTimestamp !== previousTurnTimestamp) {
                 setCurrentPlayer(activePlayerNumber); // Esto resetea el temporizador de turno
+                setTurnUpdated(false); // --- NUEVO: Resetear la bandera para permitir nuevas revisiones
                 // --- LOG: Mostrar cuántas bolas se limpian al recibir el turno ---
                 const gameStateBefore = getGameState();
                 const ballsToClear = gameStateBefore.pocketedThisTurn ? gameStateBefore.pocketedThisTurn.length : 0;

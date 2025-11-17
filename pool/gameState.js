@@ -29,6 +29,7 @@ let isTurnTimerActiveState = false; // --- SOLUCIÓN: Renombrar la variable de e
 let tickSoundPlayed = false; // Para asegurar que el sonido de alerta suene solo una vez
 
 export let isLoading = true; // --- NUEVO: Estado para saber si el juego está cargando/calentando
+let turnUpdated = false; // --- NUEVO: Bandera para prevenir llamadas múltiples a revisarEstado
 
 export function setLoadingState(loading) {
     isLoading = loading;
@@ -42,6 +43,7 @@ export function startShot() {
     pocketedThisTurn.length = 0; // Reiniciar las bolas entroneradas para el nuevo tiro
     firstBallHitThisTurn = null; // --- NUEVO: Reiniciar en cada tiro
     isTurnTimerActiveState = false; // --- SOLUCIÓN: Detener el temporizador cuando se realiza un tiro
+    setTurnUpdated(false); // --- FIX: Resetear la bandera para permitir la revisión del estado después de cada disparo
 }
 
 /**
@@ -66,6 +68,11 @@ export function setPlacingCueBall(isPlacing) { // --- NUEVO: Función para contr
  * Espera 1 segundo antes de activar el arrastre.
  */
 export function Bolaenmanoarrastre() {
+    // --- SOLUCIÓN: Limpiar el estado del turno anterior como doble seguro ---
+    console.log('%c[BolaEnMano] Limpiando estado de turno anterior.', 'color: magenta; font-weight: bold;');
+    clearPocketedBalls();
+    clearFirstHitBall();
+
     setTimeout(() => {
         setPlacingCueBall(true);
     }, 500);
@@ -351,4 +358,13 @@ export function getOnlineGameData() {
 // --- NUEVO: Función para modificar el estado de tiro en progreso ---
 export function setShotInProgress(inProgress) {
     shotInProgress = inProgress;
+}
+
+// --- NUEVO: Funciones para controlar la bandera turnUpdated ---
+export function setTurnUpdated(updated) {
+    turnUpdated = updated;
+}
+
+export function getTurnUpdated() {
+    return turnUpdated;
 }

@@ -1423,6 +1423,7 @@
         // 1. Importar las funciones necesarias de Firestore y la autenticación.
         import { db, auth, onSnapshot, doc, updateDoc, deleteDoc, getDoc, addDoc, collection } from './login/auth.js';
         import { arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { clearPocketedBalls } from './gameState.js';
 
         // --- NUEVO: Elementos del chat en el juego ---
         const gameChatModal = document.getElementById('game-chat-modal');
