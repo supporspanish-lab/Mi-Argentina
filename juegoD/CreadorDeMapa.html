@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creador de Mapas</title>
+    <!-- Esto evita el error 404 de favicon.ico en la consola -->
+    <link rel="icon" href="data:,">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        canvas { display: block; }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        /* --- Estilos para UI colapsable --- */
+        .ui-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .ui-header h2 {
+            margin: 0;
+            margin-right: 15px; /* Espacio entre el título y la flecha */
+        }
+        #ui-toggle-arrow {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+        #ui.collapsed #ui-toggle-arrow {
+            transform: rotate(-90deg);
+        }
+        .ui-content {
+            overflow: hidden;
+            max-height: 300px; /* Altura suficiente para el contenido */
+            transition: max-height 0.4s ease-out, padding-top 0.4s ease-out, margin-top 0.4s ease-out;
+        }
+        #settings-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10;
+            color: white;
+        }
+        #assets-icon {
+            position: absolute;
+            top: 10px;
+            right: 50px; /* Al lado del icono de settings */
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10;
+            color: white;
+        }
+        #settings-panel {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            max-height: 80vh; /* Límite de altura para que no sea demasiado grande */
+            overflow-y: auto; /* Habilitar el scroll vertical cuando sea necesario */
+        }
+        #assets-panel {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            width: 200px;
+            z-index: 20; /* Asegurar que esté sobre la UI principal */
+        }
+        #object-carousel {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 20;
+        }
+        /* --- Estilos del Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;            
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: transparent; /* Fondo invisible */
+            color: #f0f0f0; /* Texto claro para contraste */
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 900px;
+            height: 85%;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;            
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .modal-header h2 { margin: 0; }
+        #close-modal-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            line-height: 1;
+        }
+        .modal-body {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .modal-footer {
+            padding-top: 15px;
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-footer button {
+            margin: 0;
+            padding: 8px 16px;
+        }
+        #asset-options {
+            grid-column: 1 / -1; /* Ocupa todo el ancho */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background: rgba(0, 0, 0, 0.2); /* Fondo muy sutil para agrupar */
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        #tilt-controls label, #type-controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #page-info { font-weight: bold; }
+        #object-list { list-style: none; padding: 0; margin: 0; }
+        #object-list li { 
+            display: flex;
+            align-items: center;
+            padding: 8px; 
+            cursor: pointer; 
+            border-bottom: 1px solid #444; 
+            gap: 10px;
+        }
+        #object-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        #object-list li {
+            flex-direction: column;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            background: transparent;
+            color: #f0f0f0;
+            padding: 10px;
+            transition: border-color 0.2s;
+        }
+        #object-list li.selected {
+            border-color: #3498db;
+        }
+        .preview-canvas {
+            width: 64px;
+            height: 64px;
+            border-radius: 4px;
+        }
+        #assets-list li { padding: 5px; cursor: pointer; }
+        #assets-list li:hover { background: #555; }
+        button {
+            margin-top: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            font-size: 2em;
+            text-align: center;
+        }
+        /* Estilos para las pestañas del modal del jugador */
+        .player-tab-btn {
+            background: #333; color: white; border: 1px solid #555; border-bottom: none; padding: 10px 15px; cursor: pointer;
+            border-radius: 5px 5px 0 0; margin-right: 5px;
+        }
+        .player-tab-btn.active {
+            background: #555;
+            border-color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div id="settings-icon">⚙️</div>
+    <div id="assets-icon">📦</div>
+    <div id="settings-panel">
+        <label for="grid-size-input">Tamaño del Mapa:</label>
+        <input type="number" id="grid-size-input" value="21" min="5" max="101" step="2">
+        <button id="apply-settings-btn" style="margin-bottom: 15px;">Aplicar</button>
+
+        <hr style="border-color: #444;">
+
+        <h4 style="margin-top: 15px; margin-bottom: 10px;">Relleno de Suelo</h4>
+        <label for="fill-floor-asset-path">Ruta del Asset:</label>
+        <input type="text" id="fill-floor-asset-path" placeholder="glb/village__town_assets.glb" value="glb/village__town_assets.glb" style="width: 95%; margin-bottom: 10px;">
+        <label for="fill-floor-object-name">Nombre del Objeto:</label>
+        <input type="text" id="fill-floor-object-name" placeholder="Cube032_Material005_0" value="Cube032_Material005_0" style="width: 95%; margin-bottom: 10px;">
+        <label for="fill-floor-scale">Escala:</label>
+        <input type="number" id="fill-floor-scale" value="10" min="0.1" step="0.1" style="width: 95%; margin-bottom: 10px;">
+        <button id="fill-floor-btn">Aplicar Relleno de Suelo</button>
+
+        <hr style="border-color: #444;">
+
+        <h4 style="margin-top: 15px; margin-bottom: 10px;">Paredes Perimetrales</h4>
+        <label for="wall-asset-path">Ruta del Asset:</label>
+        <input type="text" id="wall-asset-path" placeholder="glb/village__town_assets.glb" value="glb/village__town_assets.glb" style="width: 95%; margin-bottom: 10px;">
+        <label for="wall-object-name">Nombre del Objeto:</label>
+        <input type="text" id="wall-object-name" placeholder="Wall_01" value="Wall_01" style="width: 95%; margin-bottom: 10px;">
+        <label for="wall-scale">Escala:</label>
+        <input type="number" id="wall-scale" value="10" min="0.1" step="0.1" style="width: 95%; margin-bottom: 10px;">
+        <button id="wall-btn">Aplicar Paredes</button>
+
+        <hr style="border-color: #444;">
+
+        <h4 style="margin-top: 15px; margin-bottom: 10px;">Escalar por Nombre</h4>
+        <label for="scale-by-name-input">Nombre del Objeto:</label>
+        <input type="text" id="scale-by-name-input" placeholder="Ej: Rock_01" style="width: 95%; margin-bottom: 10px;">
+        <label for="scale-by-name-value">Nueva Escala:</label>
+        <input type="number" id="scale-by-name-value" value="1" min="0.1" step="0.1" style="width: 95%; margin-bottom: 10px;">
+        <button id="scale-by-name-btn">Aplicar Escala</button>
+
+        <hr style="border-color: #444;">
+
+        <h4 style="margin-top: 15px; margin-bottom: 10px;">Establecer Tipo por Nombre</h4>
+        <label for="type-by-name-input">Nombre del Objeto:</label>
+        <input type="text" id="type-by-name-input" placeholder="Ej: Cube032_Material005_0" style="width: 95%; margin-bottom: 10px;">
+        <div id="type-by-name-controls" style="margin-bottom: 10px; display: flex; gap: 10px;">
+            <label><input type="radio" name="type-by-name" value="objeto" checked> Objeto</label>
+            <label><input type="radio" name="type-by-name" value="piso"> Piso</label>
+            <label><input type="radio" name="type-by-name" value="no-piso"> No Piso</label>
+            <label><input type="radio" name="type-by-name" value="barricada"> Barricada</label>
+        </div>
+        <button id="type-by-name-btn">Aplicar Tipo</button>
+    </div>
+    <div id="assets-panel">
+        <h3>Assets</h3>
+        <ul id="assets-list">
+            <!-- La lista de assets se generará aquí -->
+        </ul>
+    </div>
+    <!-- Modal para mostrar los assets de un archivo GLB -->
+    <div id="asset-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Selecciona un Objeto</h2>
+                <button id="close-modal-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <ul id="object-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <div id="asset-options">
+                    <div id="type-controls">
+                        <label><input type="radio" name="asset-type" value="objeto" checked> Objeto</label>
+                        <label><input type="radio" name="asset-type" value="piso"> Piso</label>
+                        <label><input type="radio" name="asset-type" value="no-piso"> No Piso</label>
+                        <label><input type="radio" name="asset-type" value="barricada"> Barricada</label>
+                    </div>
+                </div>
+                <button id="prev-page-btn">Anterior</button>
+                <span id="page-info"></span>
+                <button id="next-page-btn">Siguiente</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal para escalar objeto -->
+    <div id="scale-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px; height: auto;">
+            <div class="modal-header">
+                <h2 id="scale-modal-title">Editar Objeto</h2>
+                <button id="close-scale-modal-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="control-group" style="margin-bottom: 16px;">
+                    <label for="scale-slider">Escala: <span id="scale-value-display">1.0</span></label>
+                    <input type="range" id="scale-slider" min="0.1" max="10" step="0.1" value="1" style="width: 100%;">
+                    <input type="number" id="scale-input" min="0.1" max="10" step="0.1" value="1" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="control-group" style="margin-bottom: 16px;">
+                    <label>Altura (Y): <span id="position-y-display">0</span></label>
+                    <input type="range" id="position-y-slider" min="-50" max="100" step="0.5" value="0" style="width: 100%;">
+                    <input type="number" id="position-y-input" min="-50" max="100" step="0.5" value="0" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="control-group" style="margin-bottom: 16px;">
+                    <label>Rotación X: <span id="rotation-x-display">0°</span></label>
+                    <input type="range" id="rotation-x-slider" min="-180" max="180" step="1" value="0" style="width: 100%;">
+                    <input type="number" id="rotation-x-input" min="-180" max="180" step="1" value="0" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="control-group" style="margin-bottom: 16px;">
+                    <label>Rotación Y: <span id="rotation-y-display">0°</span></label>
+                    <input type="range" id="rotation-y-slider" min="-180" max="180" step="1" value="0" style="width: 100%;">
+                    <input type="number" id="rotation-y-input" min="-180" max="180" step="1" value="0" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="control-group" style="margin-bottom: 16px;">
+                    <label>Rotación Z: <span id="rotation-z-display">0°</span></label>
+                    <input type="range" id="rotation-z-slider" min="-180" max="180" step="1" value="0" style="width: 100%;">
+                    <input type="number" id="rotation-z-input" min="-180" max="180" step="1" value="0" style="width: 100%; margin-top: 5px;">
+                </div>
+                <div class="control-group" style="margin-top: 16px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="exportable-checkbox">
+                        Incluir en la exportación del mapa
+                    </label>
+                </div>
+                <div class="control-group" style="margin-top: 16px; border-top: 1px solid #444; padding-top: 16px;">
+                    <label>Tipo de Objeto:</label>
+                    <div id="edit-type-controls" style="display: flex; gap: 10px; margin-top: 5px;">
+                        <label><input type="radio" name="edit-asset-type" value="objeto"> Objeto</label>
+                        <label><input type="radio" name="edit-asset-type" value="piso"> Piso</label>
+                        <label><input type="radio" name="edit-asset-type" value="no-piso"> No Piso</label>
+                        <label><input type="radio" name="edit-asset-type" value="barricada"> Barricada</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="text-align: right; padding-top: 10px; border-top: 1px solid #444; margin-top: 10px;">
+                <button id="delete-object-btn" style="background-color: #e74c3c; color: white; border: none;">Eliminar Objeto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para configurar animaciones del jugador -->
+    <div id="player-settings-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px; height: auto;">
+            <div class="modal-header">
+                <h2>Configuración del Jugador</h2>
+                <button id="close-player-settings-modal-btn">×</button>
+            </div>
+            <!-- Pestañas para cambiar de vista -->
+            <div id="player-settings-tabs" style="display: flex; border-bottom: 1px solid #444; margin-bottom: 15px;">
+                <button class="player-tab-btn active" data-target="player-animation-controls">Animaciones</button>
+                <button class="player-tab-btn" data-target="player-object-controls">Objetos Visibles</button>
+            </div>
+            <div id="player-animation-controls" class="modal-body player-settings-tab-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <!-- Los selectores de animación se generarán aquí -->
+            </div>
+            <div id="player-object-controls" class="modal-body player-settings-tab-content" style="display: none; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+                <!-- Los controles de visibilidad de objetos se generarán aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de opciones para el objeto en colocación -->
+    <div id="placement-options-panel" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; display: none; z-index: 10;">
+        <h3>Opciones de Colocación</h3>
+        <div class="control-group" style="margin-bottom: 10px;">
+            <label for="placement-scale-slider">Escala: <span id="placement-scale-value-display">1.0</span></label>
+            <input type="range" id="placement-scale-slider" min="0.1" max="10" step="0.1" value="1" style="width: 100%;">
+        </div>
+        <div class="control-group" style="margin-bottom: 10px;">
+            <label for="placement-rotation-y-slider">Rotación Y: <span id="placement-rotation-y-display">0°</span></label>
+            <input type="range" id="placement-rotation-y-slider" min="-180" max="180" step="1" value="0" style="width: 100%;">
+        </div>
+        <div class="control-group">
+            <label for="placement-rotation-z-slider">Rotación Z (Inclinación): <span id="placement-rotation-z-display">0°</span></label>
+            <input type="range" id="placement-rotation-z-slider" min="-45" max="45" step="1" value="0" style="width: 100%;">
+        </div>
+    </div>
+    <div id="ui">
+        <div class="ui-header">
+            <h2>Creador de Mapas</h2>
+            <span id="ui-toggle-arrow">▼</span>
+        </div>
+        <div class="ui-content">
+            <button id="export-btn">Exportar Mapa</button>
+            <button id="load-map-btn">Cargar Mapa</button>
+            <button id="toggle-free-placement-btn">Modo Libre</button>
+            <button id="toggle-delete-brush-btn">Pincel Borrado</button>
+            <button id="toggle-view-btn">Visualizar Juego</button>
+            <hr style="border-color: #444; margin: 10px 0;">
+            <button id="set-player-spawn-btn">Spawn Jugador</button>
+            <button id="add-enemy-spawn-btn">Spawn Enemigo</button>
+            <button id="delete-enemies-btn" style="background-color: #c0392b; color: white;">Eliminar Enemigos</button>
+            <button id="clear-autosave-btn" style="background-color: #f39c12; color: white; margin-top: 15px; display: none;">Limpiar Autoguardado</button>
+        </div>
+    </div>
+    <input type="file" id="load-map-input" accept=".json" style="display: none;">
+    <div id="loading-overlay">
+        <div id="loading-text">Cargando assets modelos 3d... 0%</div>
+    </div>
+
+    <script>
+        // --- Configuración básica de Three.js ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x333333);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 30, 20);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.domElement.addEventListener('mousedown', () => {
+            if (isOrbiting) {
+                isDragging = true;
+            }
+        });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+        // --- Iluminación ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+
+        // --- Lógica para diferenciar clic de arrastre ---
+        let isOrbiting = false;
+        let isDragging = false;
+        controls.addEventListener('start', () => { isOrbiting = true; });
+        controls.addEventListener('end', () => {
+            isOrbiting = false;
+            isDragging = false; // Restablecer al final del movimiento
+        });
+        dirLight.position.set(50, 50, 50);
+        scene.add(dirLight);
+
+        // --- Cuadrícula y Plano ---
+        const clock = new THREE.Clock();
+        let gridSize = 21;
+        const cellSize = 10;
+        let gridHelper, plane;
+
+        // --- Lógica del Creador de Mapas ---
+        let mapData, wallMeshes;
+        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+        const wallGeometry = new THREE.BoxGeometry(cellSize, 10, cellSize);
+        const walls = new THREE.Group();
+        
+        // --- Lógica de Vistas Previas ---
+        let loadedGLTF = null;
+        const previewScenes = new Map();
+
+        // --- Lógica de Paginación ---
+        let allObjectsFromGLTF = [];
+        let currentPage = 0;
+        const itemsPerPage = 15;
+
+        let placementMode = false;
+        let selectedObject = null;
+        let placementPreview = null;
+        let editingObject = null;
+        let currentAssetFile = '';
+        const placedAssets = new THREE.Group();
+        const redoHistory = [];
+        let ignoreNextClick = false; 
+        const actionHistory = [];
+        scene.add(placedAssets);
+
+        // --- Lógica de Spawns ---
+        const playerSpawnGroup = new THREE.Group();
+        scene.add(playerSpawnGroup);
+        const enemySpawnsGroup = new THREE.Group();
+        scene.add(enemySpawnsGroup);
+
+        // --- INICIO: Modelos para previsualización de Spawns ---
+        let knightModel = null;
+        let skeletonModel = null;
+        let knightAnimationNames = [];
+        let knightAnimations = []; // Para guardar los clips de animación completos
+        // --- FIN: Modelos para previsualización de Spawns ---
+        let playerSpawnMode = false;
+        let enemySpawnMode = false;
+        let freePlacementMode = false; // Nueva variable para el modo de colocación libre
+        let deleteBrushMode = false; // Nueva variable para el modo pincel borrado
+        let playerSpawnPreview = null;
+        let enemySpawnPreview = null;
+
+        // --- INICIO: Variables para pintar con Ctrl + Drag ---
+        let isCtrlDown = false;
+        let isPainting = false;
+        let lastPaintedCell = { x: null, z: null };
+        // --- FIN: Variables para pintar con Ctrl + Drag ---
+        // --- INICIO: Variables para pincel borrado ---
+        let isDeleting = false;
+        // --- FIN: Variables para pincel borrado ---
+        const playerSpawnMaterial = new THREE.MeshStandardMaterial({ color: 0x007bff, transparent: true, opacity: 0.8 });
+        const enemySpawnMaterial = new THREE.MeshStandardMaterial({ color: 0xdc3545, transparent: true, opacity: 0.8 });
+        const spawnGeometry = new THREE.BoxGeometry(5, 15, 5);
+        // --- FIN Lógica de Spawns ---
+
+        const gltfLoader = new THREE.GLTFLoader();
+        scene.add(walls);
+
+        function setupGrid(size) {
+            gridSize = size;
+
+            if (gridHelper) scene.remove(gridHelper);
+            if (plane) scene.remove(plane);
+            while(walls.children.length > 0){ 
+                walls.remove(walls.children[0]); 
+            }
+
+            gridHelper = new THREE.GridHelper(gridSize * cellSize, gridSize);
+            scene.add(gridHelper);
+
+            plane = new THREE.Mesh(
+                new THREE.PlaneGeometry(gridSize * cellSize, gridSize * cellSize),
+                new THREE.MeshBasicMaterial({ visible: false })
+            );
+            plane.rotation.x = -Math.PI / 2;
+            scene.add(plane);
+
+            mapData = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0));
+            wallMeshes = Array(gridSize).fill(null).map(() => Array(gridSize).fill(null));
+        }
+
+        setupGrid(gridSize);
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isSprinting = false;
+        const cameraMoveSpeed = 0.5;
+
+        function cancelAllModes() {
+            if (placementMode && placementPreview) {
+                ignoreNextClick = true; // Evita que se coloque un objeto al cancelar
+                scene.remove(placementPreview);
+                placementPreview = null;
+            }
+            if (playerSpawnPreview) {
+                scene.remove(playerSpawnPreview);
+                playerSpawnPreview = null;
+            }
+            if (enemySpawnPreview) {
+                scene.remove(enemySpawnPreview);
+                enemySpawnPreview = null;
+            }
+
+            placementMode = false;
+            playerSpawnMode = false;
+            enemySpawnMode = false;
+            deleteBrushMode = false;
+            selectedObject = null;
+            
+            document.querySelectorAll('#object-list li.selected').forEach(el => el.classList.remove('selected'));
+            
+            // Ocultar el panel de opciones de colocación
+            const placementOptionsPanel = document.getElementById('placement-options-panel');
+            if (placementOptionsPanel) placementOptionsPanel.style.display = 'none';
+
+            const playerBtn = document.getElementById('set-player-spawn-btn');
+            if(playerBtn) playerBtn.style.backgroundColor = '';
+            const enemyBtn = document.getElementById('add-enemy-spawn-btn');
+            if(enemyBtn) enemyBtn.style.backgroundColor = '';
+        }
+
+        function placeObject(position) {
+            if (!selectedObject) return;
+
+            const assetType = document.querySelector('input[name="asset-type"]:checked').value;
+            let highestY = 0;
+
+            // --- INICIO: Lógica de altura para barricadas ---
+            // Si es una barricada, busca el suelo. Si no, se apila sobre el objeto más alto.
+            const objectsToCheck = (assetType === 'barricada') 
+                ? placedAssets.children.filter(c => c.userData.assetType === 'piso') 
+                : placedAssets.children;
+
+            for (const child of objectsToCheck) {
+                if (Math.abs(child.position.x - position.x) < cellSize * 0.5 &&
+                    Math.abs(child.position.z - position.z) < cellSize * 0.5) {
+                    const box = new THREE.Box3().setFromObject(child);
+                    const topOfObject = box.max.y;
+                    if (topOfObject > highestY) {
+                        highestY = topOfObject;
+                    }
+                }
+            }
+            // --- FIN: Lógica de altura para barricadas ---
+
+            const newObject = placementPreview.clone();
+
+            newObject.traverse(child => {
+                if (child.isMesh) {
+                    child.material.opacity = 1.0;
+                    child.material.transparent = false;
+                }
+            });
+
+            // Calculate the vertical offset needed to place the object's base at y=0
+            const tempObject = newObject.clone();
+            tempObject.position.set(0, 0, 0);
+            const tempBox = new THREE.Box3().setFromObject(tempObject);
+            const yOffset = -tempBox.min.y;
+
+            // Set the final position, stacking on top of other objects
+            newObject.position.set(position.x, highestY + yOffset, position.z);
+
+            // --- INICIO: Ajuste de rotación final al colocar ---
+            // Si el objeto NO es de tipo 'piso', mantenemos la rotación de -90 grados en X
+            // que se aplicó en la vista previa para que quede "de pie".
+            if (assetType !== 'piso') {
+                newObject.rotation.x = -Math.PI / 2;
+            }
+
+            newObject.userData.assetPath = currentAssetFile;
+            newObject.userData.assetName = selectedObject.name;
+            newObject.userData.assetType = assetType;
+            newObject.userData.exportable = true;
+
+            placedAssets.add(newObject);
+            console.log(`Objeto '${newObject.name}' colocado en`, newObject.position.clone());
+
+            actionHistory.push({
+                type: 'place_object',
+                object: newObject
+            });
+
+            // Al colocar un nuevo objeto, se limpia el historial de "rehacer"
+            redoHistory.length = 0;
+
+            saveMapToLocalStorage();
+        }
+
+        function undoLastAction() {
+            if (actionHistory.length === 0) {
+                console.log("No hay acciones para deshacer.");
+                return;
+            }
+
+            const lastAction = actionHistory.pop();
+            redoHistory.push(lastAction); // Mover la acción al historial de rehacer
+
+            if (lastAction.type === 'place_object') {
+                placedAssets.remove(lastAction.object);
+                console.log("Último objeto colocado ha sido eliminado.");
+            } else if (lastAction.type === 'set_player_spawn') {
+                playerSpawnGroup.remove(lastAction.newSpawn);
+                lastAction.oldSpawns.forEach(spawn => playerSpawnGroup.add(spawn));
+                console.log("Colocación de spawn de jugador deshecha.");
+            } else if (lastAction.type === 'add_enemy_spawn') {
+                enemySpawnsGroup.remove(lastAction.spawn);
+                console.log("Colocación de spawn de enemigo deshecha.");
+            } else if (lastAction.type === 'delete_object') {
+                // Para deshacer una eliminación, volvemos a añadir el objeto
+                placedAssets.add(lastAction.object);
+                console.log("Eliminación de objeto deshecha.");
+            }
+            saveMapToLocalStorage();
+        }
+        
+        function redoLastAction() {
+            if (redoHistory.length === 0) {
+                console.log("No hay acciones para rehacer.");
+                return;
+            }
+
+            const lastUndoneAction = redoHistory.pop();
+            actionHistory.push(lastUndoneAction); // Devolver la acción al historial principal
+
+            if (lastUndoneAction.type === 'place_object') {
+                placedAssets.add(lastUndoneAction.object);
+                console.log("Acción rehecha: objeto vuelto a colocar.");
+            } else if (lastUndoneAction.type === 'set_player_spawn') {
+                lastUndoneAction.oldSpawns.forEach(spawn => playerSpawnGroup.remove(spawn));
+                playerSpawnGroup.add(lastUndoneAction.newSpawn);
+                console.log("Acción rehecha: spawn de jugador vuelto a colocar.");
+            } else if (lastUndoneAction.type === 'add_enemy_spawn') {
+                enemySpawnsGroup.add(lastUndoneAction.spawn);
+                console.log("Acción rehecha: spawn de enemigo vuelto a colocar.");
+            } else if (lastUndoneAction.type === 'delete_object') {
+                placedAssets.remove(lastUndoneAction.object);
+                console.log("Acción rehecha: objeto vuelto a eliminar.");
+            }
+            saveMapToLocalStorage();
+        }
+
+
+        function onObjectDoubleClick(event) {
+            if (event.target.closest('#settings-icon, #assets-icon, #settings-panel, #assets-panel, #object-carousel, #ui, #asset-modal')) {
+                return;
+            }
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            // --- INICIO: Lógica de doble clic mejorada ---
+            // Primero, comprobamos si se ha hecho clic en el spawn del jugador, que tiene prioridad.
+            const playerIntersects = raycaster.intersectObjects(playerSpawnGroup.children, true);
+            if (playerIntersects.length > 0) {
+                // Asegurarse de que no estamos en modo de colocación
+                if (playerSpawnMode || enemySpawnMode || placementMode) return;
+
+                const playerSettingsModal = document.getElementById('player-settings-modal');
+                populatePlayerAnimationModal();
+                playerSettingsModal.style.display = 'flex';
+                return; // Detenemos la ejecución para no abrir otros modales.
+            }
+
+            // Si no se hizo clic en el spawn del jugador, comprobamos los assets normales.
+            const assetIntersects = raycaster.intersectObjects(placedAssets.children, true);
+            if (assetIntersects.length > 0) {
+                let clickedObject = assetIntersects[0].object;
+
+                // Subir en la jerarquía hasta encontrar el objeto principal añadido a 'placedAssets'
+                while (clickedObject.parent && clickedObject.parent !== placedAssets) {
+                    clickedObject = clickedObject.parent;
+                }
+
+                editingObject = clickedObject;
+                const scaleModal = document.getElementById('scale-modal');
+                // (El código para rellenar el modal ya está aquí, no se necesita cambiar)
+                document.getElementById('scale-modal-title').textContent = `Editar: ${editingObject.userData.assetName || 'Objeto sin nombre'}`;
+                document.getElementById('scale-slider').value = editingObject.scale.x;
+                document.getElementById('scale-input').value = editingObject.scale.x;
+                document.getElementById('scale-value-display').textContent = editingObject.scale.x.toFixed(1);
+                // ... y el resto de los campos del modal ...
+
+                // --- INICIO: Poblar altura en el modal de edición ---
+                document.getElementById('position-y-slider').value = editingObject.position.y;
+                document.getElementById('position-y-input').value = editingObject.position.y;
+                document.getElementById('position-y-display').textContent = editingObject.position.y.toFixed(2);
+                // --- FIN: Poblar altura en el modal de edición ---
+
+                // --- INICIO: Poblar tipo de objeto en el modal de edición ---
+                const currentType = editingObject.userData.assetType || 'objeto';
+                const typeRadio = document.querySelector(`#edit-type-controls input[value="${currentType}"]`);
+                if (typeRadio) {
+                    typeRadio.checked = true;
+                }
+                // --- FIN: Poblar tipo de objeto en el modal de edición ---
+                scaleModal.style.display = 'flex';
+            }
+            // --- FIN: Lógica de doble clic mejorada ---
+        }
+
+        function onMouseClick(event) {
+            if (ignoreNextClick) {
+                ignoreNextClick = false;
+                return;
+            }
+
+            if (isDragging) {
+                isDragging = false;
+                return;
+            }
+        // --- INICIO: Lógica para pintar con Ctrl + Drag ---
+        if (isCtrlDown && placementMode) {
+            isPainting = true;
+            controls.enabled = false; // Desactivar la cámara para poder pintar
+            // No retornamos para permitir que el clic inicial también coloque un objeto.
+        }
+        // --- FIN: Lógica para pintar con Ctrl + Drag ---
+        // --- INICIO: Lógica para pincel borrado ---
+        if (deleteBrushMode) {
+            isDeleting = true;
+            controls.enabled = false; // Desactivar la cámara para poder borrar
+        }
+        // --- FIN: Lógica para pincel borrado ---
+
+            if (!event.target || event.target.closest('#settings-icon, #assets-icon, #settings-panel, #assets-panel, #object-carousel, #ui, #asset-modal, #placement-options-panel')) {
+                return;
+            }
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObject(plane);
+
+            if (intersects.length > 0) {
+                const intersectPoint = intersects[0].point.clone();
+                if (deleteBrushMode) {
+                    // Delete objects under the cursor
+                    const assetIntersects = raycaster.intersectObjects(placedAssets.children, true);
+                    if (assetIntersects.length > 0) {
+                        let clickedObject = assetIntersects[0].object;
+                        while (clickedObject.parent && clickedObject.parent !== placedAssets) {
+                            clickedObject = clickedObject.parent;
+                        }
+                        placedAssets.remove(clickedObject);
+                        actionHistory.push({
+                            type: 'delete_object',
+                            object: clickedObject
+                        });
+                        redoHistory.length = 0;
+                        saveMapToLocalStorage();
+                        console.log(`Objeto '${clickedObject.userData.assetName}' eliminado con pincel.`);
+                    }
+                    return;
+                }
+                if (placementMode && selectedObject && placementPreview) {
+                    let finalX = intersectPoint.x;
+                    let finalZ = intersectPoint.z;
+
+                    if (!freePlacementMode) {
+                        const offset = (gridSize % 2 === 0) ? cellSize / 2 : 0;
+                        finalX = Math.round((intersectPoint.x - offset) / cellSize) * cellSize + offset;
+                        finalZ = Math.round((intersectPoint.z - offset) / cellSize) * cellSize + offset;
+                    }
+
+                    const centeredPosition = new THREE.Vector3(finalX, placementPreview.position.y, finalZ);
+                    placeObject(centeredPosition);
+                    return;
+                }
+
+                // --- INICIO: Lógica para colocar Spawns ---
+                if (playerSpawnMode && playerSpawnPreview) {
+                    const oldSpawns = [...playerSpawnGroup.children];
+                    while(playerSpawnGroup.children.length > 0) {
+                        playerSpawnGroup.remove(playerSpawnGroup.children[0]);
+                    }
+                    const newSpawn = playerSpawnPreview.clone();
+                    newSpawn.traverse(child => {
+                        if (child.isMesh) {
+                            child.material.opacity = 1;
+                            child.material.transparent = false;
+                        }
+                    });
+                    playerSpawnGroup.add(newSpawn);
+
+                    actionHistory.push({
+                        type: 'set_player_spawn',
+                        newSpawn: newSpawn,
+                        oldSpawns: oldSpawns
+                    });
+                    redoHistory.length = 0;
+
+                    saveMapToLocalStorage();
+
+                    console.log("Punto de spawn de jugador colocado en:", newSpawn.position);
+                    cancelAllModes();
+                    return;
+                }
+
+                if (enemySpawnMode && enemySpawnPreview) {
+                    const newSpawn = enemySpawnPreview.clone();
+                    newSpawn.traverse(child => {
+                        if (child.isMesh) {
+                            child.material.opacity = 1;
+                            child.material.transparent = false;
+                        }
+                    });
+                    enemySpawnsGroup.add(newSpawn);
+
+                    actionHistory.push({
+                        type: 'add_enemy_spawn',
+                        spawn: newSpawn
+                    });
+                    redoHistory.length = 0;
+
+                    saveMapToLocalStorage();
+
+                    console.log("Punto de spawn de enemigo añadido en:", newSpawn.position);
+                    // No salimos del modo para poder colocar varios enemigos seguidos.
+                }
+            }
+        }
+
+        function toggleWall(x, z) {
+            if (mapData[z][x] === 0) {
+                mapData[z][x] = 1;
+                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                wall.position.set(
+                    (x - gridSize / 2 + 0.5) * cellSize,
+                    5,
+                    (z - gridSize / 2 + 0.5) * cellSize
+                );
+                walls.add(wall);
+                wallMeshes[z][x] = wall;
+            } 
+            else {
+                mapData[z][x] = 0;
+                const wallToRemove = wallMeshes[z][x];
+                if (wallToRemove) {
+                    walls.remove(wallToRemove);
+                    wallMeshes[z][x] = null;
+                }
+            }
+        }
+
+        function exportMap() {
+            const exportData = {
+                gridSize: gridSize,
+                mapData: mapData,
+                assets: [],
+                playerSpawn: null,
+                enemySpawns: []
+            };
+
+            placedAssets.children.forEach(asset => {
+                if (asset.userData.exportable === false) return;
+
+                exportData.assets.push({
+                    assetPath: asset.userData.assetPath,
+                    assetName: asset.userData.assetName,
+                    assetType: asset.userData.assetType || 'objeto',
+                    exportable: asset.userData.exportable,
+                    position: { x: asset.position.x, y: asset.position.y, z: asset.position.z },
+                    rotation: { x: asset.rotation.x, y: asset.rotation.y, z: asset.rotation.z },
+                    scale: { x: asset.scale.x, y: asset.scale.y, z: asset.scale.z }
+                });
+            });
+
+            if (playerSpawnGroup.children.length > 0) {
+                const spawn = playerSpawnGroup.children[0];
+                exportData.playerSpawn = { 
+                    x: spawn.position.x, y: spawn.position.y, z: spawn.position.z,
+                    // Añadir las configuraciones de animación guardadas
+                    animationSettings: spawn.userData.animationSettings || {},
+                    objectVisibility: spawn.userData.objectVisibility || {}
+                };
+            }
+
+            enemySpawnsGroup.children.forEach(spawn => {
+                exportData.enemySpawns.push({ x: spawn.position.x, y: spawn.position.y, z: spawn.position.z });
+            });
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "mapa.json");
+            document.body.appendChild(downloadAnchorNode);
+            console.log("Exported Map Data:", exportData); // Log the data for debugging
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            alert("¡Mapa exportado como 'mapa.json'!");
+        }
+
+        function generateMapData() {
+            const mapDataToGenerate = {
+                gridSize: gridSize,
+                mapData: mapData,
+                assets: [],
+                playerSpawn: null,
+                enemySpawns: []
+            };
+
+            placedAssets.children.forEach(asset => {
+                if (asset.userData.exportable === false) return;
+
+                mapDataToGenerate.assets.push({
+                    assetPath: asset.userData.assetPath,
+                    assetName: asset.userData.assetName,
+                    assetType: asset.userData.assetType || 'objeto',
+                    exportable: asset.userData.exportable,
+                    position: { x: asset.position.x, y: asset.position.y, z: asset.position.z },
+                    rotation: { x: asset.rotation.x, y: asset.rotation.y, z: asset.rotation.z },
+                    scale: { x: asset.scale.x, y: asset.scale.y, z: asset.scale.z }
+                });
+            });
+
+            if (playerSpawnGroup.children.length > 0) {
+                const spawn = playerSpawnGroup.children[0];
+                mapDataToGenerate.playerSpawn = { 
+                    x: spawn.position.x, 
+                    y: spawn.position.y, 
+                    z: spawn.position.z,
+                    animationSettings: spawn.userData.animationSettings || {},
+                    objectVisibility: spawn.userData.objectVisibility || {}
+                };
+            }
+
+            enemySpawnsGroup.children.forEach(spawn => {
+                mapDataToGenerate.enemySpawns.push({ x: spawn.position.x, y: spawn.position.y, z: spawn.position.z });
+            });
+
+            return mapDataToGenerate;
+        }
+
+        // --- INICIO: Autoguardado y carga ---
+        function saveMapToLocalStorage() {
+            try {
+                const mapData = generateMapData();
+                localStorage.setItem('autosavedMap', JSON.stringify(mapData));
+                document.getElementById('clear-autosave-btn').style.display = 'block';
+                console.log("Mapa autoguardado en el navegador.");
+            } catch (error) {
+                console.error("Error al autoguardar el mapa:", error);
+            }
+        }
+
+        async function loadMapFromLocalStorage() {
+            const clearAutosaveBtn = document.getElementById('clear-autosave-btn');
+            const savedMapData = localStorage.getItem('autosavedMap');
+            if (savedMapData) {
+                clearAutosaveBtn.style.display = 'block';
+                console.log("Se encontró un mapa autoguardado. Cargando...");
+                try {
+                    const mapData = JSON.parse(savedMapData);
+                    await buildMapFromData(mapData);
+                    console.log("Mapa autoguardado cargado con éxito.");
+                } catch (error) {
+                    console.error("Error al cargar el mapa autoguardado:", error);
+                    localStorage.removeItem('autosavedMap'); // Limpiar si está corrupto
+                    clearAutosaveBtn.style.display = 'none';
+                }
+            } else {
+                clearAutosaveBtn.style.display = 'none';
+                console.log("No se encontró mapa autoguardado. Empezando de cero.");
+            }
+        }
+
+        function clearAutosavedMap() {
+            localStorage.removeItem('autosavedMap');
+            alert("El mapa autoguardado ha sido eliminado. La página se recargará para empezar de cero.");
+            window.location.reload();
+        }
+        // --- FIN: Autoguardado y carga ---
+
+        function loadMapFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const mapData = JSON.parse(e.target.result);
+                    localStorage.setItem('autosavedMap', JSON.stringify(mapData)); // Guardar el mapa cargado
+                    await buildMapFromData(mapData);
+                    alert("¡Mapa cargado con éxito!");
+                } catch (error) {
+                    console.error("Error al cargar o procesar el mapa:", error);
+                    alert("El archivo del mapa no es válido o está corrupto.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        async function buildMapFromData(data) {
+            cancelAllModes();
+            actionHistory.length = 0;
+            while(placedAssets.children.length > 0) {
+                placedAssets.remove(placedAssets.children[0]);
+            }
+            while(playerSpawnGroup.children.length > 0) { playerSpawnGroup.remove(playerSpawnGroup.children[0]); }
+            while(enemySpawnsGroup.children.length > 0) { enemySpawnsGroup.remove(enemySpawnsGroup.children[0]); }
+
+            setupGrid(data.gridSize);
+
+            for (let z = 0; z < data.gridSize; z++) {
+                for (let x = 0; x < data.gridSize; x++) {
+                    if (data.mapData[z][x] === 1) {
+                        toggleWall(x, z);
+                    }
+                }
+            }
+
+            const assetsByPath = {};
+            if (data.assets) {
+                data.assets.forEach(asset => {
+                    if (!assetsByPath[asset.assetPath]) {
+                        assetsByPath[asset.assetPath] = [];
+                    }
+                    assetsByPath[asset.assetPath].push(asset);
+                });
+            }
+
+            for (const path in assetsByPath) {
+                const gltf = await gltfLoader.loadAsync(path);
+                const assetsToPlace = assetsByPath[path];
+
+                assetsToPlace.forEach(assetInfo => {
+                    const originalObject = gltf.scene.getObjectByName(assetInfo.assetName);
+                    if (originalObject) {
+                        const newObject = originalObject.clone();
+                        newObject.position.set(assetInfo.position.x, assetInfo.position.y, assetInfo.position.z);
+                        newObject.rotation.set(assetInfo.rotation.x, assetInfo.rotation.y, assetInfo.rotation.z);
+                        newObject.scale.set(assetInfo.scale.x, assetInfo.scale.y, assetInfo.scale.z);
+
+                        // --- INICIO: Restaurar userData al cargar ---
+                        newObject.userData.assetPath = assetInfo.assetPath;
+                        newObject.userData.assetName = assetInfo.assetName;
+                        newObject.userData.assetType = assetInfo.assetType;
+                        newObject.userData.exportable = assetInfo.exportable;
+                        // --- FIN: Restaurar userData al cargar ---
+                        placedAssets.add(newObject);
+                    }
+                });
+            }
+
+            if (data.playerSpawn) {
+                if (knightModel) {
+                    const playerSpawn = knightModel.clone();
+                    playerSpawn.position.copy(data.playerSpawn);
+                    // Restaurar la configuración de animación guardada
+                    playerSpawn.userData.animationSettings = data.playerSpawn.animationSettings || {};
+                    const savedVisibility = data.playerSpawn.objectVisibility || {};
+                    playerSpawn.userData.objectVisibility = savedVisibility;
+
+                    // --- INICIO: Aplicar visibilidad de objetos al cargar ---
+                    playerSpawn.traverse(child => {
+                        if (child.isMesh) {
+                            if (savedVisibility[child.name] !== undefined) {
+                                // Si hay una configuración guardada, la usamos.
+                                child.visible = savedVisibility[child.name];
+                            } else {
+                                // Si no hay configuración guardada, todo es visible por defecto.
+                                child.visible = true;
+                            }
+                        }
+                    });
+                    // --- FIN: Aplicar visibilidad de objetos al cargar ---
+                    playerSpawnGroup.add(playerSpawn);
+                } else {
+                    console.warn("El modelo del jugador no estaba listo al cargar el mapa. El spawn no se mostrará.");
+                }
+            }
+
+            if (data.enemySpawns) {
+                if (skeletonModel) {
+                    data.enemySpawns.forEach(spawnPos => {
+                        const enemySpawn = skeletonModel.clone();
+                        enemySpawn.position.copy(spawnPos);
+                        enemySpawnsGroup.add(enemySpawn);
+                    });
+                } else {
+                    console.warn("El modelo del enemigo no estaba listo al cargar el mapa. Los spawns no se mostrarán.");
+                }
+            }
+        }
+
+        function createObjectPreview(canvas, object) {
+            const previewScene = new THREE.Scene();
+            previewScene.background = new THREE.Color(0x505050);
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            dirLight.position.set(1, 2, 3);
+            previewScene.add(ambient);
+            previewScene.add(dirLight);
+            
+            const previewCamera = new THREE.PerspectiveCamera(50, 120 / 120, 0.1, 100);
+            const model = object.clone();
+            previewScene.add(model);
+
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            model.position.sub(box.getCenter(new THREE.Vector3()));
+            
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = previewCamera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            cameraZ *= 1.5;
+            previewCamera.position.z = cameraZ;
+
+            previewScenes.set(canvas, {
+                scene: previewScene,
+                camera: previewCamera,
+                model: model
+            });
+        }
+
+        function clearPreviewScenes() {
+            previewScenes.clear();
+        }
+
+        async function renderPage(page) {
+            currentPage = page;
+            const objectList = document.getElementById('object-list');
+            const pageInfo = document.getElementById('page-info');
+            const prevBtn = document.getElementById('prev-page-btn');
+            const nextBtn = document.getElementById('next-page-btn');
+
+            objectList.innerHTML = '';
+            clearPreviewScenes();
+
+            const start = page * itemsPerPage;
+            const end = start + itemsPerPage;
+            const objectsToShow = allObjectsFromGLTF.slice(start, end);
+
+            const totalPages = Math.ceil(allObjectsFromGLTF.length / itemsPerPage);
+            pageInfo.textContent = `Página ${currentPage + 1} de ${totalPages}`;
+
+            prevBtn.disabled = (currentPage === 0);
+            nextBtn.disabled = (currentPage >= totalPages - 1);
+
+            for (const obj of objectsToShow) {
+                const li = document.createElement('li');
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 120; canvas.height = 120;
+                li.appendChild(canvas);
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = obj.name;
+                li.appendChild(nameSpan);
+
+                li.dataset.objectName = obj.name;
+                li.addEventListener('click', () => onObjectSelected(li, obj.name));
+                objectList.appendChild(li);
+
+                await new Promise(resolve => setTimeout(() => {
+                    createObjectPreview(canvas, obj);
+                    resolve();
+                }, 16));
+            }
+        }
+
+
+        async function loadAndShowObjects(assetPath) {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            
+            loadingText.textContent = 'Cargando assets modelos 3d... 0%';
+            loadingOverlay.style.display = 'flex';
+            assetsPanel.style.display = 'none';
+
+            currentAssetFile = assetPath;
+
+            loadedGLTF = null;
+            const gltf = await new Promise((resolve, reject) => {
+                gltfLoader.load(assetPath, 
+                (gltfData) => resolve(gltfData),
+                (xhr) => {
+                    const percentComplete = (xhr.loaded / xhr.total) * 100;
+                    loadingText.textContent = `Cargando assets modelos 3d... ${Math.round(percentComplete)}%`;
+                },
+                (error) => reject(error)
+                );
+            }).catch(error => {
+                loadingOverlay.style.display = 'none';
+                console.error(`Error al cargar ${assetPath}:`, error);
+                alert(`No se pudo cargar el modelo: ${assetPath}`);
+                return null;
+            });
+
+            if (!gltf) return;
+
+            gltf.scene.traverse(node => {
+                if (node.isMesh) {
+                    const material = node.material;
+                    if (material && material.map) {
+                        material.transparent = false;
+                        material.alphaTest = 0.1;
+                        material.needsUpdate = true;
+                    }
+                }
+            });
+
+            if (gltf.animations && gltf.animations.length > 0) {
+                console.log(`¡Éxito! El modelo "${assetPath}" contiene ${gltf.animations.length} animación(es).`);
+            } else {
+                console.log(`El modelo "${assetPath}" no contiene animaciones.`);
+            }
+
+            loadingOverlay.style.display = 'none';
+            console.log("Modelo cargado:", gltf);
+            loadedGLTF = gltf;
+            const objectList = document.getElementById('object-list');
+            objectList.innerHTML = '';
+
+            allObjectsFromGLTF = [];
+            const addedNames = new Set();
+            
+            gltf.scene.traverse((child) => {
+                if (child.name && child !== gltf.scene && !addedNames.has(child.name)) {
+                    let hasVisibleMesh = child.isMesh;
+                    if (!hasVisibleMesh && child.isGroup) {
+                        child.traverse(c => { if (c.isMesh) hasVisibleMesh = true; });
+                    }
+                    if (hasVisibleMesh) {
+                        allObjectsFromGLTF.push(child);
+                        addedNames.add(child.name);
+                    }
+                }
+            });
+
+            document.getElementById('asset-modal').style.display = 'flex';
+            
+            await renderPage(0);
+        }
+
+        function onObjectSelected(listItem, objectName) {
+            cancelAllModes();
+            
+            document.querySelectorAll('#object-list li.selected').forEach(el => el.classList.remove('selected'));
+            listItem.classList.add('selected');
+
+            selectedObject = loadedGLTF.scene.getObjectByName(objectName);
+            if (selectedObject) {
+                placementMode = true;
+                if (placementPreview) scene.remove(placementPreview);
+                ignoreNextClick = true;
+
+                placementPreview = new THREE.Group();
+                const modelClone = selectedObject.clone();
+                placementPreview.add(modelClone);
+
+                // --- INICIO: Corrección de rotación para la vista previa ---
+                // Rotamos todos los objetos para que se vean derechos al seleccionarlos.
+                placementPreview.rotation.x = -Math.PI / 2;
+
+                placementPreview.scale.set(10, 10, 10);
+
+                placementPreview.traverse(child => {
+                    if(child.isMesh) {
+                        child.material = child.material.clone();
+                        child.material.transparent = true;
+                        child.material.opacity = 0.6;
+                    }
+                });
+                scene.add(placementPreview);
+                document.getElementById('asset-modal').style.display = 'none';
+
+                // --- INICIO: Mostrar panel de opciones de colocación ---
+                document.getElementById('placement-options-panel').style.display = 'block';
+                // --- FIN: Mostrar panel de opciones de colocación ---
+            }
+        }
+
+        // --- Event Listeners ---
+        window.addEventListener('click', onMouseClick);
+        window.addEventListener('dblclick', onObjectDoubleClick);
+        document.getElementById('export-btn').addEventListener('click', exportMap);
+
+        const settingsIcon = document.getElementById('settings-icon');
+        const settingsPanel = document.getElementById('settings-panel');
+        const gridSizeInput = document.getElementById('grid-size-input');
+        const applySettingsBtn = document.getElementById('apply-settings-btn');
+        const placementOptionsPanel = document.getElementById('placement-options-panel');
+        const placementScaleSlider = document.getElementById('placement-scale-slider');
+        const placementRotationYSlider = document.getElementById('placement-rotation-y-slider');
+        const placementRotationZSlider = document.getElementById('placement-rotation-z-slider');
+
+
+        const assetsIcon = document.getElementById('assets-icon');
+        const loadMapBtn = document.getElementById('load-map-btn');
+        const loadMapInput = document.getElementById('load-map-input');
+        loadMapBtn.addEventListener('click', () => loadMapInput.click());
+        loadMapInput.addEventListener('change', loadMapFromFile);
+        const assetsPanel = document.getElementById('assets-panel');
+        const assetsList = document.getElementById('assets-list');
+        const assetModal = document.getElementById('asset-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const prevPageBtn = document.getElementById('prev-page-btn');
+        const nextPageBtn = document.getElementById('next-page-btn');
+        const uiHeader = document.querySelector('.ui-header');
+        const uiPanel = document.getElementById('ui');
+        const uiContent = document.querySelector('.ui-content');
+        const toggleViewBtn = document.getElementById('toggle-view-btn');
+        let isGameView = false;
+        const scaleModal = document.getElementById('scale-modal');
+        const fillFloorCheckbox = document.getElementById('fill-floor-checkbox');
+        const fillFloorBtn = document.getElementById('fill-floor-btn');
+        const wallBtn = document.getElementById('wall-btn');
+        const closeScaleModalBtn = document.getElementById('close-scale-modal-btn');
+        const scaleSlider = document.getElementById('scale-slider');
+        const scaleInput = document.getElementById('scale-input');
+        const rotationXSlider = document.getElementById('rotation-x-slider');
+        const rotationXInput = document.getElementById('rotation-x-input');
+        const rotationYSlider = document.getElementById('rotation-y-slider');
+        const rotationYInput = document.getElementById('rotation-y-input');
+        const rotationZSlider = document.getElementById('rotation-z-slider');
+        const rotationZInput = document.getElementById('rotation-z-input');
+        const scaleDisplay = document.getElementById('scale-value-display');
+        const positionYSlider = document.getElementById('position-y-slider');
+        const positionYInput = document.getElementById('position-y-input');
+        const positionYDisplay = document.getElementById('position-y-display');
+        const rotationXDisplay = document.getElementById('rotation-x-display');
+        const rotationYDisplay = document.getElementById('rotation-y-display');
+        const rotationZDisplay = document.getElementById('rotation-z-display');
+        const deleteObjectBtn = document.getElementById('delete-object-btn');
+        const exportableCheckbox = document.getElementById('exportable-checkbox');
+        const closePlayerSettingsModalBtn = document.getElementById('close-player-settings-modal-btn');
+        const setPlayerSpawnBtn = document.getElementById('set-player-spawn-btn');
+        const addEnemySpawnBtn = document.getElementById('add-enemy-spawn-btn');
+        const deleteEnemiesBtn = document.getElementById('delete-enemies-btn');
+        const toggleFreePlacementBtn = document.getElementById('toggle-free-placement-btn');
+        const toggleDeleteBrushBtn = document.getElementById('toggle-delete-brush-btn');
+
+        // --- INICIO: Listener para cambiar el tipo de objeto en el modal de edición ---
+        document.querySelectorAll('input[name="edit-asset-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (editingObject) {
+                    editingObject.userData.assetType = e.target.value;
+                    saveMapToLocalStorage();
+                    console.log(`Tipo de objeto actualizado a: ${e.target.value}`);
+                }
+            });
+        });
+        // --- FIN: Listener para cambiar el tipo de objeto en el modal de edición ---
+        document.getElementById('clear-autosave-btn').addEventListener('click', clearAutosavedMap);
+        // --- INICIO: Listeners para el panel de opciones de colocación ---
+        placementScaleSlider.addEventListener('input', (e) => {
+            if (placementPreview) {
+                const scale = parseFloat(e.target.value);
+                placementPreview.scale.set(scale, scale, scale);
+                document.getElementById('placement-scale-value-display').textContent = scale.toFixed(1);
+            }
+        });
+
+        placementRotationYSlider.addEventListener('input', (e) => {
+            if (placementPreview) {
+                const degrees = parseInt(e.target.value);
+                const radians = degrees * Math.PI / 180;
+                // La rotación en X es para la vista previa, la rotación en Y es la del usuario.
+                placementPreview.rotation.y = radians;
+                document.getElementById('placement-rotation-y-display').textContent = `${degrees}°`;
+            }
+        });
+
+        placementRotationZSlider.addEventListener('input', (e) => {
+            if (placementPreview) {
+                const degrees = parseInt(e.target.value);
+                const radians = degrees * Math.PI / 180;
+                // La rotación en Z es para la inclinación lateral.
+                placementPreview.rotation.z = radians;
+                document.getElementById('placement-rotation-z-display').textContent = `${degrees}°`;
+            }
+        });
+        // --- FIN: Listeners para el panel de opciones de colocación ---
+
+        // --- INICIO: Listeners para las pestañas del modal del jugador ---
+        document.querySelectorAll('.player-tab-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target;
+
+                // Ocultar todos los contenidos de las pestañas y quitar la clase activa de los botones
+                document.querySelectorAll('.player-settings-tab-content').forEach(content => content.style.display = 'none');
+                document.querySelectorAll('.player-tab-btn').forEach(btn => btn.classList.remove('active'));
+
+                // Mostrar el contenido de la pestaña seleccionada y marcar el botón como activo
+                document.getElementById(targetId).style.display = 'grid';
+                button.classList.add('active');
+            });
+        });
+        // --- FIN: Listeners para las pestañas del modal del jugador ---
+
+
+        toggleFreePlacementBtn.addEventListener('click', () => {
+            freePlacementMode = !freePlacementMode;
+            if (freePlacementMode) {
+                toggleFreePlacementBtn.style.backgroundColor = '#28a745'; // Green
+                toggleFreePlacementBtn.style.color = 'white';
+            } else {
+                toggleFreePlacementBtn.style.backgroundColor = '';
+                toggleFreePlacementBtn.style.color = '';
+            }
+            cancelAllModes(); // Cancel other modes when toggling free placement
+        });
+
+        toggleDeleteBrushBtn.addEventListener('click', () => {
+            deleteBrushMode = !deleteBrushMode;
+            if (deleteBrushMode) {
+                toggleDeleteBrushBtn.style.backgroundColor = '#e74c3c'; // Red
+                toggleDeleteBrushBtn.style.color = 'white';
+            } else {
+                toggleDeleteBrushBtn.style.backgroundColor = '';
+                toggleDeleteBrushBtn.style.color = '';
+            }
+            cancelAllModes(); // Cancel other modes when toggling delete brush
+        });
+
+        setPlayerSpawnBtn.addEventListener('click', () => {
+            cancelAllModes();
+            if (!knightModel) {
+                alert("El modelo del jugador no se ha cargado todavía. Por favor, espera un momento.");
+                return;
+            }
+            playerSpawnMode = true;
+            if (!playerSpawnPreview) {
+                playerSpawnPreview = knightModel.clone();
+                playerSpawnPreview.traverse(child => {
+                    if (child.isMesh) {
+                        child.material = child.material.clone();
+                        child.material.transparent = true;
+                        child.material.opacity = 0.6;
+                    }
+                });
+                scene.add(playerSpawnPreview);
+            }
+            setPlayerSpawnBtn.style.backgroundColor = '#007bff';
+        });
+
+        addEnemySpawnBtn.addEventListener('click', () => {
+            cancelAllModes();
+            if (!skeletonModel) {
+                alert("El modelo del enemigo no se ha cargado todavía. Por favor, espera un momento.");
+                return;
+            }
+            enemySpawnMode = true;
+            if (!enemySpawnPreview) {
+                enemySpawnPreview = skeletonModel.clone();
+                enemySpawnPreview.traverse(child => {
+                    if (child.isMesh) {
+                        child.material = child.material.clone();
+                        child.material.transparent = true;
+                        child.material.opacity = 0.6;
+                    }
+                });
+                scene.add(enemySpawnPreview);
+            }
+            addEnemySpawnBtn.style.backgroundColor = '#dc3545';
+        });
+
+        // --- INICIO: Listener para el botón de eliminar enemigos ---
+        deleteEnemiesBtn.addEventListener('click', () => {
+            if (confirm('¿Estás seguro de que quieres eliminar TODOS los puntos de spawn de enemigos?')) {
+                while(enemySpawnsGroup.children.length > 0) {
+                    enemySpawnsGroup.remove(enemySpawnsGroup.children[0]);
+                }
+                saveMapToLocalStorage();
+                console.log("Todos los spawns de enemigos han sido eliminados.");
+            }
+        });
+        // --- FIN: Listener para el botón de eliminar enemigos ---
+
+        // --- INICIO: Función para precargar modelos del editor ---
+        async function preloadEditorModels() {
+            const loader = new THREE.GLTFLoader();
+            try {
+                const knightGltf = await loader.loadAsync('players/Knight.glb');
+                knightModel = knightGltf.scene;
+                knightModel.scale.set(1.7, 1.7, 1.7);
+                // --- INICIO: Extraer y guardar los nombres de las animaciones ---
+                knightAnimationNames = knightGltf.animations.map(clip => clip.name);
+                knightAnimations = knightGltf.animations; // Guardar los clips completos
+                // --- FIN: Extraer y guardar los nombres de las animaciones ---
+                console.log("Modelo del Caballero precargado para el spawn.");
+
+                const skeletonGltf = await loader.loadAsync('Enemigo/Skeleton_Warrior.glb');
+                skeletonModel = skeletonGltf.scene;
+                skeletonModel.scale.set(1.7, 1.7, 1.7);
+                console.log("Modelo del Esqueleto precargado para el spawn.");
+            } catch (error) {
+                console.error("Error precargando los modelos para el editor:", error);
+                alert("Hubo un error al cargar los modelos del jugador/enemigo. La función de spawn puede no funcionar correctamente.");
+            }
+        }
+
+        function playAnimationOnSpawn(animationName) {
+            const playerSpawnObject = playerSpawnGroup.children[0];
+            if (!playerSpawnObject || !knightAnimations.length) return;
+
+            // Obtener o crear el mixer para el objeto de spawn
+            if (!playerSpawnObject.userData.mixer) {
+                playerSpawnObject.userData.mixer = new THREE.AnimationMixer(playerSpawnObject);
+            }
+            const mixer = playerSpawnObject.userData.mixer;
+            mixer.stopAllAction();
+
+            const clipToPlay = THREE.AnimationClip.findByName(knightAnimations, animationName);
+            const idleClip = THREE.AnimationClip.findByName(knightAnimations, 'Idle');
+
+            if (!clipToPlay || !idleClip) {
+                console.error(`No se pudo encontrar la animación "${animationName}" o la animación "Idle".`);
+                return;
+            }
+
+            const action = mixer.clipAction(clipToPlay);
+            action.setLoop(THREE.LoopOnce);
+            action.clampWhenFinished = true;
+            action.play();
+
+            // Cuando la animación termine, volver a la animación de reposo (Idle)
+            mixer.addEventListener('finished', function onFinished() {
+                mixer.removeEventListener('finished', onFinished);
+                mixer.clipAction(idleClip).play();
+            });
+        }
+
+        function populatePlayerAnimationModal() {
+            const animContainer = document.getElementById('player-animation-controls');
+            const objContainer = document.getElementById('player-object-controls');
+            animContainer.innerHTML = ''; // Limpiar contenido anterior
+            objContainer.innerHTML = '';
+
+            // --- INICIO: Lógica de pestañas ---
+            // Asegurarse de que la pestaña de animaciones esté activa por defecto
+            document.querySelector('.player-tab-btn[data-target="player-animation-controls"]').classList.add('active');
+            document.querySelector('.player-tab-btn[data-target="player-object-controls"]').classList.remove('active');
+            animContainer.style.display = 'grid';
+            objContainer.style.display = 'none';
+            // --- FIN: Lógica de pestañas ---
+
+            const playerSpawnObject = playerSpawnGroup.children[0];
+            if (!playerSpawnObject || !knightModel) return;
+
+            const currentSettings = playerSpawnObject.userData.animationSettings || {};
+
+            const animationMappings = {
+                'Animación de Reposo (Idle)': { key: 'idle', default: 'Idle' },
+                'Animación al Correr': { key: 'running', default: 'Running_A' },
+                'Ataque Combo 1': { key: 'attack1', default: '1H_Melee_Attack_Slice_Horizontal' },
+                'Ataque Combo 2': { key: 'attack2', default: '1H_Melee_Attack_Chop' },
+                'Ataque Combo 3': { key: 'attack3', default: '1H_Melee_Attack_Slice_Diagonal' },
+                'Ataque Combo 4': { key: 'attack4', default: '1H_Melee_Attack_Stab' },
+                'Animación de Recibir Golpe 1': { key: 'hit1', default: 'Hit_A' },
+                'Animación de Recibir Golpe 2': { key: 'hit2', default: 'Hit_B' },
+                'Animación de Muerte 1': { key: 'death1', default: 'Death_A' },
+                'Animación de Muerte 2': { key: 'death2', default: 'Death_B' }
+            };
+
+            for (const label in animationMappings) {
+                const mapping = animationMappings[label];
+                const controlDiv = document.createElement('div');
+                
+                const labelEl = document.createElement('label');
+                labelEl.textContent = label + ':';
+                labelEl.style.display = 'block';
+                labelEl.style.marginBottom = '5px';
+
+                const selectEl = document.createElement('select');
+                selectEl.style.width = '100%';
+                selectEl.dataset.key = mapping.key;
+
+                knightAnimationNames.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    selectEl.appendChild(option);
+                });
+
+                selectEl.value = currentSettings[mapping.key] || mapping.default;
+
+                selectEl.addEventListener('change', (e) => {
+                    if (!playerSpawnObject.userData.animationSettings) {
+                        playerSpawnObject.userData.animationSettings = {};
+                    }
+                    playerSpawnObject.userData.animationSettings[e.target.dataset.key] = e.target.value;
+                    saveMapToLocalStorage(); // Guardar cambios automáticamente
+                    console.log(`Animación '${e.target.dataset.key}' actualizada a '${e.target.value}'`);
+                });
+
+                const playBtn = document.createElement('button');
+                playBtn.textContent = '▶️';
+                playBtn.style.marginLeft = '10px';
+                playBtn.style.padding = '5px 8px';
+                playBtn.addEventListener('click', () => {
+                    playAnimationOnSpawn(selectEl.value);
+                });
+
+                const controlWrapper = document.createElement('div');
+                controlWrapper.style.display = 'flex';
+                controlWrapper.style.alignItems = 'center';
+                controlWrapper.appendChild(selectEl);
+                controlWrapper.appendChild(playBtn);
+                controlDiv.appendChild(labelEl);
+                controlDiv.appendChild(controlWrapper);
+                animContainer.appendChild(controlDiv);
+            }
+
+            // --- INICIO: Poblar lista de objetos visibles ---
+            const currentVisibility = playerSpawnObject.userData.objectVisibility || {};
+
+            knightModel.traverse(child => {
+                if (child.isMesh) {
+                    const controlDiv = document.createElement('div');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `vis-toggle-${child.name}`;
+                    checkbox.dataset.name = child.name;
+
+                    // --- INICIO: Lógica de visibilidad por defecto mejorada ---
+                    // Partes del cuerpo que no se pueden desactivar para evitar confusiones.
+                    const nonToggleableParts = ['Knight_Body', 'Knight_ArmRight', 'Knight_ArmLeft', 'Knight_LegRight', 'Knight_LegLeft', 'Knight_Head'];
+                    if (nonToggleableParts.includes(child.name)) {
+                        checkbox.disabled = true;
+                        checkbox.checked = true;
+                        checkbox.title = "Esta parte del cuerpo no se puede ocultar.";
+                    }
+
+                    // El estado inicial se basa en lo guardado. Si no hay nada guardado, todo es visible por defecto.
+                    checkbox.checked = currentVisibility[child.name] !== undefined 
+                        ? currentVisibility[child.name]
+                        : true;
+                    // --- FIN: Lógica de visibilidad por defecto mejorada ---
+
+                    checkbox.addEventListener('change', (e) => {
+                        const objectName = e.target.dataset.name;
+                        const isVisible = e.target.checked;
+                        const objectInSpawn = playerSpawnObject.getObjectByName(objectName);
+                        if (objectInSpawn) objectInSpawn.visible = isVisible;
+                        
+                        if (!playerSpawnObject.userData.objectVisibility) playerSpawnObject.userData.objectVisibility = {};
+                        playerSpawnObject.userData.objectVisibility[objectName] = isVisible;
+                        saveMapToLocalStorage();
+                    });
+
+                    const label = document.createElement('label');
+                    label.htmlFor = checkbox.id;
+                    label.textContent = child.name;
+                    controlDiv.append(checkbox, label);
+                    objContainer.appendChild(controlDiv);
+                }
+            });
+            // --- FIN: Poblar lista de objetos visibles ---
+        }
+        // --- FIN: Función para precargar modelos del editor ---
+
+        exportableCheckbox.addEventListener('change', () => {
+            if (editingObject) {
+                editingObject.userData.exportable = exportableCheckbox.checked;
+                saveMapToLocalStorage();
+            }
+        });
+
+        uiHeader.addEventListener('click', () => {
+            uiPanel.classList.toggle('collapsed');
+            if (uiPanel.classList.contains('collapsed')) {
+                uiContent.style.maxHeight = '0';
+            } else {
+                uiContent.style.maxHeight = uiContent.scrollHeight + "px";
+            }
+        });
+
+        toggleViewBtn.addEventListener('click', () => {
+            // --- INICIO: Guardado explícito para la vista previa ---
+            // Generamos los datos del mapa en el momento exacto del clic para asegurar que es la versión más reciente.
+            const mapData = generateMapData();
+            // Usamos sessionStorage para que los datos solo persistan para la siguiente pestaña.
+            sessionStorage.setItem('previewMapData', JSON.stringify(mapData));
+            console.log("Datos del mapa guardados en sessionStorage para la vista previa.");
+            window.open('juego.html?preview=true', '_blank');
+            // --- FIN: Guardado explícito para la vista previa ---
+        });
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 0) renderPage(currentPage - 1);
+        });
+        nextPageBtn.addEventListener('click', () => {
+            renderPage(currentPage + 1);
+        });
+
+        closePlayerSettingsModalBtn.addEventListener('click', () => {
+            document.getElementById('player-settings-modal').style.display = 'none';
+        });
+
+        const assetFiles = [
+            'glb/free_modular_low_poly_dungeon_pack.glb',
+            'players/Knight.glb',
+            'glb/low_poly_city.glb',
+           
+            'glb/low_poly_farm_v2.glb',
+            'glb/low_poly_stylized_nature_pack.glb',
+            
+
+
+'glb/brawl_stars_box_3.glb',
+
+
+
+            'glb/low_poly_nature_free.glb',
+            'Enemigo/Skeleton_Warrior.glb',
+            'glb/village__town_assets.glb',
+        ];
+
+        assetsIcon.addEventListener('click', () => {
+            assetsPanel.style.display = assetsPanel.style.display === 'none' ? 'block' : 'none';
+            settingsPanel.style.display = 'none';
+            assetModal.style.display = 'none';
+        });
+
+        assetsList.innerHTML = '';
+        assetFiles.forEach(file => {
+            const li = document.createElement('li');
+            li.textContent = file;
+            li.addEventListener('click', () => {
+                loadAndShowObjects(file);
+            });
+            assetsList.appendChild(li);
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            assetModal.style.display = 'none';
+            clearPreviewScenes();
+            // Al cerrar el modal, cancelamos el modo de colocación
+            cancelAllModes();
+        });
+
+        settingsIcon.addEventListener('click', () => {
+            settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+            assetsPanel.style.display = 'none';
+        });
+
+        applySettingsBtn.addEventListener('click', () => {
+            setupGrid(parseInt(gridSizeInput.value));
+            saveMapToLocalStorage();
+        });
+
+        document.getElementById('scale-by-name-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('scale-by-name-input');
+            const scaleInput = document.getElementById('scale-by-name-value');
+
+            const objectName = nameInput.value.trim();
+            const newScale = parseFloat(scaleInput.value);
+
+            if (!objectName || isNaN(newScale) || newScale <= 0) {
+                alert("Por favor, introduce un nombre y una escala válidos.");
+                return;
+            }
+
+            let updatedCount = 0;
+            placedAssets.children.forEach(asset => {
+                if (asset.userData.assetName === objectName) {
+                    asset.scale.set(newScale, newScale, newScale);
+                    updatedCount++;
+                }
+            });
+            saveMapToLocalStorage();
+
+            alert(`Se actualizaron ${updatedCount} objetos con el nombre "${objectName}".`);
+        });
+
+        document.getElementById('type-by-name-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('type-by-name-input');
+            const selectedType = document.querySelector('input[name="type-by-name"]:checked').value;
+            const objectName = nameInput.value.trim();
+
+            if (!objectName) {
+                alert("Por favor, introduce un nombre de objeto.");
+                return;
+            }
+
+            let updatedCount = 0;
+            placedAssets.children.forEach(asset => {
+                if (asset.userData.assetName === objectName) {
+                    asset.userData.assetType = selectedType;
+                    updatedCount++;
+                }
+            });
+            saveMapToLocalStorage();
+
+            alert(`Se actualizó el tipo de ${updatedCount} objetos con el nombre "${objectName}" a "${selectedType}".`);
+        });
+
+        fillFloorBtn.addEventListener('click', () => {
+            const assetPath = document.getElementById('fill-floor-asset-path').value.trim();
+            const objectName = document.getElementById('fill-floor-object-name').value.trim();
+            const scale = parseFloat(document.getElementById('fill-floor-scale').value);
+
+            if (!assetPath || !objectName || isNaN(scale) || scale <= 0) {
+                alert("Por favor, introduce datos válidos para el relleno de suelo.");
+                return;
+            }
+
+            if (!loadedGLTF || currentAssetFile !== assetPath) {
+                loadAndShowObjects(assetPath).then(() => applyFloorFill(objectName, scale));
+            } else {
+                applyFloorFill(objectName, scale);
+            }
+        });
+
+        function applyFloorFill(objectName, scale) {
+            const originalObject = loadedGLTF?.scene.getObjectByName(objectName);
+            if (!originalObject) {
+                alert(`No se encontró el objeto "${objectName}" en el asset cargado.`);
+                return;
+            }
+
+            // --- INICIO: Lógica de limpieza de suelo mejorada ---
+            let removedCount = 0;
+            for (let i = placedAssets.children.length - 1; i >= 0; i--) {
+                const asset = placedAssets.children[i];
+                if (asset.userData.assetType === 'piso') {
+                    placedAssets.remove(asset);
+                    removedCount++;
+                }
+            }
+            console.log(`Limpiando ${removedCount} bloques de piso existentes.`);
+            // --- FIN: Lógica de limpieza de suelo mejorada ---
+
+            let filledCount = 0;
+            // Iterate through the grid and fill all spots.
+            for (let z = 0; z < gridSize; z++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const targetX = (x - gridSize / 2 + 0.5) * cellSize;
+                    const targetZ = (z - gridSize / 2 + 0.5) * cellSize;
+                    
+                    const newObject = originalObject.clone();
+                    newObject.rotation.x = -Math.PI / 2;
+                    newObject.position.set(targetX, 0, targetZ);
+                    newObject.scale.set(scale, scale, scale);
+                    newObject.userData.assetPath = currentAssetFile;
+                    newObject.userData.assetName = objectName;
+                    newObject.userData.assetType = 'piso';
+                    newObject.userData.exportable = true;
+                    placedAssets.add(newObject);
+                    filledCount++;
+                }
+            }
+            console.log(`Se colocaron ${filledCount} nuevos bloques de piso.`);
+            saveMapToLocalStorage();
+            alert(`Se creó un suelo nuevo con ${filledCount} baldosas de "${objectName}".`);
+        }
+
+        wallBtn.addEventListener('click', () => {
+            const assetPath = document.getElementById('wall-asset-path').value.trim();
+            const objectName = document.getElementById('wall-object-name').value.trim();
+            const scale = parseFloat(document.getElementById('wall-scale').value);
+
+            if (!assetPath || !objectName || isNaN(scale) || scale <= 0) {
+                alert("Por favor, introduce datos válidos para las paredes.");
+                return;
+            }
+
+            if (!loadedGLTF || currentAssetFile !== assetPath) {
+                loadAndShowObjects(assetPath).then(() => applyWalls(objectName, scale));
+            } else {
+                applyWalls(objectName, scale);
+            }
+        });
+
+        function applyWalls(objectName, scale) {
+            const originalObject = loadedGLTF?.scene.getObjectByName(objectName);
+            if (!originalObject) {
+                alert(`No se encontró el objeto "${objectName}" en el asset cargado.`);
+                return;
+            }
+
+            const wallObjectsToRemove = placedAssets.children.filter(asset => asset.userData.assetType === 'no-piso');
+            wallObjectsToRemove.forEach(obj => placedAssets.remove(obj));
+
+            const perimeterPositions = [];
+            for (let x = 0; x < gridSize; x++) {
+                perimeterPositions.push({ x: x, z: 0 });
+                perimeterPositions.push({ x: x, z: gridSize - 1 });
+            }
+            for (let z = 1; z < gridSize - 1; z++) {
+                perimeterPositions.push({ x: 0, z: z });
+                perimeterPositions.push({ x: gridSize - 1, z: z });
+            }
+
+            perimeterPositions.forEach(pos => {
+                const newObject = originalObject.clone();
+                newObject.rotation.x = -Math.PI / 2;
+
+                const baseX = (pos.x - gridSize / 2 + 0.5) * cellSize;
+                const baseZ = (pos.z - gridSize / 2 + 0.5) * cellSize;
+
+                let maxFloorHeight = 0;
+                placedAssets.children.forEach(asset => {
+                    if (asset.userData.assetType === 'piso' &&
+                        Math.abs(asset.position.x - baseX) < cellSize / 2 &&
+                        Math.abs(asset.position.z - baseZ) < cellSize / 2) {
+                        const box = new THREE.Box3().setFromObject(asset);
+                        if (box.max.y > maxFloorHeight) {
+                            maxFloorHeight = box.max.y;
+                        }
+                    }
+                });
+
+                newObject.position.set(baseX, maxFloorHeight, baseZ);
+                newObject.scale.set(scale, scale, scale);
+                newObject.userData.assetPath = currentAssetFile;
+                newObject.userData.assetName = objectName;
+                newObject.userData.assetType = 'no-piso';
+                placedAssets.add(newObject);
+            });
+            saveMapToLocalStorage();
+
+            alert(`Paredes aplicadas con "${objectName}".`);
+        }
+
+        closeScaleModalBtn.addEventListener('click', () => {
+            scaleModal.style.display = 'none';
+            editingObject = null;
+        });
+
+        scaleSlider.addEventListener('input', () => {
+            if (editingObject) {
+                const newScale = parseFloat(scaleSlider.value);
+                editingObject.scale.set(newScale, newScale, newScale);
+                scaleInput.value = newScale;
+                scaleDisplay.textContent = newScale.toFixed(1);
+                saveMapToLocalStorage();
+            }
+        });
+
+        scaleInput.addEventListener('input', () => {
+            if (editingObject) {
+                const newScale = parseFloat(scaleInput.value);
+                if (!isNaN(newScale) && newScale >= 0.1) {
+                    editingObject.scale.set(newScale, newScale, newScale);
+                    scaleSlider.value = newScale;
+                    scaleDisplay.textContent = newScale.toFixed(1);
+                    saveMapToLocalStorage();
+                }
+            }
+        });
+
+        positionYSlider.addEventListener('input', () => {
+            if (editingObject) {
+                const newY = parseFloat(positionYSlider.value);
+                editingObject.position.y = newY;
+                positionYInput.value = newY;
+                positionYDisplay.textContent = newY.toFixed(2);
+                saveMapToLocalStorage();
+            }
+        });
+
+        positionYInput.addEventListener('input', () => {
+            if (editingObject) {
+                const newY = parseFloat(positionYInput.value);
+                if (!isNaN(newY)) {
+                    editingObject.position.y = newY;
+                    positionYSlider.value = newY;
+                    positionYDisplay.textContent = newY.toFixed(2);
+                    saveMapToLocalStorage();
+                }
+            }
+        });
+
+        function updateRotation(axis, slider, input, display) {
+            return () => {
+                if (editingObject) {
+                    const degrees = parseFloat(slider.value);
+                    const radians = degrees * Math.PI / 180;
+                    editingObject.rotation[axis] = radians;
+                    input.value = degrees;
+                    display.textContent = degrees + '°';
+                    saveMapToLocalStorage();
+                }
+            };
+        }
+
+        function updateRotationFromInput(axis, slider, input, display) {
+            return () => {
+                if (editingObject) {
+                    const degrees = parseFloat(input.value);
+                    if (!isNaN(degrees) && degrees >= -180 && degrees <= 180) {
+                        const radians = degrees * Math.PI / 180;
+                        editingObject.rotation[axis] = radians;
+                        slider.value = degrees;
+                        display.textContent = degrees + '°';
+                        saveMapToLocalStorage();
+                    }
+                }
+            };
+        }
+
+        rotationXSlider.addEventListener('input', updateRotation('x', rotationXSlider, rotationXInput, rotationXDisplay));
+        rotationYSlider.addEventListener('input', updateRotation('y', rotationYSlider, rotationYInput, rotationYDisplay));
+        rotationZSlider.addEventListener('input', updateRotation('z', rotationZSlider, rotationZInput, rotationZDisplay));
+
+        rotationXInput.addEventListener('input', updateRotationFromInput('x', rotationXSlider, rotationXInput, rotationXDisplay));
+        rotationYInput.addEventListener('input', updateRotationFromInput('y', rotationYSlider, rotationYInput, rotationYDisplay));
+        rotationZInput.addEventListener('input', updateRotationFromInput('z', rotationZSlider, rotationZInput, rotationZDisplay));
+
+        deleteObjectBtn.addEventListener('click', () => {
+            if (editingObject) {
+                if (confirm(`¿Estás seguro de que quieres eliminar el objeto "${editingObject.userData.assetName}"?`)) {
+                    placedAssets.remove(editingObject);
+                    actionHistory.push({
+                        type: 'delete_object',
+                        object: editingObject
+                    });
+                    redoHistory.length = 0;
+
+                    saveMapToLocalStorage();
+                    scaleModal.style.display = 'none';
+                    editingObject = null;
+                    console.log("Objeto eliminado.");
+                }
+            }
+        });
+
+        window.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const playerIntersects = raycaster.intersectObjects(playerSpawnGroup.children);
+            if (playerIntersects.length > 0) {
+                if (confirm('¿Eliminar el punto de spawn del jugador?')) {
+                    playerSpawnGroup.remove(playerIntersects[0].object);
+                    saveMapToLocalStorage();
+                }
+                return;
+            }
+
+            const enemyIntersects = raycaster.intersectObjects(enemySpawnsGroup.children);
+            if (enemyIntersects.length > 0) {
+                if (confirm('¿Eliminar este punto de spawn de enemigo?')) {
+                    enemySpawnsGroup.remove(enemyIntersects[0].object);
+                    saveMapToLocalStorage();
+                }
+                return;
+            }
+        });
+
+        window.addEventListener('keydown', (event) => {
+            switch (event.key.toLowerCase()) {
+                case 'w': moveForward = true; break;
+                case 's': moveBackward = true; break;
+                case 'a': moveLeft = true; break;
+                case 'd': moveRight = true; break;
+                case 'shift': isSprinting = true; break;
+                case 'escape':
+                    cancelAllModes();
+                    break;
+                case 'z':
+                    if (event.ctrlKey) {
+                        if (event.shiftKey) {
+                            redoLastAction(); // Ctrl + Shift + Z para rehacer
+                        } else {
+                            undoLastAction(); // Ctrl + Z para deshacer
+                        }
+                    }
+                    break;
+                case 'control':
+                    isCtrlDown = true;
+                    // Si estamos en modo de colocación, preparamos para pintar desactivando la cámara.
+                    if (placementMode) {
+                        controls.enabled = false;
+                    }
+                    break;
+            }
+        });
+
+        window.addEventListener('keyup', (event) => {
+            switch (event.key.toLowerCase()) {
+                case 'w': moveForward = false; break;
+                case 's': moveBackward = false; break;
+                case 'a': moveLeft = false; break;
+                case 'd': moveRight = false; break;
+                case 'shift': isSprinting = false; break;
+                case 'control':
+                    isCtrlDown = false;
+                    isPainting = false; // Detener pintura si se suelta Ctrl
+                    controls.enabled = true; // Reactivar la cámara
+                    lastPaintedCell = { x: null, z: null };
+                    break;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            // --- INICIO: Lógica de movimiento para pintar ---
+            if (isPainting) {
+                handlePainting(event);
+            }
+            // --- FIN: Lógica de movimiento para pintar ---
+            // --- INICIO: Lógica de movimiento para borrar ---
+            if (isDeleting) {
+                handleDeleting(event);
+            }
+            // --- FIN: Lógica de movimiento para borrar ---
+
+            if (!placementMode && !playerSpawnMode && !enemySpawnMode) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const objectsToIntersect = [plane, ...placedAssets.children];
+            const intersects = raycaster.intersectObjects(objectsToIntersect, true);
+
+            if (intersects.length > 0) {
+                const pos = intersects[0].point;
+
+                let targetPreview = null;
+                if (placementMode && placementPreview) targetPreview = placementPreview;
+                if (playerSpawnMode && playerSpawnPreview) targetPreview = playerSpawnPreview;
+                if (enemySpawnMode && enemySpawnPreview) targetPreview = enemySpawnPreview;
+
+                if (targetPreview) {
+                    let finalX = pos.x;
+                    let finalZ = pos.z;
+
+                    if (!freePlacementMode) {
+                        const offset = (gridSize % 2 === 0) ? cellSize / 2 : 0;
+                        finalX = Math.round((pos.x - offset) / cellSize) * cellSize + offset;
+                        finalZ = Math.round((pos.z - offset) / cellSize) * cellSize + offset;
+                    }
+                    targetPreview.position.set(finalX, 0, finalZ);
+
+                    let highestY = 0;
+                    let foundObjectBelow = false;
+                    for (const child of placedAssets.children) { // Iterar sobre los objetos ya colocados
+                        if (Math.abs(child.position.x - finalX) < cellSize * 0.6 &&
+                            Math.abs(child.position.z - finalZ) < cellSize * 0.6) {
+                            const box = new THREE.Box3().setFromObject(child);
+                            if (box.max.y > highestY) { // Encontrar la altura máxima debajo del cursor
+                                highestY = box.max.y;
+                            }
+                            foundObjectBelow = true;
+                        }
+                    }
+
+                    if (foundObjectBelow) {
+                        targetPreview.position.y = highestY;
+                    } else {
+                        if (playerSpawnMode || enemySpawnMode) {
+                             targetPreview.position.y = spawnGeometry.parameters.height / 2;
+                        } else {
+                            const previewBox = new THREE.Box3().setFromObject(targetPreview);
+                            targetPreview.position.y = -previewBox.min.y;
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- INICIO: Función para manejar la pintura de objetos ---
+        function handlePainting(event) {
+            if (!isPainting || !placementMode || !placementPreview) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObject(plane);
+            if (intersects.length > 0) {
+                const intersectPoint = intersects[0].point.clone();
+                let finalX, finalZ;
+
+                if (!freePlacementMode) {
+                    const offset = (gridSize % 2 === 0) ? cellSize / 2 : 0;
+                    finalX = Math.round((intersectPoint.x - offset) / cellSize) * cellSize + offset;
+                    finalZ = Math.round((intersectPoint.z - offset) / cellSize) * cellSize + offset;
+                } else {
+                    finalX = intersectPoint.x;
+                    finalZ = intersectPoint.z;
+                }
+
+                // Evitar pintar en la misma celda repetidamente
+                if (finalX === lastPaintedCell.x && finalZ === lastPaintedCell.z) {
+                    return;
+                }
+
+                // --- INICIO: Mejora para no pintar sobre objetos idénticos ---
+                // Comprobar si ya existe un objeto del mismo tipo en esta celda.
+                const tolerance = freePlacementMode ? 0.1 : cellSize * 0.5;
+                for (const child of placedAssets.children) {
+                    if (child.userData.assetName === selectedObject.name &&
+                        Math.abs(child.position.x - finalX) < tolerance &&
+                        Math.abs(child.position.z - finalZ) < tolerance) {
+                        
+                        // Ya hay un objeto idéntico aquí, no pintar.
+                        console.log(`Pintado omitido: ya existe un '${selectedObject.name}' en esta celda.`);
+                        return; 
+                    }
+                }
+                // --- FIN: Mejora para no pintar sobre objetos idénticos ---
+
+                lastPaintedCell.x = finalX;
+                lastPaintedCell.z = finalZ;
+
+                const centeredPosition = new THREE.Vector3(finalX, placementPreview.position.y, finalZ);
+                placeObject(centeredPosition);
+            }
+        }
+        // --- FIN: Función para manejar la pintura de objetos ---
+
+        // --- INICIO: Función para manejar el borrado de objetos ---
+        function handleDeleting(event) {
+            if (!isDeleting) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const assetIntersects = raycaster.intersectObjects(placedAssets.children, true);
+            if (assetIntersects.length > 0) {
+                let clickedObject = assetIntersects[0].object;
+                while (clickedObject.parent && clickedObject.parent !== placedAssets) {
+                    clickedObject = clickedObject.parent;
+                }
+                placedAssets.remove(clickedObject);
+                actionHistory.push({
+                    type: 'delete_object',
+                    object: clickedObject
+                });
+                redoHistory.length = 0;
+                saveMapToLocalStorage();
+                console.log(`Objeto '${clickedObject.userData.assetName}' eliminado con pincel.`);
+            }
+        }
+        // --- FIN: Función para manejar el borrado de objetos ---
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            const currentSpeed = isSprinting ? cameraMoveSpeed * 3 : cameraMoveSpeed;
+
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
+
+            const right = new THREE.Vector3().crossVectors(camera.up, forward).normalize();
+
+            if (moveForward) camera.position.addScaledVector(forward, currentSpeed);
+            if (moveBackward) camera.position.addScaledVector(forward, -currentSpeed);
+            if (moveLeft) camera.position.addScaledVector(right, currentSpeed);
+            if (moveRight) camera.position.addScaledVector(right, -currentSpeed);
+
+            controls.update();
+            renderer.render(scene, camera);
+
+            // Actualizar el mixer de animación del spawn del jugador si existe
+            const playerSpawnObject = playerSpawnGroup.children[0];
+            if (playerSpawnObject && playerSpawnObject.userData.mixer) {
+                playerSpawnObject.userData.mixer.update(clock.getDelta());
+            }
+            
+            renderer.setScissorTest(true);
+
+            previewScenes.forEach((preview, canvas) => {
+                const canvasRect = canvas.getBoundingClientRect();
+
+                if (canvasRect.bottom < 0 || canvasRect.top > renderer.domElement.clientHeight ||
+                    canvasRect.right < 0 || canvasRect.left > renderer.domElement.clientWidth) {
+                    return;
+                }
+
+                const width = canvasRect.right - canvasRect.left;
+                const height = canvasRect.bottom - canvasRect.top;
+                const left = canvasRect.left;
+                const bottom = renderer.domElement.clientHeight - canvasRect.bottom;
+
+                renderer.setScissor(left, bottom, width, height);
+                renderer.setViewport(left, bottom, width, height);
+
+                preview.model.rotation.y += 0.01;
+                preview.model.rotation.x += 0.005;
+
+                renderer.render(preview.scene, preview.camera);
+            });
+
+            renderer.setScissorTest(false);
+            renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+        }
+
+        // --- INICIO: Evento para detener la pintura al soltar el clic ---
+        window.addEventListener('mouseup', () => {
+            isPainting = false;
+            isDeleting = false;
+            controls.enabled = true; // Reactivar la cámara al soltar el clic
+            lastPaintedCell = { x: null, z: null };
+        });
+        // --- FIN: Evento para detener la pintura al soltar el clic ---
+        // Cargar el mapa autoguardado al iniciar
+        preloadEditorModels();
+        loadMapFromLocalStorage();
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+body { margin: 0; overflow: hidden; }
+#coords { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; cursor: pointer; z-index: 1; }
+#settings-icon { position: absolute; top: 10px; right: 10px; color: white; font-size: 24px; cursor: pointer; z-index: 100; }
+#settings-panel { position: absolute; top: 50px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; display: none; z-index: 100; border-radius: 5px; font-family: Arial, sans-serif; }
+/* --- INICIO: Estilos para el modal de la tienda --- */
+.shop-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none; /* Oculto por defecto */
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+.shop-modal-content {
+    background: #2c3e50;
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    font-family: Arial, sans-serif;
+}
+.shop-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #4a6fa5;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+.shop-filters {
+    display: flex;
+    gap: 10px;
+}
+.filter-btn {
+    padding: 5px 10px;
+    background: #4a6fa5;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.filter-btn.active {
+    background: #FFD700;
+    color: black;
+}
+#close-shop-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+}
+.shop-items-grid {
+    display: flex;
+    flex-direction: column; /* Organiza los artículos en una columna vertical */
+    gap: 15px;
+    overflow-y: auto; /* Scroll si hay muchos artículos */
+    max-height: 60vh; /* Altura máxima para el contenedor de artículos */
+    padding: 5px;
+}
+.shop-item-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto auto; /* Icono, Detalles, Precio, Botón */
+    align-items: center;
+    gap: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #4a6fa5;
+    text-align: center; /* Centrar el texto dentro de la tarjeta */
+}
+.shop-item-details {
+    text-align: left;
+}
+.shop-item-description {
+    font-size: 0.9em;
+    color: #ccc;
+}
+.shop-item-icon {
+    width: 64px;
+    height: 64px;
+    background-color: #4a6fa5;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 32px;
+    margin: 0 auto; /* Centrar el icono */
+}
+.shop-item-name {
+    font-size: 1.1em;
+    font-weight: bold;
+}
+.shop-item-price {
+    font-size: 1.1em;
+    color: #FFD700; /* Color dorado para el precio */
+    font-weight: bold;
+}
+.buy-button {
+    padding: 8px 16px;
+    width: 100%; /* Hacer que el botón ocupe todo el ancho */
+    cursor: pointer;
+}
+
+/* --- INICIO: Estilos Responsivos para Móviles --- */
+
+@media (max-width: 768px) {
+    /* Reducir el tamaño de los elementos de la UI en las esquinas */
+    #coords, #fps, #money, #equipment-ui {
+        font-size: 12px;
+        padding: 3px;
+    }
+
+    #player-health {
+        width: 120px; /* Hacer la barra de vida más pequeña */
+        height: 15px;
+    }
+
+    /* Mover el display de la oleada a la parte inferior para no obstruir la vista */
+    #wave-display {
+        top: auto;
+        bottom: 10px;
+        font-size: 14px;
+    }
+
+    /* Ajustar el panel de ajustes */
+    #settings-panel {
+        width: 80vw;
+        right: 5px;
+        top: 40px;
+    }
+
+    /* Ajustar el modal de la tienda para que ocupe más pantalla */
+    .shop-modal-content {
+        width: 95%;
+        height: 90%;
+        padding: 10px;
+    }
+
+    .shop-item-row {
+        grid-template-columns: 48px 1fr auto; /* Icono, Detalles, Botón */
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .shop-item-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+    }
+
+    .shop-item-price {
+        grid-column: 3; /* Mover el precio debajo del botón */
+        grid-row: 2;
+    }
+
+    /* Ajustar los controles táctiles */
+    #joystick-container, #attack-joystick-container {
+        width: 120px !important;
+        height: 120px !important;
+    }
+}
+
+/* --- FIN: Estilos Responsivos para Móviles --- */
+/* --- FIN: Estilos para el modal de la tienda --- */

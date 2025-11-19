@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>First Person 3D Game</title>
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"></script>
+    <script>
+        window.nipplejs = nipplejs;
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="background-color: #111;"> <!-- Evita el parpadeo blanco inicial -->
+    <!-- INICIO: Pantalla de Carga -->
+    <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; color: white; display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; font-family: Arial, sans-serif; transition: opacity 0.5s;">
+        <div id="loading-text" style="font-size: 24px; margin-bottom: 10px;">Cargando...</div>
+        <div id="sound-loading-container" style="width: 80%; max-width: 400px; text-align: center;">
+            <div id="sound-loading-text" style="font-size: 16px; margin-bottom: 5px;">Cargando Sonidos: 0%</div>
+            <div style="background: #444; border-radius: 5px; overflow: hidden;"><div id="sound-loading-bar" style="width: 0%; height: 20px; background: #4a90e2; transition: width 0.1s;"></div></div>
+        </div>
+        <div id="ai-warmup-container" style="width: 80%; max-width: 400px; text-align: center; margin-top: 20px; display: none;">
+            <div id="ai-warmup-text" style="font-size: 16px; margin-bottom: 5px;">Calentando IA: 0%</div>
+            <div style="background: #444; border-radius: 5px; overflow: hidden;"><div id="ai-warmup-bar" style="width: 0%; height: 20px; background: #e24a4a; transition: width 0.1s;"></div></div>
+        </div>
+    </div>
+    <!-- FIN: Pantalla de Carga -->
+<body>
+    <div id="coords">Posición: (-156.62, 20, 0)</div>
+    <div id="fps" style="position: absolute; top: 40px; left: 10px; color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1;">FPS: 0</div>
+    <div id="money" style="position: absolute; top: 70px; left: 10px; color: #FFD700; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1;">Dinero: 0 💰</div>
+    <div id="wave-display" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1; font-size: 18px; font-weight: bold;">Oleada 1/10 - Enemigos: 0</div>
+    <div id="player-health" style="position: absolute; top: 100px; left: 10px; width: 200px; height: 20px; background: red; border: 1px solid black; z-index: 1;"><div id="player-health-bar" style="height: 100%; background: green; width: 100%;"></div></div>
+    <div id="equipment-ui" style="position: absolute; top: 130px; left: 10px; z-index: 1; font-family: Arial, sans-serif; font-size: 14px; color: white;">
+        <div id="helmet-equipment" style="display: none;">⛑️ <span id="helmet-durability">0</span></div>
+        <div id="cape-equipment" style="display: none;">🧥 <span id="cape-durability">0</span></div>
+    </div>
+    <div id="settings-icon">⚙️</div>
+    <div id="settings-panel">
+        <label for="camera-distance">Distancia de cámara: <span id="camera-distance-value">25</span></label><br>
+        <input type="range" id="camera-distance" min="10" max="150" value="25" step="5">
+        <br><label for="camera-angle">Ángulo de cámara: <span id="camera-angle-value">30</span>°</label><br>
+        <input type="range" id="camera-angle" min="0" max="90" value="30" step="5">
+        <br><label for="camera-rotation">Rotación de cámara: <span id="camera-rotation-value">0</span>°</label><br>
+        <input type="range" id="camera-rotation" min="0" max="360" value="0" step="15">
+        <br><label><input type="checkbox" id="camera-mode" checked> Vista Top-Down</label>
+        <br><label><input type="checkbox" id="toggle-ai-enemies" checked> Habilitar IA Enemigos</label>
+        <br><label><input type="checkbox" id="god-mode"> Modo Dios</label>
+        <br><button id="generate-enemy">Generar Enemigo</button>
+        <br><button id="generate-boss1">Generar Boss 1</button>
+    </div>
+    <!-- INICIO: Barra de vida para Object_2 -->
+    <div id="object2-health-container" style="position: absolute; display: none; flex-direction: column; align-items: center; z-index: 1;">
+        <span style="color: white; font-weight: bold; text-shadow: 1px 1px 2px black;">Punto de Control</span>
+        <div id="object2-health" style="width: 150px; height: 15px; background: red; border: 1px solid black;"><div id="object2-health-bar" style="height: 100%; background: cyan; width: 100%;"></div></div>
+    </div>
+    <!-- INICIO: Botón de Tienda para Object_2 -->
+    <div id="shop-button-container" style="position: absolute; display: none; z-index: 2;">
+        <button id="shop-button" style="padding: 10px 20px; font-size: 18px; cursor: pointer; background-color: #f39c12; color: white; border: none; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);">Tienda 🛒</button>
+        <button id="start-wave-button" style="padding: 10px 20px; font-size: 18px; cursor: pointer; background-color: #e74c3c; color: white; border: none; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); margin-left: 10px;">Empezar Oleada</button>
+    </div>
+    <!-- FIN: Botón de Tienda para Object_2 -->
+    <!-- INICIO: Modal de la Tienda -->
+    <div id="shop-modal" class="shop-modal-overlay">
+        <div class="shop-modal-content">
+            <div class="shop-modal-header">
+                <h2>Tienda</h2>
+                <div class="shop-filters">
+                    <button class="filter-btn active" data-filter="all">Todos</button>
+                    <button class="filter-btn" data-filter="shields">Escudos</button>
+                    <button class="filter-btn" data-filter="construction">Construcción</button>
+                    <button class="filter-btn" data-filter="potions">Pociones</button>
+                </div>
+                <button id="close-shop-btn">&times;</button>
+            </div>
+            <div id="shop-items" class="shop-items-grid">
+                <!-- Fila de Artículo 1 -->
+                <div class="shop-item-row" data-category="construction">
+                    <div class="shop-item-icon">🧱</div>
+                    <div class="shop-item-name">Barricada de Madera</div>
+                    <div class="shop-item-price">50 💰</div>
+                    <button class="buy-button" data-item="barricade">Comprar</button>
+                </div>
+                <!-- Fila de Artículo 2 -->
+                <div class="shop-item-row" data-category="potions">
+                    <div class="shop-item-icon">➕</div>
+                    <div class="shop-item-name">Poción de Vida</div>
+                    <div class="shop-item-price">100 💰</div>
+                    <button class="buy-button" data-item="health_potion">Comprar</button>
+                </div>
+                <!-- Fila de Artículo 3 -->
+                <div class="shop-item-row" data-category="misc">
+                    <div class="shop-item-icon">🛡️</div>
+                    <div class="shop-item-name">Reparar Base (Vida Completa)</div>
+                    <div class="shop-item-price">200 💰</div>
+                    <button class="buy-button" data-item="repair_base">Comprar</button>
+                </div>
+                <!-- Fila de Artículo 4 -->
+                <div class="shop-item-row" data-category="shields">
+                    <div class="shop-item-icon">🔰</div>
+                    <div class="shop-item-name">Escudo Redondo</div>
+                    <div class="shop-item-price">150 💰</div>
+                    <button class="buy-button" data-item="shield">Comprar</button>
+                </div>
+                <!-- Fila de Artículo 5 -->
+                <div class="shop-item-row" data-category="shields">
+                    <div class="shop-item-icon">⛑️</div>
+                    <div class="shop-item-details">
+                        <div class="shop-item-name">Casco de Caballero</div>
+                        <div class="shop-item-description">20% reducción de daño</div>
+                    </div>
+                    <div class="shop-item-price">100 💰</div>
+                    <button class="buy-button" data-item="helmet">Comprar</button>
+                </div>
+                <!-- Fila de Artículo 6 -->
+                <div class="shop-item-row" data-category="shields">
+                    <div class="shop-item-icon">🧥</div>
+                    <div class="shop-item-details">
+                        <div class="shop-item-name">Capa de Caballero</div>
+                        <div class="shop-item-description">10% reducción de daño</div>
+                    </div>
+                    <div class="shop-item-price">120 💰</div>
+                    <button class="buy-button" data-item="cape">Comprar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- FIN: Modal de la Tienda -->
+    <div id="joystick-container" style="position: absolute; bottom: 50px; left: 50px; width: 150px; height: 150px; z-index: 10;"></div>
+    <div id="item-button" style="position: absolute; bottom: 40px; right: 120px; width: 60px; height: 60px; background-color: rgba(100, 150, 255, 0.5); border-radius: 50%; z-index: 10; display: none; justify-content: center; align-items: center; font-size: 30px; user-select: none; border: 2px solid white;">
+        <span id="item-icon">🍺</span>
+        <span id="item-count" style="position: absolute; bottom: -5px; right: -5px; background: red; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 24px; text-align: center; font-weight: bold;">0</span>
+    </div>
+    <div id="barricade-button" style="position: absolute; bottom: 40px; right: 200px; width: 60px; height: 60px; background-color: rgba(139, 69, 19, 0.7); border-radius: 50%; z-index: 10; display: none; justify-content: center; align-items: center; font-size: 30px; user-select: none; border: 2px solid white; cursor: pointer;">
+        <span id="barricade-icon">🧱</span>
+        <span id="barricade-count" style="position: absolute; bottom: -5px; right: -5px; background: red; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 24px; text-align: center; font-weight: bold;">0</span>
+    </div>
+    <div id="potion-button" style="position: absolute; bottom: 40px; right: 280px; width: 60px; height: 60px; background-color: rgba(220, 20, 60, 0.7); border-radius: 50%; z-index: 10; display: none; justify-content: center; align-items: center; font-size: 30px; user-select: none; border: 2px solid white; cursor: pointer;">
+        <span id="potion-icon">❤️</span>
+        <span id="potion-count" style="position: absolute; bottom: -5px; right: -5px; background: blue; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 24px; text-align: center; font-weight: bold;">0</span>
+    </div>
+    <div id="shield-button" style="position: absolute; bottom: 40px; right: 360px; width: 60px; height: 60px; background-color: rgba(128, 128, 128, 0.7); border-radius: 50%; z-index: 10; display: none; justify-content: center; align-items: center; font-size: 30px; user-select: none; border: 2px solid white; cursor: pointer;">
+        <span id="shield-icon">🛡️</span>
+        <span id="shield-count" style="position: absolute; bottom: -5px; right: -5px; background: green; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 24px; text-align: center; font-weight: bold;">0</span>
+    </div>
+    <div id="attack-joystick-container" style="position: absolute; bottom: 50px; right: 50px; width: 150px; height: 150px; z-index: 10;"></div>
+    <script src="script-juego/globals.js"></script>
+    <script src="script-juego/constants.js"></script>
+    <script src="script-juego/utils.js"></script>
+    <script src="script-juego/scene.js"></script>
+    <script src="script-juego/combat.js"></script>
+    <script src="script-juego/animations.js"></script>
+    <script src="script-juego/input.js"></script>
+    <script src="script-juego/gameLoop.js"></script>
+    <script src="script-juego/mapLoader.js"></script>
+    <script src="script-juego/playerLoader.js"></script>
+    <script src="script-juego/enemySpawner.js"></script>
+    <script src="script-juego/enemyAI.js"></script>
+    <script src="script-juego/barricadePlacement.js"></script>
+    <script src="script-juego/ui.js"></script>
+    <script src="script-juego/sceneSetup.js"></script>
