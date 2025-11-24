@@ -103,6 +103,16 @@ window.initUI = function() {
         }
     });
 
+    // Fullscreen button
+    const fullscreenBtn = document.getElementById('fullscreen-button');
+    fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
 
 
     // Item button listener
