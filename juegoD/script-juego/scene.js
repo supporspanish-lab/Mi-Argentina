@@ -11,9 +11,8 @@ window.initScene = function() {
 
     window.globalState.renderer = new THREE.WebGLRenderer();
     window.globalState.renderer.setSize(window.innerWidth, window.innerHeight);
-    // Shadows disabled for performance
-    // window.globalState.renderer.shadowMap.enabled = true;
-    // window.globalState.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    window.globalState.renderer.shadowMap.enabled = true;
+    window.globalState.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(window.globalState.renderer.domElement);
 
     // Lighting for night
@@ -22,16 +21,17 @@ window.initScene = function() {
 
     const directionalLight = new THREE.DirectionalLight(0xddddff, 0.3); // Bluish moonlight
     directionalLight.position.set(-10, 20, 10); // Moon position
-    // Shadows disabled
-    // directionalLight.castShadow = true;
-    // directionalLight.shadow.mapSize.width = 2048;
-    // directionalLight.shadow.mapSize.height = 2048;
-    // directionalLight.shadow.camera.near = 0.5;
-    // directionalLight.shadow.camera.far = 500;
-    // directionalLight.shadow.camera.left = -50;
-    // directionalLight.shadow.camera.right = 50;
-    // directionalLight.shadow.camera.top = 50;
-    // directionalLight.shadow.camera.bottom = -50;
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 200;
+    directionalLight.shadow.camera.left = -20;
+    directionalLight.shadow.camera.right = 20;
+    directionalLight.shadow.camera.top = 20;
+    directionalLight.shadow.camera.bottom = -20;
+    directionalLight.shadow.bias = -0.0005;
+    directionalLight.shadow.normalBias = 0.02;
     window.globalState.scene.add(directionalLight);
 
     // Create joystick attack indicator (yellow arc)

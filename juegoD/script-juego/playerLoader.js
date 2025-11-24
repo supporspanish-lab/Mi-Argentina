@@ -80,7 +80,8 @@ window.loadPlayer = function() {
 
             const blockAction = window.globalState.mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Block'));
             if (blockAction) {
-                blockAction.setLoop(THREE.LoopRepeat);
+                blockAction.setLoop(THREE.LoopOnce);
+                blockAction.clampWhenFinished = true;
             }
 
             const blockHitAction = window.globalState.mixer.clipAction(THREE.AnimationClip.findByName(clips, 'Block_Hit'));

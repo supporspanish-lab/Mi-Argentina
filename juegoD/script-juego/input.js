@@ -35,4 +35,8 @@ window.initInput = function() {
 
     // Initialize barricade events
     window.initBarricadeEvents();
+
+    // --- INICIO: Lógica del Joystick Táctil ---
+
+    // --- FIN: Lógica del Joystick Táctil ---
 };

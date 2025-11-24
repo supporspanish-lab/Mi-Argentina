@@ -182,6 +182,7 @@ window.initUI = function() {
     });
 
     setupJoysticks();
+    // setupJoysticks(); // Esta función se ha movido a input.js para una mejor organización.
 
     window.globalState.shopButtonContainer = document.getElementById('shop-button-container');
     window.globalState.shopModal = document.getElementById('shop-modal');
@@ -317,7 +318,7 @@ window.setupJoysticks = function() {
         window.globalState.manager.on('move', function (evt, data) {
             // Guardar el ángulo y la fuerza directamente para un movimiento analógico
             window.globalState.joystickAngle = data.angle ? data.angle.radian : 0;
-            window.globalState.joystickForce = data.force;
+            window.globalState.joystickForce = Math.min(data.force, 1); // Limitar a 1 para evitar velocidad excesiva
         });
 
         window.globalState.manager.on('end', function () {
@@ -338,9 +339,9 @@ window.setupJoysticks = function() {
         fadeTime: 0 // Sin animación de desvanecimiento para control manual
     };
     window.globalState.attackManager = nipplejs.create(attackJoystickOptions);
-    
+
     let wasJoystickDragged = false;
-    
+
     window.globalState.attackManager.on('start', function () {
         wasJoystickDragged = false; // Resetear la bandera al iniciar el toque
         // if (window.globalState.character && window.globalState.joystickAttackIndicator) {
@@ -483,7 +484,7 @@ window.updatePickupPrompts = function() {
                     mug.pickupPrompt.textContent = '🤚';
                     mug.pickupPrompt.style.position = 'absolute';
                     mug.pickupPrompt.style.fontSize = '24px';
-                    mug.pickupPrompt.style.pointerEvents = 'none';
+                    mug.pickupPrompt.style.pointerEvents = window.globalState.isMobile ? 'auto' : 'none';
                     mug.pickupPrompt.style.zIndex = '1000';
                     document.body.appendChild(mug.pickupPrompt);
 

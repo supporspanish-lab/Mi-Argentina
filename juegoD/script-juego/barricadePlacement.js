@@ -212,24 +212,8 @@ function updatePreviewPosition(x, y) {
     if (intersects.length > 0) {
         const pos = intersects[0].point.clone();
 
-        // Calculate stacking height
-        let highestY = pos.y;
-        const objectsToCheck = window.globalState.collisionObjects;
-        const tolerance = 10; // cellSize
-        for (const child of objectsToCheck) {
-            if (Math.abs(child.position.x - pos.x) < tolerance && Math.abs(child.position.z - pos.z) < tolerance) {
-                const box = new THREE.Box3().setFromObject(child);
-                const topOfObject = box.max.y;
-                if (topOfObject > highestY) {
-                    highestY = topOfObject;
-                }
-            }
-        }
-
-        // Calculate yOffset for the preview
-        const tempBox = new THREE.Box3().setFromObject(window.globalState.placementPreviewMesh);
-        const yOffset = -tempBox.min.y;
-        pos.y = highestY + yOffset;
+        // Set fixed height at 5
+        pos.y = 6.2;
 
         window.globalState.placementPreviewMesh.position.copy(pos);
         window.globalState.placementPreviewMesh.rotation.x = -Math.PI / 2; // Match placement rotation
@@ -335,24 +319,8 @@ window.updateBarricadePreview = function() {
             return; // If dragging, position is updated in mousemove
         }
 
-        // Calculate stacking height
-        let highestY = finalPos.y;
-        const objectsToCheck = window.globalState.collisionObjects;
-        const tolerance = 10; // cellSize
-        for (const child of objectsToCheck) {
-            if (Math.abs(child.position.x - finalPos.x) < tolerance && Math.abs(child.position.z - finalPos.z) < tolerance) {
-                const box = new THREE.Box3().setFromObject(child);
-                const topOfObject = box.max.y;
-                if (topOfObject > highestY) {
-                    highestY = topOfObject;
-                }
-            }
-        }
-
-        // Calculate yOffset for the preview
-        const tempBox = new THREE.Box3().setFromObject(window.globalState.placementPreviewMesh);
-        const yOffset = -tempBox.min.y;
-        finalPos.y = highestY + yOffset;
+        // Set fixed height at 5
+        finalPos.y = 6.2;
 
         window.globalState.placementPreviewMesh.position.copy(finalPos);
         window.globalState.placementPreviewMesh.rotation.x = -Math.PI / 2; // Match placement rotation

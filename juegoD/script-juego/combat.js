@@ -98,11 +98,37 @@ window.attack = function(attackAngle) {
                     const healthBeforeHit = window.globalState.skeletonHealths[i];
                     window.globalState.skeletonHealths[i] -= window.ENEMY_ATTACK_DAMAGE;
 
+                    // Add blood particles
+                    const enemyPos = enemy.position.clone();
+                    enemyPos.y += 1; // Approximate head height
+                    window.addBloodParticles(enemyPos.x, enemyPos.y, enemyPos.z);
+
+                    // Add blood on ground
+                    const groundPos = new THREE.Vector3(enemyPos.x, 0, enemyPos.z);
+                    const raycaster = new THREE.Raycaster(groundPos.clone().add(new THREE.Vector3(0, 10, 0)), new THREE.Vector3(0, -1, 0));
+                    const intersects = raycaster.intersectObjects(window.globalState.collisionObjects, true);
+                    if (intersects.length > 0) {
+                        groundPos.y = intersects[0].point.y + 0.01; // Slightly above ground
+                        const bloodGeometry = new THREE.PlaneGeometry(0.5, 0.5);
+                        const bloodMaterial = new THREE.MeshBasicMaterial({ color: 0x880000, transparent: true, opacity: 0.9 });
+                        const bloodMesh = new THREE.Mesh(bloodGeometry, bloodMaterial);
+                        bloodMesh.position.copy(groundPos);
+                        bloodMesh.rotation.x = -Math.PI / 2;
+                        window.globalState.scene.add(bloodMesh);
+                        // Remove after 30 seconds
+                        setTimeout(() => {
+                            window.globalState.scene.remove(bloodMesh);
+                            bloodGeometry.dispose();
+                            bloodMaterial.dispose();
+                        }, 30000);
+                    }
+
                     // --- INICIO: Lógica de Sonido de Golpe ---
                     // Primero, reproducir siempre el sonido del golpe de la espada.
                     const swordHitSounds = ['sonido/espada1.mp3', 'sonido/espada2.wav', 'sonido/espada3.wav'];
                     const randomSound = swordHitSounds[Math.floor(Math.random() * swordHitSounds.length)];
-                    window.playSound(randomSound, 0.6);
+                    const randomVolume = 0.2 + Math.random() * 0.8; // 0.2 to 1.0
+                    window.playSound(randomSound, randomVolume);
 
                     // Luego, si es el jefe, añadir su sonido de dolor con probabilidad.
                     if (enemy.userData.isBoss) {
@@ -171,6 +197,8 @@ window.attack = function(attackAngle) {
                 }
             }
         }
+
+        // Blood effects are now only particles and ground stains
 
         // Si después de comprobar a todos los enemigos, no se golpeó a ninguno, reproducir sonido de fallo.
         if (!hitAnEnemy) {

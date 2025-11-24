@@ -32,6 +32,8 @@ window.globalState = {
     shieldPressed: false, // Flag to track if shield button is currently pressed
     joystickAngle: 0, // For mobile movement
     joystickForce: 0, // For mobile movement
+    joystickMoveVector: new THREE.Vector3(0, 0, 0), // For new constant speed joystick
+    joystickSpeed: 15, // Joystick movement speed
 
 
     // Enemy related
@@ -138,6 +140,35 @@ window.globalState = {
     // Pickups
     mugDrops: [], // Array to store dropped mugs
 
+    // Blood particles
+    bloodParticles: [],
+    bloodCanvas: null,
+    bloodCtx: null,
+
+    // Collision function
+    checkHorizontalCollision: function(currentPos, moveVector) {
+        if (moveVector.lengthSq() === 0) return moveVector;
+
+        const playerHeight = window.PLAYER_HEIGHT;
+        const playerRadius = window.PLAYER_RADIUS;
+        const nextPos = currentPos.clone().add(moveVector);
+
+        const playerBox = new THREE.Box3(
+            new THREE.Vector3(nextPos.x - playerRadius, nextPos.y + 0.1, nextPos.z - playerRadius),
+            new THREE.Vector3(nextPos.x + playerRadius, nextPos.y + playerHeight, nextPos.z + playerRadius)
+        );
+
+        for (let i = 0; i < window.globalState.collisionObjects.length; i++) {
+            const object = window.globalState.collisionObjects[i];
+            if (object.userData.isFloor === true || !object.geometry) continue;
+
+            const objectBox = new THREE.Box3().setFromObject(object);
+            if (playerBox.intersectsBox(objectBox)) return new THREE.Vector3(0, 0, 0);
+        }
+
+        return moveVector;
+    },
+
     // Functions (will be imported from other modules and assigned here)
     initScene: null,
     loadMap: null,
@@ -204,4 +235,79 @@ window.playLoopingSound = function(url, volume) {
         window.globalState.loopingSounds[url] = source; // Guardar referencia para evitar duplicados
     }
 };
-// --- FIN: Función para Sonido en Bucle ---
+
+// --- INICIO: Sistema de Partículas de Sangre ---
+window.initBloodCanvas = function() {
+    window.globalState.bloodCanvas = document.getElementById('blood-canvas');
+    window.globalState.bloodCtx = window.globalState.bloodCanvas.getContext('2d');
+    window.resizeBloodCanvas();
+    window.addEventListener('resize', window.resizeBloodCanvas);
+};
+
+window.resizeBloodCanvas = function() {
+    window.globalState.bloodCanvas.width = window.innerWidth;
+    window.globalState.bloodCanvas.height = window.innerHeight;
+};
+
+window.addBloodParticles = function(worldX, worldY, worldZ, count = 10, color = 'red') {
+    for (let i = 0; i < count; i++) {
+        window.globalState.bloodParticles.push({
+            worldX: worldX,
+            worldY: worldY,
+            worldZ: worldZ,
+            vx: (Math.random() - 0.5) * 2, // velocity in world units
+            vy: (Math.random() - 0.5) * 2 - 1, // velocity y, bias upwards
+            vz: (Math.random() - 0.5) * 2,
+            life: 1.0, // life from 1 to 0
+            size: Math.random() * 2 + 1,
+            color: color
+        });
+    }
+};
+
+window.updateBloodParticles = function(deltaTime) {
+    const playerPos = window.globalState.character ? window.globalState.character.position : new THREE.Vector3();
+    const cullDistance = window.globalState.renderDistance + 20;
+
+    for (let i = window.globalState.bloodParticles.length - 1; i >= 0; i--) {
+        const p = window.globalState.bloodParticles[i];
+        p.worldX += p.vx * deltaTime;
+        p.worldY += p.vy * deltaTime;
+        p.worldZ += p.vz * deltaTime;
+        p.vy -= 9.8 * deltaTime; // gravity in world
+        p.life -= deltaTime * 2; // fade out
+
+        // Cull based on distance
+        const dist = Math.sqrt((p.worldX - playerPos.x)**2 + (p.worldZ - playerPos.z)**2);
+        if (p.life <= 0 || dist > cullDistance) {
+            window.globalState.bloodParticles.splice(i, 1);
+        } else {
+            // Project to screen
+            const worldPos = new THREE.Vector3(p.worldX, p.worldY, p.worldZ);
+            const screenPos = worldPos.clone().project(window.globalState.camera);
+            p.x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+            p.y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+        }
+    }
+};
+
+window.drawBloodParticles = function() {
+    const ctx = window.globalState.bloodCtx;
+    ctx.clearRect(0, 0, window.globalState.bloodCanvas.width, window.globalState.bloodCanvas.height);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; // shadow
+    for (const p of window.globalState.bloodParticles) {
+        ctx.globalAlpha = p.life * 0.5;
+        ctx.beginPath();
+        ctx.arc(p.x + 2, p.y + 2, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    for (const p of window.globalState.bloodParticles) {
+        ctx.fillStyle = p.color === 'yellow' ? 'rgba(255,255,0,0.8)' : 'red';
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+};
+// --- FIN: Sistema de Partículas de Sangre ---

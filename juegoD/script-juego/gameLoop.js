@@ -72,12 +72,9 @@ function animateGame() {
             if (window.globalState.isMobile && window.globalState.joystickForce > 0) {
                 // --- Lógica para Joystick (Móvil) --- (Corregida)
                 const angle = window.globalState.joystickAngle;
-                // Se limita la fuerza a un máximo de 1 para evitar velocidad infinita.
-                // Se ajusta la curva de velocidad para que la mínima sea más alta.
-                const force = Math.min(window.globalState.joystickForce, 5.0); // Limitar la fuerza a 1.
-                const effectiveForce = 0.4 + (force * 0.6); // La fuerza ahora va de 0.4 a 1.0.
-                const moveX = Math.cos(angle) * playerMoveSpeed * (effectiveForce / 2.5);
-                const moveZ = -Math.sin(angle) * playerMoveSpeed * (effectiveForce / 2.5);
+                // Velocidad variable según la fuerza del joystick (arrastre), de mínima a máxima.
+                const moveX = Math.cos(angle) * window.globalState.joystickSpeed * window.globalState.joystickForce * deltaTime;
+                const moveZ = -Math.sin(angle) * window.globalState.joystickSpeed * window.globalState.joystickForce * deltaTime;
                 moveVector.set(moveX, 0, moveZ);
             } else {
                 // --- Lógica para Teclado (PC) ---
@@ -185,6 +182,83 @@ function animateGame() {
                             window.playSound('sonido/boss1-bloqueo.mp3', 0.9);
                             // ...reproducir la animación óptima. El estado sigue siendo 'hit'.
                             window.setSkeletonAnimation(i, skeleton.animationActions.blockReactionOptimal);
+
+                            // --- INICIO: Contraataque del jefe: devolver el daño ---
+                            let counterDamage = window.ENEMY_ATTACK_DAMAGE; // Daño igual al que el jugador inflige
+                            if (window.globalState.character.userData.equippedHelmet) counterDamage *= 0.8;
+                            if (window.globalState.character.userData.equippedCape) counterDamage *= 0.9;
+                            counterDamage = Math.floor(counterDamage);
+
+                            if (!window.globalState.godMode) {
+                                // Aplicar daño siempre, incluso si está bloqueando
+                                window.globalState.playerHealth -= counterDamage;
+                                if (window.globalState.playerHealth < 0) window.globalState.playerHealth = 0;
+                                window.updatePlayerHealthUI();
+                                console.log(`Contraataque del jefe. Daño: ${counterDamage}. Vida restante: ${window.globalState.playerHealth}`);
+
+                                // Aplicar daño a equipo si corresponde
+                                if (window.globalState.character.userData.equippedHelmet) {
+                                    window.globalState.helmetDurability -= 1;
+                                    if (window.globalState.helmetDurability <= 0) {
+                                        const helmet = window.globalState.character.getObjectByName('Knight_Helmet');
+                                        if (helmet) helmet.visible = false;
+                                        window.globalState.character.userData.equippedHelmet = false;
+                                        window.globalState.helmetDurability = 0;
+                                        console.log('Casco roto por contraataque');
+                                    }
+                                }
+                                if (window.globalState.character.userData.equippedCape) {
+                                    window.globalState.capeDurability -= 1;
+                                    if (window.globalState.capeDurability <= 0) {
+                                        const cape = window.globalState.character.getObjectByName('Knight_Cape');
+                                        if (cape) cape.visible = false;
+                                        window.globalState.character.userData.equippedCape = false;
+                                        window.globalState.capeDurability = 0;
+                                        console.log('Capa rota por contraataque');
+                                    }
+                                }
+                                window.updateEquipmentUI();
+
+                                if (window.globalState.characterState === 'blocking') {
+                                    // Si está bloqueando, reproducir sonido de bloqueo y reducir durabilidad del escudo
+                                    const blockSounds = ['sonido/escudo-bloqueo.wav', 'sonido/escudo-bloqueo2.wav', 'sonido/escudo-bloqueo3.wav'];
+                                    const randomBlockSound = blockSounds[Math.floor(Math.random() * blockSounds.length)];
+                                    window.playSound(randomBlockSound, 0.8);
+                                    console.log('Contraataque bloqueado parcialmente');
+
+                                    window.globalState.shieldDurability -= 1;
+                                    if (window.globalState.shieldDurability <= 0) {
+                                        const shield = window.globalState.character.getObjectByName('Round_Shield');
+                                        if (shield) shield.visible = false;
+                                        window.playSound('sonido/escudo-bloqueo-destruido.wav', 1.0);
+                                        window.globalState.character.userData.equippedShield = false;
+                                        window.globalState.shieldDurability = 0;
+                                        window.globalState.wasBlocking = false;
+                                        console.log('Escudo roto por contraataque');
+                                    }
+                                    window.updateShieldUI();
+
+                                    if (window.globalState.character.animationActions.blockHit) {
+                                        window.setPlayerAnimation(window.globalState.character.animationActions.blockHit, 0.1);
+                                        window.globalState.characterState = 'hit';
+                                        window.globalState.wasBlocking = true;
+                                    } else {
+                                        window.globalState.characterState = 'idle';
+                                    }
+                                } else {
+                                    // Si no está bloqueando, reproducir sonido de golpe y animación de hit
+                                    window.playSound('sonido/golpe-personaje.mp3', 0.5);
+
+                                    if (window.globalState.character.animationActions.hits.length > 0) {
+                                        const randomHitAction = window.globalState.character.animationActions.hits[Math.floor(Math.random() * window.globalState.character.animationActions.hits.length)];
+                                        window.setPlayerAnimation(randomHitAction, 0.1);
+                                        window.globalState.characterState = 'hit';
+                                    }
+                                }
+                            } else {
+                                console.log(`Modo Dios: Contraataque bloqueado. Daño evitado: ${counterDamage}`);
+                            }
+                            // --- FIN: Contraataque del jefe: devolver el daño ---
                         } else {
                             // Si no, volver a idle como de costumbre.
                             skeleton.userData.state = 'idle';
@@ -306,6 +380,26 @@ function animateGame() {
             window.globalState.camera.lookAt(window.globalState.character.position);
         }
 
+        // Update directional light to follow player for shadows
+        if (window.globalState.character) {
+            const light = window.globalState.scene.children.find(obj => obj.isDirectionalLight);
+            if (light) {
+                light.position.set(window.globalState.character.position.x - 10, 20, window.globalState.character.position.z + 10);
+                // Center shadow camera on player
+                light.shadow.camera.position.copy(window.globalState.character.position);
+                // Update shadow camera to cover entire map to hide edges
+                const bounds = window.globalState.mapBounds;
+                if (bounds) {
+                    light.shadow.camera.left = bounds.minX;
+                    light.shadow.camera.right = bounds.maxX;
+                    light.shadow.camera.top = bounds.maxZ;
+                    light.shadow.camera.bottom = bounds.minZ;
+                    light.shadow.camera.far = 500;
+                    light.shadow.camera.updateProjectionMatrix();
+                }
+            }
+        }
+
         window.updateCoordsUI();
         window.updateFPSUI();
         window.updateMoneyUI();
@@ -323,6 +417,10 @@ function animateGame() {
         // Handle destroyed barricades
         window.handleDestroyedBarricades();
     }
+
+    // Update and draw blood particles
+    window.updateBloodParticles(deltaTime);
+    window.drawBloodParticles();
 
     window.globalState.renderer.render(window.globalState.scene, window.globalState.camera);
 }

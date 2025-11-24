@@ -4,6 +4,7 @@ async function initGame() {
     // Funciones de inicialización que no dependen de assets cargados
     window.initScene();
     window.initUI();
+    window.initBloodCanvas();
     window.initInput();
 
     // 1. Precargar sonidos
