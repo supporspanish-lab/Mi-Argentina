@@ -30,11 +30,10 @@
         </button>
     </div>
     <!-- FIN: Pantalla de Carga -->
-<body>
     <div id="coords">Posición: (-156.62, 20, 0)</div>
     <div id="fps" style="position: absolute; top: 40px; left: 10px; color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1;">FPS: 0</div>
     <div id="money" style="position: absolute; top: 70px; left: 10px; color: #FFD700; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1;">Dinero: 0 💰</div>
-    <div id="wave-display" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1; font-size: 18px; font-weight: bold;">Oleada 1/10 - Enemigos: 0</div>
+    <span id="wave-display" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: white; font-family: Arial, sans-serif; background: rgba(0,0,0,0.5); padding: 5px; z-index: 1; font-size: 18px; font-weight: bold;">Oleada 1/10 - Enemigos: 0</span>
     <div id="player-health" style="position: absolute; top: 100px; left: 10px; width: 200px; height: 20px; background: red; border: 1px solid black; z-index: 1;"><div id="player-health-bar" style="height: 100%; background: green; width: 100%;"></div></div>
     <div id="equipment-ui" style="position: absolute; top: 130px; left: 10px; z-index: 1; font-family: Arial, sans-serif; font-size: 14px; color: white;">
         <div id="helmet-equipment" style="display: none;">⛑️ <span id="helmet-durability">0</span></div>
@@ -53,6 +52,7 @@
         <br><label><input type="checkbox" id="god-mode"> Modo Dios</label>
         <br><button id="generate-enemy">Generar Enemigo</button>
         <br><button id="generate-boss1">Generar Boss 1</button>
+        <br><button id="fullscreen-button">Pantalla Completa</button>
     </div>
     <!-- INICIO: Barra de vida para Object_2 -->
     <div id="object2-health-container" style="position: absolute; display: none; flex-direction: column; align-items: center; z-index: 1;">
@@ -131,6 +131,20 @@
         </div>
     </div>
     <!-- FIN: Modal de la Tienda -->
+    <!-- INICIO: Modal de Errores -->
+    <div id="error-modal" class="error-modal-overlay">
+        <div class="error-modal-content">
+            <div class="error-modal-header">
+                <h2>Errores en la Consola</h2>
+                <button id="close-error-modal-btn">&times;</button>
+            </div>
+            <div id="error-list" class="error-list">
+                <!-- Errores aquí -->
+            </div>
+            <button id="clear-errors-btn">Limpiar Errores</button>
+        </div>
+    </div>
+    <!-- FIN: Modal de Errores -->
     <div id="joystick-container" style="position: absolute; bottom: 50px; left: 50px; width: 150px; height: 150px; z-index: 10;"></div>
     <div id="item-button" style="position: absolute; bottom: 40px; right: 120px; width: 60px; height: 60px; background-color: rgba(100, 150, 255, 0.5); border-radius: 50%; z-index: 10; display: none; justify-content: center; align-items: center; font-size: 30px; user-select: none; border: 2px solid white;">
         <span id="item-icon">🍺</span>
@@ -149,6 +163,7 @@
         <span id="shield-count" style="position: absolute; bottom: -5px; right: -5px; background: green; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 24px; text-align: center; font-weight: bold;">0</span>
     </div>
     <div id="attack-joystick-container" style="position: absolute; bottom: 50px; right: 50px; width: 150px; height: 150px; z-index: 10;"></div>
+    <canvas id="blood-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10;"></canvas>
     <script src="script-juego/globals.js"></script>
     <script src="script-juego/constants.js"></script>
     <script src="script-juego/utils.js"></script>
