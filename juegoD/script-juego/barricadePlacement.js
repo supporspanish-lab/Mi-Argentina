@@ -66,16 +66,25 @@ window.initBarricadeUI = function() {
     // Load barricade model if not set
     if (!window.globalState.barricadeModel) {
         const loader = new THREE.GLTFLoader();
-        loader.load('glb/free_modular_low_poly_dungeon_pack.glb', function(gltf) {
-            const woodenBox = gltf.scene.getObjectByName('wooden_box_light_brown_0');
-            if (woodenBox) {
-                window.globalState.barricadeModel = woodenBox.clone();
-                window.globalState.barricadeModel.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
-                window.globalState.barricadeScale = new THREE.Vector3(5, 5, 5);
-                window.globalState.barricadeY = 0;
-                console.log("Barricade model loaded from GLB.");
+        loader.load('glb/village__town_assets.glb',
+            function(gltf) {
+                const crate = gltf.scene.getObjectByName('Crate_Material005_0');
+                if (crate) {
+                    window.globalState.barricadeModel = crate.clone();
+                    window.globalState.barricadeModel.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+                    window.globalState.barricadeScale = new THREE.Vector3(5, 5, 5);
+                    window.globalState.barricadeY = 0;
+                    console.log("Barricade model loaded from GLB.");
+                } else {
+                    console.warn("Crate not found in GLB file.");
+                }
+            },
+            undefined, // onProgress
+            function(error) {
+                console.error("Error loading barricade GLB:", error);
+                // Optionally, set a default model or skip
             }
-        });
+        );
     }
 
     // Shop buy button for barricades
