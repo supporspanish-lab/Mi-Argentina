@@ -17,6 +17,29 @@ window.initUI = function() {
     window.globalState.moneyDiv = document.getElementById('money');
     window.globalState.playerHealthBar = document.getElementById('player-health-bar');
 
+    // Error modal
+    window.globalState.errorModal = document.getElementById('error-modal');
+    window.globalState.errorList = document.getElementById('error-list');
+    window.globalState.closeErrorModalBtn = document.getElementById('close-error-modal-btn');
+    window.globalState.clearErrorsBtn = document.getElementById('clear-errors-btn');
+    window.globalState.errors = [];
+
+    window.onerror = function(message, source, lineno, colno, error) {
+        const errorMsg = `${message} at ${source}:${lineno}:${colno}`;
+        window.globalState.errors.push(errorMsg);
+        updateErrorModal();
+        window.globalState.errorModal.style.display = 'flex';
+    };
+
+    window.globalState.closeErrorModalBtn.addEventListener('click', () => {
+        window.globalState.errorModal.style.display = 'none';
+    });
+
+    window.globalState.clearErrorsBtn.addEventListener('click', () => {
+        window.globalState.errors = [];
+        updateErrorModal();
+    });
+
     // Settings
     window.globalState.settingsIcon = document.getElementById('settings-icon');
     window.globalState.settingsPanel = document.getElementById('settings-panel');
@@ -105,13 +128,15 @@ window.initUI = function() {
 
     // Fullscreen button
     const fullscreenBtn = document.getElementById('fullscreen-button');
-    fullscreenBtn.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            document.exitFullscreen();
-        }
-    });
+    if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+    }
 
 
 
@@ -793,5 +818,15 @@ function filterShopItems(filter) {
         } else {
             item.style.display = 'none';
         }
+    });
+}
+
+function updateErrorModal() {
+    window.globalState.errorList.innerHTML = '';
+    window.globalState.errors.forEach(err => {
+        const div = document.createElement('div');
+        div.className = 'error-item';
+        div.textContent = err;
+        window.globalState.errorList.appendChild(div);
     });
 }
