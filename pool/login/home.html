@@ -911,6 +911,20 @@
     }
     window.addEventListener('load', setAppHeight);
 
+    // --- MODIFICADO: Lógica de orientación para forzar horizontal ---
+    async function lockOrientation() {
+      // Intenta bloquear la pantalla a horizontal (funcionará en Android)
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock('landscape').catch(() => {}); // Empty catch as requested
+          console.log('Orientación bloqueada a horizontal.');
+        }
+      } catch (error) {
+        // Silencio, esperado en iOS y algunos navegadores.
+      }
+    }
+    window.addEventListener('load', lockOrientation);
+
     // --- NUEVO: Ocultar las secciones de salas cuando el chat está abierto ---
     const chatModal = document.getElementById('waiting-screen');
     const globalGamesSection = document.getElementById('global-games-section');
