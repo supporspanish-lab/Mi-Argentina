@@ -312,8 +312,9 @@ function handleAttack(skeleton, i, target) {
         if (currentDistance <= ENEMY_ATTACK_RANGE) {
             if (currentTarget === window.globalState.character && window.globalState.playerHealth > 0) {
                 let damage = ENEMY_ATTACK_DAMAGE;
+                if (window.globalState.character.userData.equippedShield) damage *= 0.9; // 10% reduction
                 if (window.globalState.character.userData.equippedHelmet) damage *= 0.8;
-                if (window.globalState.character.userData.equippedCape) damage *= 0.9;
+                if (window.globalState.character.userData.equippedCape) damage *= 0.5; // 50% reduction
                 damage = Math.floor(damage);
 
                 if (window.globalState.characterState !== 'blocking' && !window.globalState.godMode) {
@@ -469,8 +470,7 @@ function handleAttack(skeleton, i, target) {
 
                 if (window.globalState.characterState === 'blocking' && window.globalState.character.animationActions.blockHit) {
                     window.setPlayerAnimation(window.globalState.character.animationActions.blockHit, 0.1);
-                    window.globalState.characterState = 'hit';
-                    window.globalState.wasBlocking = true;
+                    // Stay in blocking state, don't set to 'hit'
                 } else if (window.globalState.character.animationActions.hits.length > 0) {
                     const randomHitAction = window.globalState.character.animationActions.hits[Math.floor(Math.random() * window.globalState.character.animationActions.hits.length)];
                     window.setPlayerAnimation(randomHitAction, 0.1);

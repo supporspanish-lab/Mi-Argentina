@@ -2,9 +2,34 @@
 
 // Function to drop health pickup
 window.dropHealthPickup = function(position) {
-    const mugGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const mugMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    const healthPickup = new THREE.Mesh(mugGeometry, mugMaterial);
+    const isGold = Math.random() < 0.5; // 50% chance for gold
+
+    let pickup;
+    let type;
+    if (isGold) {
+        // Create gold coin
+        const coinGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.1, 16);
+        const coinMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 }); // Gold color
+        pickup = new THREE.Mesh(coinGeometry, coinMaterial);
+        pickup.rotation.x = -Math.PI / 2; // Stand up
+        type = 'gold';
+    } else {
+        // Create a + shape for health pickup
+        pickup = new THREE.Group();
+
+        // Horizontal bar
+        const horizontalGeometry = new THREE.BoxGeometry(2.5, 0.5, 0.5);
+        const horizontalMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Green for health
+        const horizontal = new THREE.Mesh(horizontalGeometry, horizontalMaterial);
+        pickup.add(horizontal);
+
+        // Vertical bar
+        const verticalGeometry = new THREE.BoxGeometry(0.5, 2.5, 0.5);
+        const verticalMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const vertical = new THREE.Mesh(verticalGeometry, verticalMaterial);
+        pickup.add(vertical);
+        type = 'health';
+    }
 
     const dropRayOrigin = new THREE.Vector3(position.x, 50, position.z);
     window.globalState.raycaster.set(dropRayOrigin, new THREE.Vector3(0, -1, 0));
@@ -16,12 +41,14 @@ window.dropHealthPickup = function(position) {
         position.y = 5.00;
     }
 
-    healthPickup.position.copy(position);
-    healthPickup.position.y += 1.5;
-    healthPickup.scale.set(0.5, 0.5, 0.5);
-    window.globalState.scene.add(healthPickup);
-    window.globalState.mugDrops.push({ mesh: healthPickup, collected: false });
-    console.log('Health pickup dropped at:', position);
+    pickup.position.copy(position);
+    pickup.position.y += 1.5;
+    if (!isGold) {
+        pickup.scale.set(1.2, 1.2, 1.2); // Slightly smaller for health
+    }
+    window.globalState.scene.add(pickup);
+    window.globalState.mugDrops.push({ mesh: pickup, collected: false, baseY: pickup.position.y, animationTime: 0, type: type });
+    console.log(`${type} pickup dropped at:`, position);
 };
 
 // The attack function

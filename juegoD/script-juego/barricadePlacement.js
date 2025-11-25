@@ -97,6 +97,7 @@ window.initBarricadeUI = function() {
                 window.globalState.playerInventory.barricades += 1;
                 window.updateBarricadeUI();
                 window.updateMoneyUI();
+                window.playSound('sonido/compra.mp3', 1.0);
             }
         });
     });
@@ -153,6 +154,7 @@ window.placeBarricade = function(placementPosition) {
     // --- FIN: Validar posición ---
     const newBarricade = window.globalState.barricadeModel.clone();
     newBarricade.position.copy(placementPosition);
+    newBarricade.rotation.set(0, 0, 0); // Reset rotation to stand up
     if (window.globalState.barricadeScale) {
         newBarricade.scale.copy(window.globalState.barricadeScale);
     }
@@ -332,7 +334,7 @@ window.updateBarricadePreview = function() {
         finalPos.y = 6.2;
 
         window.globalState.placementPreviewMesh.position.copy(finalPos);
-        window.globalState.placementPreviewMesh.rotation.x = -Math.PI / 2; // Match placement rotation
+        window.globalState.placementPreviewMesh.rotation.set(0, 0, 0); // Stand up
 
         // --- INICIO: Actualizar color del preview según validez ---
         if (window.globalState.placementPreviewMesh) {

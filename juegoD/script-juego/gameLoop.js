@@ -185,8 +185,9 @@ function animateGame() {
 
                             // --- INICIO: Contraataque del jefe: devolver el daño ---
                             let counterDamage = window.ENEMY_ATTACK_DAMAGE; // Daño igual al que el jugador inflige
+                            if (window.globalState.character.userData.equippedShield) counterDamage *= 0.9; // 10% reduction
                             if (window.globalState.character.userData.equippedHelmet) counterDamage *= 0.8;
-                            if (window.globalState.character.userData.equippedCape) counterDamage *= 0.9;
+                            if (window.globalState.character.userData.equippedCape) counterDamage *= 0.5; // 50% reduction
                             counterDamage = Math.floor(counterDamage);
 
                             if (!window.globalState.godMode) {

@@ -512,11 +512,17 @@ window.updatePickupPrompts = function() {
             continue;
         }
         if (!mug.collected) {
+            // Floating animation
+            if (mug.baseY !== undefined) {
+                mug.animationTime += 0.02; // Adjust speed
+                mug.mesh.position.y = mug.baseY + Math.sin(mug.animationTime) * 0.3; // Up and down, smaller amplitude
+                mug.mesh.rotation.y += 0.05; // Rotate 360 degrees
+            }
             const distance = window.globalState.character.position.distanceTo(mug.mesh.position);
             if (distance < PICKUP_COLLECTION_RANGE) {
                 if (!mug.pickupPrompt) {
                     mug.pickupPrompt = document.createElement('div');
-                    mug.pickupPrompt.textContent = '🤚';
+                    mug.pickupPrompt.textContent = mug.type === 'gold' ? '💰' : '🤚';
                     mug.pickupPrompt.style.position = 'absolute';
                     mug.pickupPrompt.style.fontSize = '24px';
                     mug.pickupPrompt.style.pointerEvents = window.globalState.isMobile ? 'auto' : 'none';
@@ -559,8 +565,15 @@ window.updatePickupPrompts = function() {
                         mug.collected = true;
                         if (mug.pickupPrompt) {
                             window.globalState.scene.remove(mug.mesh);
-                            window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
-                            console.log(`Player health: ${window.globalState.playerHealth}`);
+                            if (mug.type === 'gold') {
+                                const goldAmount = Math.floor(Math.random() * 151) + 50; // 50 to 200
+                                window.globalState.playerMoney += goldAmount;
+                                console.log(`Gold collected: ${goldAmount}. Total money: ${window.globalState.playerMoney}`);
+                                window.updateMoneyUI();
+                            } else {
+                                window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
+                                console.log(`Player health: ${window.globalState.playerHealth}`);
+                            }
                             document.body.removeChild(mug.pickupPrompt);
                             mug.pickupPrompt = null;
                         }
@@ -569,11 +582,18 @@ window.updatePickupPrompts = function() {
                         if (mug.pickupPrompt) {
                             document.body.removeChild(mug.pickupPrompt);
                         }
-                        window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
-                        console.log(`Player health: ${window.globalState.playerHealth}`);
+                        if (mug.type === 'gold') {
+                            const goldAmount = Math.floor(Math.random() * 151) + 50; // 50 to 200
+                            window.globalState.playerMoney += goldAmount;
+                            console.log(`Gold collected: ${goldAmount}. Total money: ${window.globalState.playerMoney}`);
+                            window.updateMoneyUI();
+                        } else {
+                            window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
+                            console.log(`Player health: ${window.globalState.playerHealth}`);
+                        }
                         window.globalState.scene.remove(mug.mesh);
                         window.globalState.mugDrops.splice(i, 1);
-                        console.log('Mug collected!');
+                        console.log(`${mug.type} collected!`);
                     }
                 }
             } else {
@@ -599,8 +619,15 @@ window.collectPickup = function(mug, index) {
         mug.collected = true;
         if (mug.pickupPrompt) {
             window.globalState.scene.remove(mug.mesh);
-            window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
-            console.log(`Player health: ${window.globalState.playerHealth}`);
+            if (mug.type === 'gold') {
+                const goldAmount = Math.floor(Math.random() * 151) + 50; // 50 to 200
+                window.globalState.playerMoney += goldAmount;
+                console.log(`Gold collected: ${goldAmount}. Total money: ${window.globalState.playerMoney}`);
+                window.updateMoneyUI();
+            } else {
+                window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
+                console.log(`Player health: ${window.globalState.playerHealth}`);
+            }
             document.body.removeChild(mug.pickupPrompt);
             mug.pickupPrompt = null;
         }
@@ -608,11 +635,18 @@ window.collectPickup = function(mug, index) {
         if (mug.pickupPrompt) {
             document.body.removeChild(mug.pickupPrompt);
         }
-        window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
-        console.log(`Player health: ${window.globalState.playerHealth}`);
+        if (mug.type === 'gold') {
+            const goldAmount = Math.floor(Math.random() * 151) + 50; // 50 to 200
+            window.globalState.playerMoney += goldAmount;
+            console.log(`Gold collected: ${goldAmount}. Total money: ${window.globalState.playerMoney}`);
+            window.updateMoneyUI();
+        } else {
+            window.globalState.playerHealth = Math.min(100, window.globalState.playerHealth + HEALTH_PICKUP_AMOUNT);
+            console.log(`Player health: ${window.globalState.playerHealth}`);
+        }
         window.globalState.scene.remove(mug.mesh);
         window.globalState.mugDrops.splice(index, 1);
-        console.log('Mug collected!');
+        console.log(`${mug.type} collected!`);
     }
 }
 

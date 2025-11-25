@@ -46,6 +46,12 @@ window.initScene = function() {
 
     window.globalState.joystickAttackIndicator.visible = false; // Initially hidden
     window.globalState.scene.add(window.globalState.joystickAttackIndicator);
+
+    // Add resize event listener for responsive design
+    window.addEventListener('resize', window.onWindowResize, false);
+
+    // Also listen for fullscreen changes
+    document.addEventListener('fullscreenchange', window.onWindowResize, false);
 };
 
 window.onWindowResize = function() {
