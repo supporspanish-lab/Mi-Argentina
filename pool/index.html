@@ -1201,14 +1201,6 @@
     <!-- --- SOLUCIÓN: Añadir la imagen para "bola en mano" --- -->
     <img id="bolaMano" src="imajenes/mover.png" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; width: 100px; height: 100px;">
 
-    <!-- --- NUEVO: Pantalla para pedir al usuario que rote el dispositivo --- -->
-    <div id="rotate-device-overlay">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M16.83 14.56c.39-.39.39-1.02 0-1.41L14.71 11H19c.55 0 1-.45 1-1s-.45-1-1-1h-4.29l2.12-2.12c.39-.39.39-1.02 0-1.41a.996.996 0 0 0-1.41 0l-3.59 3.59c-.39.39-.39 1.02 0 1.41l3.59 3.59c.39.39 1.02.39 1.41 0zM5 3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h7.5c.55 0 1-.45 1-1s-.45-1-1-1H5V5h7.5c.55 0 1-.45 1-1s-.45-1-1-1H5z"/>
-      </svg>
-      <h2>Gira tu dispositivo</h2>
-      <p>Para una mejor experiencia, por favor, usa el modo horizontal.</p>
-    </div>
 
     <!-- --- NUEVO: Pantalla de carga --- -->
     <div id="loading-screen">
@@ -2098,51 +2090,6 @@
         updatePowerBar(0, 0);
 
 
-    </script>
-    <script>
-        // --- NUEVO: Lógica de orientación para Android y iOS ---
-        async function lockOrientation() {
-          const rotateOverlay = document.getElementById('rotate-device-overlay');
-          const gameContainer = document.getElementById('gameContainer');
-          const rotateTitle = rotateOverlay.querySelector('h2');
-          const rotateParagraph = rotateOverlay.querySelector('p');
-    
-          // Detectar si es iOS
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    
-          // Función para comprobar y mostrar/ocultar el overlay
-          const checkOrientation = () => {
-            const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-            if (isPortrait) {
-              rotateOverlay.classList.add('visible');
-              if(gameContainer) gameContainer.style.display = 'none';
-              // Mensaje específico para iOS
-              if (isIOS) {
-                rotateTitle.textContent = 'Gira tu iPhone/iPad';
-                rotateParagraph.textContent = 'Por favor, gira manualmente tu dispositivo a modo horizontal para jugar.';
-              } else {
-                rotateTitle.textContent = 'Gira tu dispositivo';
-                rotateParagraph.textContent = 'Para una mejor experiencia, por favor, usa el modo horizontal.';
-              }
-            } else {
-              rotateOverlay.classList.remove('visible');
-              if(gameContainer) gameContainer.style.display = 'block';
-            }
-          };
-    
-          try {
-            if (screen.orientation && typeof screen.orientation.lock === 'function') {
-              await screen.orientation.lock('landscape');
-            }
-          } catch (error) {
-            // Silencio, esperado en iOS y algunos navegadores.
-          }
-    
-          checkOrientation();
-          window.addEventListener('orientationchange', checkOrientation);
-          window.addEventListener('resize', checkOrientation);
-        }
-        window.addEventListener('load', lockOrientation);
     </script>
 
     <script>

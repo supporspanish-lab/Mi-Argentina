@@ -294,6 +294,23 @@
         max-width: 600px; /* Ancho aumentado para 2 columnas */
         margin: 0 auto; /* Centrar */
       }
+
+      /* --- NUEVO: Media query para orientación vertical (portrait) --- */
+      @media (orientation: portrait) {
+        .main-content {
+          display: flex;
+          flex-direction: column;
+        }
+        .active-games-section {
+          order: 3; /* Salas al final */
+        }
+        .vertical-options-container {
+          order: 1; /* Primer carrusel */
+        }
+        .game-carousel-container {
+          order: 2; /* Segundo carrusel */
+        }
+      }
     </style>
   </head>
   <body>

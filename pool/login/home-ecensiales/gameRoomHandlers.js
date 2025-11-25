@@ -576,7 +576,7 @@ export const updateGameLists = async () => {
         if (!verticalList.querySelector('.create-new')) {
             const createCard = document.createElement('div');
             createCard.className = 'game-card create-new';
-            createCard.innerHTML = `<img src="../video/crear.png" alt="Crear Partida" class="create-icon"><span class="create-text">Crear Partida</span>`;
+            createCard.innerHTML = `<img src="../login/video/online.png" alt="Crear Partida" class="create-icon"><span class="create-text">Crear Partida</span>`;
             createCard.addEventListener('click', () => {
                 const betModal = document.getElementById('bet-modal');
                 const betAmountInput = document.getElementById('bet-amount-input');
@@ -590,7 +590,7 @@ export const updateGameLists = async () => {
         if (!verticalList.querySelector('.practice-game')) {
             const practiceCard = document.createElement('div');
             practiceCard.className = 'game-card practice-game';
-            practiceCard.innerHTML = `<img src="../video/practica.png" alt="Practica" class="create-icon"><span class="create-text">Practica</span>`;
+            practiceCard.innerHTML = `<img src="../login/video/practica.png" alt="Practica" class="create-icon"><span class="create-text">Practica</span>`;
             let isCreatingPractice = false;
             practiceCard.addEventListener('click', () => {
                 if (!isCreatingPractice) {
