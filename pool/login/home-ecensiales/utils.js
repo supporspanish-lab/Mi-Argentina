@@ -153,6 +153,13 @@ export const setupErrorHandling = () => {
         const reason = event.reason;
         const errorString = `Unhandled Promise Rejection: ${reason instanceof Error ? reason.message : reason}\n  Stack: ${reason instanceof Error ? reason.stack : 'N/A'}`;
 
+        // Ignorar errores de permisos de Firebase
+        if (errorString.includes('Missing or insufficient permissions')) {
+            console.warn('Error de permisos de Firebase ignorado:', errorString);
+            event.preventDefault();
+            return;
+        }
+
         if (((errorString.includes('FirebaseError') && errorString.includes('resource-exhausted')) || errorString.includes('Using maximum backoff delay to prevent overloading the backend.'))) {
             if (!isMaintenanceModalOpen) {
                 maintenanceModal.classList.add('visible');

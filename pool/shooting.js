@@ -49,7 +49,13 @@ export function shoot(powerPercent) {
     // El listener en index.html se encargará de enviarlo a Firebase.
     import('./spinControls.js').then(({ getSpinOffset }) => {
         const spin = getSpinOffset();
-        
+
+        // Enviar la posición actual de la bola blanca al servidor antes del disparo
+        const gameRef = getGameRef();
+        if (gameRef) {
+            updateDoc(gameRef, { cueBallPosition: { x: cueBall.x, y: cueBall.y } }).catch(err => console.error("Error sending cue ball position before shot:", err));
+        }
+
         const shotData = {
             angle: currentShotAngle,
             power: powerPercent,

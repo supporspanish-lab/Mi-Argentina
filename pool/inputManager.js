@@ -94,6 +94,12 @@ function onPointerDown(e) {
         if (dist < BALL_RADIUS * 6) { // Área de toque más grande para facilitar el arrastre
             movingCueBall = true;
             pointerDown = true; // El puntero está presionado solo si se mueve la bola
+            // Ocultar la imagen de "bola en mano" al empezar a arrastrar
+            const bolaManoImg = document.getElementById('bolaMano');
+            if (bolaManoImg) {
+                bolaManoImg.style.display = 'none';
+                bolaManoImg.classList.remove('blinking');
+            }
         } else {
             // Si no se hace clic en la bola blanca, pero estamos en modo "bola en mano",
             // entonces el usuario quiere apuntar.
@@ -183,8 +189,7 @@ function onPointerMove(e) {
             cueBallMaterial.color.set(0xffffff);
             // --- NUEVO: Enviar la posición de la bola blanca al servidor en tiempo real ---
             const onlineGameData = getOnlineGameData();
-            const myUid = auth.currentUser?.uid;
-            if (onlineGameData.ballInHandFor === myUid) {
+            if (onlineGameData.gameId) {
                 window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: newPosition } }));
             }
         } else {
@@ -210,8 +215,7 @@ function onPointerUp(e) {
 
         // Enviar la actualización al oponente si es una partida online
         const onlineGameData = getOnlineGameData();
-        const myUid = auth.currentUser?.uid;
-        if (onlineGameData.ballInHandFor === myUid) {
+        if (onlineGameData.gameId) {
             window.dispatchEvent(new CustomEvent('sendcueballmove', { detail: { position: newPosition } }));
         }
 

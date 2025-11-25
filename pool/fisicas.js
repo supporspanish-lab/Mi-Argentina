@@ -173,6 +173,8 @@ export function updateBallPositions(dt, balls, pockets, handles, BALL_RADIUS) {
 
                 // --- CORRECCIÓN: Comprobar si la bola ha caído en una tronera DESPUÉS de las colisiones con los bordes ---
                 for (let pocketIndex = 0; pocketIndex < pockets.length; pocketIndex++) {
+                    // --- FIX: No entronerar la bola blanca si está en modo de colocación ---
+                    if (ball === balls[0] && getGameState().isPlacingCueBall) break;
                     const pocket = pockets[pocketIndex];
                     const ballPos = ball.mesh.position;
                     let isInside = false;

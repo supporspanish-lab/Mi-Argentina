@@ -11,7 +11,7 @@ import { initFallPhysics, addBallToFallSimulation, updateFallPhysics } from './f
 import { setOnLoadingComplete, setProcessingSteps } from './loadingManager.js';
 import { initCueBallEffects, updateCueBallEffects, showShotEffect } from './cueBallEffects.js';
 import { prepareAimingResources, updateAimingGuides, hideAimingGuides, cueMesh } from './aiming.js';
-import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, INACTIVITY_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData, setCurrentPlayer, getTurnUpdated, setTurnUpdated } from './gameState.js';
+import { getGameState, handleTurnEnd, startShot, addPocketedBall, setGamePaused, areBallsAnimating, setPlacingCueBall, showFoulMessage, checkTurnTimer, isTurnTimerActive, turnStartTime, TURN_TIME_LIMIT, INACTIVITY_TIME_LIMIT, clearPocketedBalls, clearFirstHitBall, stopTurnTimer, setShotInProgress, getOnlineGameData, setOnlineGameData, setCurrentPlayer, getTurnUpdated, setTurnUpdated, Bolaenmanoarrastre } from './gameState.js';
 import { getCurrentShotAngle, isMovingCueBall } from './inputManager.js';
 import { revisarEstado } from './revisar.js';
 import { initializePowerBar, getPowerPercent } from './powerBar.js';
@@ -68,7 +68,7 @@ export const sendCueBallUpdate = throttle(async (position) => {
             console.error("Error al sincronizar la posición de la bola blanca:", error);
         }
     }
-}, 100); // Throttle to 100ms for smoother real-time updates when dragging ball in hand
+}, 200); // Throttle to 200ms for real-time updates when dragging ball in hand
 
 let shakeIntensity = 0;
 let shakeDuration = 0;
@@ -162,6 +162,10 @@ window.addEventListener('receiveaim', (event) => {
         if (gameData.ballInHandFor === myUid) {
             return;
         }
+        // Si estamos colocando la bola blanca y la posición es la por defecto, no aplicar.
+        if (getGameState().isPlacingCueBall && gameData.cueBallPosition.x === TABLE_WIDTH / 4 && gameData.cueBallPosition.y === TABLE_HEIGHT / 2) {
+            return;
+        }
         // Si el servidor indica una posición para la bola blanca, la aplicamos.
         // La comprobación de isMovingCueBall() (en inputManager) evitará que esto sobreescriba la posición
         // mientras el jugador arrastra la bola.
@@ -200,6 +204,11 @@ window.addEventListener('receiveaim', (event) => {
         //     // Si no tengo bola en mano, desactivar el modo de colocación.
         //     setPlacingCueBall(false);
         // }
+
+        // Si el servidor indica activar bola en mano para todos, llamar a Bolaenmanoarrastre
+        if (gameData.activateBallInHand) {
+            Bolaenmanoarrastre();
+        }
     }
 
 });

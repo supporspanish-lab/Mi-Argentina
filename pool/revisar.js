@@ -2008,6 +2008,7 @@ export async function revisarEstado(faltaPorTiempo = false, gameRef = null, onli
             // --- MANTENIDO POR COMPATIBILIDAD: Aunque ahora es redundante, otros clientes pueden usarlo ---
             cueBallPosition: bolaBlancaEntronerada ? { x: TABLE_WIDTH / 4, y: TABLE_HEIGHT / 2 } : null,
             ballInHandFor: null, // Inicialmente null, se enviará con retraso
+            activateBallInHand: (faltaCometida && motivoFalta !== "no metió una bola válida." && !motivoFalta.includes("mismas bolas")) || bolaBlancaEntronerada,
 
             turnTimestamp: Date.now(), // Marcar el momento de la actualización del turno
         };
