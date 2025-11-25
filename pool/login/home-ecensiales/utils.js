@@ -1,13 +1,22 @@
 import { db, doc, deleteDoc, updateDoc, getDoc } from './firebaseService.js';
-import { maintenanceModal, errorConsoleTextarea, errorConsoleModal, waitingScreen, gameCarousel, player2ChatName, player2ChatAvatar, startGameBtn, cancelWaitBtn, kickOpponentBtn } from './domElements.js';
+import { maintenanceModal, waitingScreen, gameCarousel, player2ChatName, player2ChatAvatar, startGameBtn, cancelWaitBtn, kickOpponentBtn } from './domElements.js';
 import { getState, setUserWaitingGameId, setPollingIntervalId, setGameStarted } from './state.js';
 
 export let isMaintenanceModalOpen = false;
-export const capturedErrors = [];
 
-export function updateErrorConsole() {
-    errorConsoleTextarea.value = capturedErrors.join('\n\n');
-}
+// --- NUEVO: Manejo mínimo de errores para ignorar permisos de Firebase ---
+export const setupMinimalErrorHandling = () => {
+    window.onunhandledrejection = function(event) {
+        const reason = event.reason;
+        const errorString = `Unhandled Promise Rejection: ${reason instanceof Error ? reason.message : reason}`;
+
+        // Ignorar errores de permisos de Firebase
+        if (errorString.includes('Missing or insufficient permissions')) {
+            event.preventDefault();
+            return;
+        }
+    };
+};
 
 export function setPlayerAvatar(imgElement, imageName) {
     if (imageName) {
@@ -112,69 +121,6 @@ export async function fetchUserProfile(uid) {
     return null;
 }
 
-// --- NUEVO: Manejo de errores global ---
-export const setupErrorHandling = () => {
-    const originalConsoleError = console.error;
-    console.error = function(...args) {
-        originalConsoleError.apply(console, args);
-        const errorMessage = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
-        
-        if (((errorMessage.includes('FirebaseError') && errorMessage.includes('resource-exhausted')) || errorMessage.includes('Using maximum backoff delay to prevent overloading the backend.'))) {
-            if (!isMaintenanceModalOpen) {
-                maintenanceModal.classList.add('visible');
-                isMaintenanceModalOpen = true;
-            }
-            return; 
-        } else {
-            capturedErrors.push('Console Error: ' + errorMessage);
-            updateErrorConsole();
-            errorConsoleModal.classList.add('visible');
-        }
-    };
-
-    window.onerror = function(message, source, lineno, colno, error) {
-        const errorString = `Uncaught Error: ${message}\n  Source: ${source}\n  Line: ${lineno}, Column: ${colno}\n  Stack: ${error ? error.stack : 'N/A'}`;
-        
-        if (((errorString.includes('FirebaseError') && errorString.includes('resource-exhausted')) || errorString.includes('Using maximum backoff delay to prevent overloading the backend.'))) {
-            if (!isMaintenanceModalOpen) {
-                maintenanceModal.classList.add('visible');
-                isMaintenanceModalOpen = true;
-            }
-            return false;
-        }
-
-        capturedErrors.push(errorString);
-        updateErrorConsole();
-        errorConsoleModal.classList.add('visible');
-        return false;
-    };
-
-    window.onunhandledrejection = function(event) {
-        const reason = event.reason;
-        const errorString = `Unhandled Promise Rejection: ${reason instanceof Error ? reason.message : reason}\n  Stack: ${reason instanceof Error ? reason.stack : 'N/A'}`;
-
-        // Ignorar errores de permisos de Firebase
-        if (errorString.includes('Missing or insufficient permissions')) {
-            console.warn('Error de permisos de Firebase ignorado:', errorString);
-            event.preventDefault();
-            return;
-        }
-
-        if (((errorString.includes('FirebaseError') && errorString.includes('resource-exhausted')) || errorString.includes('Using maximum backoff delay to prevent overloading the backend.'))) {
-            if (!isMaintenanceModalOpen) {
-                maintenanceModal.classList.add('visible');
-                isMaintenanceModalOpen = true;
-            }
-            event.preventDefault();
-            return;
-        }
-
-        capturedErrors.push(errorString);
-        updateErrorConsole();
-        errorConsoleModal.classList.add('visible');
-        event.preventDefault();
-    };
-};
 
 // --- NUEVO: Limpieza de la sala de espera ---
 export const loadGameIntoIframe = (gameId) => {

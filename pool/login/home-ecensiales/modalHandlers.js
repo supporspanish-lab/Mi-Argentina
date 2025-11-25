@@ -1,7 +1,7 @@
-import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, errorConsoleModal, errorConsoleTextarea, copyErrorsBtn, closeErrorModalBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, infoBtn, infoModal, closeInfoModalBtn, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge, profileImg, profileSvg } from './domElements.js';
+import { closeMaintenanceModalBtn, maintenanceModal, profilePictureContainer, mainAvatarModal, avatarSelectionModal, closeAvatarSelectionModalBtn, mainCurrentAvatarDisplay, mainCurrentAvatarImg, avatarGrid, betModal, cancelBetBtn, confirmBetBtn, betAmountInput, betErrorMessage, friendsBtn, friendsModal, closeFriendsModalBtn, userFriendIdSpan, copyFriendIdBtn, openWonGamesModalBtn, wonGamesModal, closeWonGamesModalBtn, wonGamesList, infoBtn, infoModal, closeInfoModalBtn, friendChatBtn, friendChatModal, closeFriendChatModalBtn, friendChatList, friendChatArea, friendChatMessages, friendChatInput, sendFriendChatBtn, chatBadge, profileImg, profileSvg } from './domElements.js';
 import { updateUserProfile } from '../auth.js';
 import { getState, setCurrentUserProfile } from './state.js';
-import { updateErrorConsole, isMaintenanceModalOpen } from './utils.js';
+import { isMaintenanceModalOpen } from './utils.js';
 import { db, auth, query, where, getDocs, collection, addDoc, onSnapshot, doc, getDoc } from '../auth.js';
 import { createGame } from './gameRoomHandlers.js';
 
@@ -170,74 +170,6 @@ export const setupFriendsModal = () => {
     });
 };
 
-export const setupErrorConsoleModal = () => {
-    closeErrorModalBtn.addEventListener('click', () => {
-        errorConsoleModal.classList.remove('visible');
-    });
-
-    // Función para copiar automáticamente los errores
-    const autoCopyErrors = async () => {
-        try {
-            await navigator.clipboard.writeText(errorConsoleTextarea.value);
-            copyErrorsBtn.textContent = '¡Copiado!';
-            setTimeout(() => {
-                copyErrorsBtn.textContent = 'Copiar Errores';
-            }, 2000);
-        } catch (err) {
-            console.error('Error al copiar los errores automáticamente:', err);
-            copyErrorsBtn.textContent = 'Error al copiar';
-            // Intentar método alternativo
-            try {
-                const textarea = document.createElement('textarea');
-                textarea.value = errorConsoleTextarea.value;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                copyErrorsBtn.textContent = '¡Copiado! (método alternativo)';
-                setTimeout(() => {
-                    copyErrorsBtn.textContent = 'Copiar Errores';
-                }, 2000);
-            } catch (fallbackErr) {
-                console.error('Error al copiar los errores con método alternativo:', fallbackErr);
-                copyErrorsBtn.textContent = 'Error al copiar';
-            }
-        }
-    };
-
-    // Copiar automáticamente cuando se muestra el modal
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                if (errorConsoleModal.classList.contains('visible')) {
-                    autoCopyErrors();
-                }
-            }
-        });
-    });
-    observer.observe(errorConsoleModal, { attributes: true, attributeFilter: ['class'] });
-
-    copyErrorsBtn.addEventListener('click', async () => {
-        try {
-            await navigator.clipboard.writeText(errorConsoleTextarea.value);
-            alert('Errores copiados al portapapeles!');
-        } catch (err) {
-            console.error('Error al copiar los errores con navigator.clipboard.writeText:', err);
-            try {
-                const textarea = document.createElement('textarea');
-                textarea.value = errorConsoleTextarea.value;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                alert('Errores copiados al portapapeles (método alternativo)!');
-            } catch (fallbackErr) {
-                console.error('Error al copiar los errores con document.execCommand(\'copy\'):', fallbackErr);
-                alert('No se pudieron copiar los errores automáticamente. Por favor, selecciona el texto y cópialo manualmente.');
-            }
-        }
-    });
-};
 
 export const setupWonGamesModal = () => {
     // Open won games modal

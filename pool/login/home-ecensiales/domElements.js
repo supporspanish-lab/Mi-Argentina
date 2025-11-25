@@ -60,10 +60,6 @@ export const foundUsernameSpan = document.getElementById('found-username');
 export const addFriendBtn = document.getElementById('add-friend-btn');
 export const cancelAddFriendBtn = document.getElementById('cancel-add-friend-btn');
 
-export const errorConsoleModal = document.getElementById('error-console-modal');
-export const errorConsoleTextarea = document.getElementById('error-console-textarea');
-export const copyErrorsBtn = document.getElementById('copy-errors-btn');
-export const closeErrorModalBtn = document.getElementById('close-error-modal-btn');
 
 export const friendRequestsContainer = document.getElementById('friend-requests-container');
 export const gameInvitesContainer = document.getElementById('game-invites-container'); // --- NUEVO
