@@ -711,17 +711,5 @@
             }
         });
     </script>
-    <script>
-        window.addEventListener('load', async () => {
-            try {
-                if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                    await screen.orientation.lock('portrait-primary');
-                    console.log('Screen orientation locked to portrait for login page.');
-                }
-            } catch (error) {
-                console.warn('Could not lock screen orientation to portrait:', error.message);
-            }
-        });
-    </script>
 </body>
 </html>

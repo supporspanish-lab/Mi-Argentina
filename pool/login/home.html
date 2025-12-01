@@ -14,7 +14,6 @@
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-orientation" content="landscape">
     <link rel="apple-touch-icon" href="../imajenes/apple-touch-icon.png">
     <link rel="stylesheet" href="./home-ecensiales/style.css">
     <!-- NUEVO: Estilos para el video de fondo -->
@@ -571,7 +570,7 @@
         </div>
     </div>
         <!-- --- NUEVO: Modal para mensajes de mantenimiento del servidor --- -->
-    <div id="maintenance-modal" class="error-modal-overlay">
+        <div id="maintenance-modal" class="error-modal-overlay" style="display: none;">
         <div class="error-modal-box">
             <h3>Servidores en Mantenimiento</h3>
             <p>Actualmente, nuestros servidores están experimentando una alta demanda o están en mantenimiento. Por favor, inténtalo de nuevo más tarde.</p>
@@ -917,19 +916,6 @@
     }
     window.addEventListener('load', setAppHeight);
 
-    // --- MODIFICADO: Lógica de orientación para forzar horizontal ---
-    async function lockOrientation() {
-      // Intenta bloquear la pantalla a horizontal (funcionará en Android)
-      try {
-        if (screen.orientation && screen.orientation.lock) {
-          await screen.orientation.lock('landscape').catch(() => {}); // Empty catch as requested
-          console.log('Orientación bloqueada a horizontal.');
-        }
-      } catch (error) {
-        // Silencio, esperado en iOS y algunos navegadores.
-      }
-    }
-    window.addEventListener('load', lockOrientation);
 
     // --- NUEVO: Ocultar las secciones de salas cuando el chat está abierto ---
     const chatModal = document.getElementById('waiting-screen');

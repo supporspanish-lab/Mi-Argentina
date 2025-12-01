@@ -50,9 +50,9 @@ export function shoot(powerPercent) {
     import('./spinControls.js').then(({ getSpinOffset }) => {
         const spin = getSpinOffset();
 
-        // Enviar la posición actual de la bola blanca al servidor antes del disparo
+        // Enviar la posición actual de la bola blanca al servidor antes del disparo solo si está en modo bola en mano
         const gameRef = getGameRef();
-        if (gameRef) {
+        if (gameRef && gameState.isPlacingCueBall) {
             updateDoc(gameRef, { cueBallPosition: { x: cueBall.x, y: cueBall.y } }).catch(err => console.error("Error sending cue ball position before shot:", err));
         }
 
@@ -60,8 +60,8 @@ export function shoot(powerPercent) {
             angle: currentShotAngle,
             power: powerPercent,
             spin: spin,
-            // Enviar la posición de la bola blanca en el momento del disparo
-            cueBallStartPos: { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y }
+            // Enviar la posición de la bola blanca en el momento del disparo solo si está en modo bola en mano
+            ...(gameState.isPlacingCueBall && { cueBallStartPos: { x: cueBall.mesh.position.x, y: cueBall.mesh.position.y } })
         };
 
         // Limpiar el array de bolas entronadas antes de enviar los datos al servidor.

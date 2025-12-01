@@ -157,11 +157,8 @@ window.addEventListener('receiveaim', (event) => {
 
     // --- NUEVO: Lógica para recibir el estado de "bola en mano" y la posición ---
     const myUid = auth.currentUser?.uid;
-    if (gameData.cueBallPosition && cueBall && cueBall.mesh) {
-        // Si el jugador tiene bola en mano, no actualizar la posición desde el servidor.
-        if (gameData.ballInHandFor === myUid) {
-            return;
-        }
+    if (gameData.cueBallPosition && cueBall && cueBall.mesh && gameData.ballInHandFor && gameData.ballInHandFor !== myUid) {
+        // Solo actualizar la posición de la bola blanca desde el servidor si alguien tiene bola en mano y no soy yo.
         // Si estamos colocando la bola blanca y la posición es la por defecto, no aplicar.
         if (getGameState().isPlacingCueBall && gameData.cueBallPosition.x === TABLE_WIDTH / 4 && gameData.cueBallPosition.y === TABLE_HEIGHT / 2) {
             return;
@@ -175,35 +172,15 @@ window.addEventListener('receiveaim', (event) => {
             cueBall.isPocketed = false;
             cueBall.pocketedState = null;
             cueBall.mesh.visible = true;
-            
+
             cueBall.mesh.position.x = gameData.cueBallPosition.x;
             cueBall.mesh.position.y = gameData.cueBallPosition.y;
-            
+
             if (cueBall.shadowMesh) {
                 cueBall.shadowMesh.visible = true;
                 cueBall.shadowMesh.position.set(gameData.cueBallPosition.x, gameData.cueBallPosition.y, 0.1);
             }
         }
-
-        // Si el servidor indica que YO tengo bola en mano, me aseguro de que la bola esté activa y visible.
-        // if (gameData.ballInHandFor === myUid) {
-        //     // --- SOLUCIÓN: Limpiar el estado del turno anterior al recibir bola en mano ---
-        //     // Esto previene que bolas entroneradas por el oponente en su tiro de falta
-        //     // se procesen incorrectamente en nuestro turno.
-        //     console.log('%c[BALL-IN-HAND] Limpiando estado de turno anterior por bola en mano.', 'color: magenta; font-weight: bold;');
-        //     clearPocketedBalls();
-        //     clearFirstHitBall();
-        //
-        //     cueBall.isPocketed = false;
-        //     cueBall.pocketedState = null;
-        //     cueBall.isActive = true;
-        //     cueBall.mesh.visible = true;
-        //     if (cueBall.shadowMesh) cueBall.shadowMesh.visible = true;
-        //     setPlacingCueBall(true); // Asegurarse de que el estado de colocación esté activo.
-        // } else {
-        //     // Si no tengo bola en mano, desactivar el modo de colocación.
-        //     setPlacingCueBall(false);
-        // }
 
         // Si el servidor indica activar bola en mano para todos, llamar a Bolaenmanoarrastre
         if (gameData.activateBallInHand) {
